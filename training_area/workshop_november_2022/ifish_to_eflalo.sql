@@ -23,12 +23,17 @@
  
  */
  
- 
-
-with iFV as  ( 
+ with iFV as  ( 
 		select * 
 		from dbo.F_VOYAGE 
 		where YEAR(DEPARTURE_DATE_TIME) = 2018 or YEAR(RETURN_DATE_TIME) = 2018 
+		AND RSS_NO IN (  
+			select * 
+			from dbo.D_VESSEL 
+			WHERE COUNTRY_CODE = 'GBW' 		
+		) 
+
+		 
 		) , 
 	iFA as ( 
 		select *
@@ -36,10 +41,13 @@ with iFV as  (
 		where VOYAGE_ID IN ( select DISTINCT VOYAGE_ID from iFV ) 
 	), 
 	iFC as ( 
+
 		select ACTIVITY_ID, SPECIES_CODE, Sum(LIVE_WEIGHT) as LE_KG, Sum(LANDINGS_VALUE) as LE_EURO 
 		from dbo.F_CATCH where ACTIVITY_ID IN (select DISTINCT ACTIVITY_ID from iFA )
 		group by  ACTIVITY_ID, SPECIES_CODE
+
 		) 
+ 
 
 select DISTINCT
 
@@ -57,10 +65,12 @@ iDPD.COUNTRY_CODE as FT_DCOU,
 iDPD.NAME as FT_DHAR,
 CAST ( iFV.DEPARTURE_DATE_TIME AS DATE) as FT_DDAT,
 CAST (iFV.DEPARTURE_DATE_TIME AS TIME) as FT_DTIME,
+iFV.DEPARTURE_DATE_TIME  as FT_DDATIM , 
 iDPL.COUNTRY_CODE as FT_LCOU,
 iDPL.NAME as FT_LHAR,
 CAST( iFV.RETURN_DATE_TIME AS DATE) as FT_LDAT,
 CAST( iFV.RETURN_DATE_TIME AS TIME) as FT_LTIME,
+iFV.RETURN_DATE_TIME as FT_LDATIM,
 
 
 -- Logbook Event info section
@@ -81,32 +91,32 @@ iFA.MESH_SIZE as LE_MSZ,
 iFA.RECTANGLE_CODE as LE_RECT,
 iFA.FAO_FISHING_AREA_CODE as LE_DIV,
 --iDE.EFLALO2_AREA as LE_DIV,
-null as LE_MET,
+iFVMET.METIER_CODE as LE_MET,
 iFC.species_code  LE_SPE,
 LE_KG, 
 LE_EURO
 
 from 
 -- IFISH basic joins
-iFV inner join  iFA on iFV.VOYAGE_ID = iFA.VOYAGE_ID  
-inner join  iFC 	on iFA.ACTIVITY_ID = iFC.ACTIVITY_ID	
-left join dbo.D_VESSEL iDV on iFV.RSS_NO = iDV.RSS_NO and   
- 						CONVERT(  DATE, CONVERT(VARCHAR(10), iFV.DEPARTURE_DATE_TIME, 112) )  
-						---- USE ACTIVITY DATE TO SELECT TRIPS INSTEAD DEPARTURE or LANDINGS
-						 between CONVERT(  DATE, CONVERT(VARCHAR(10), iDV.VALID_FROM_DATE, 112) )  
-						 and CONVERT(  DATE, CONVERT(VARCHAR(10),  iDV.VALID_TO_DATE , 112) )    
+iFV 
+inner join  iFA 
+on iFV.VOYAGE_ID = iFA.VOYAGE_ID  
+inner join  iFC 	
+on iFA.ACTIVITY_ID = iFC.ACTIVITY_ID	
+inner join   dbo.F_VOYAGE_METIER iFVMET 
+on iFV.VOYAGE_ID = iFVMET.VOYAGE_ID
+
+
+--- Following tables are metadata tables not included in the "WITH as " block 
+left join dbo.D_VESSEL  as iDV 
+	on iFV.RSS_NO = iDV.RSS_NO and   
+   CONVERT(  DATE, CONVERT(VARCHAR(10), iFV.DEPARTURE_DATE_TIME, 112) )  
+	---- USE ACTIVITY DATE TO SELECT TRIPS INSTEAD DEPARTURE or LANDINGS
+	between CONVERT(  DATE, CONVERT(VARCHAR(10), iDV.VALID_FROM_DATE, 112) )  
+	and CONVERT(  DATE, CONVERT(VARCHAR(10),  iDV.VALID_TO_DATE , 112) )    
 
 -- Need a couple of port nationalities
 left join dbo.D_PORT iDPD on iFV.DEPARTURE_PORT_CODE = iDPD.PORT_CODE
 left join dbo.D_PORT iDPL on iFV.LANDING_PORT_CODE = iDPL.PORT_CODE
 -- inner join dbo.GBPToEuroConversionMultiplier iMp on Year(iFV.RETURN_DATE_TIME) = iMp.YearValid
-
---inner join iFish2Dev.dbo.D_EFLALO2_AREA iDE on iFA.FAO_FISHING_AREA_CODE = iDE.FAO_FISHING_AREA
-
---inner join RegionRectangle rr on iFA.RECTANGLE_CODE = rr.Rectangle
-
-
---Deal with some things that dont fit joins very well
-where  iDV.COUNTRY_CODE like 'GB%'
---and iFA.ACTIVITY_DATE between rq.DateFrom and rq.DateTo
  
