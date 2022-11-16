@@ -23,17 +23,14 @@
  
  */
  
+ 
+ 
  with iFV as  ( 
+	 
 		select * 
 		from dbo.F_VOYAGE 
-		where YEAR(DEPARTURE_DATE_TIME) = 2018 or YEAR(RETURN_DATE_TIME) = 2018 
-		AND RSS_NO IN (  
-			select * 
-			from dbo.D_VESSEL 
-			WHERE COUNTRY_CODE = 'GBW' 		
-		) 
-
-		 
+		where YEAR(DEPARTURE_DATE_TIME) = 2018 or YEAR(RETURN_DATE_TIME) = 2018  
+		
 		) , 
 	iFA as ( 
 		select *
@@ -108,15 +105,16 @@ on iFV.VOYAGE_ID = iFVMET.VOYAGE_ID
 
 
 --- Following tables are metadata tables not included in the "WITH as " block 
-left join dbo.D_VESSEL  as iDV 
+inner join dbo.D_VESSEL  as iDV 
 	on iFV.RSS_NO = iDV.RSS_NO and   
    CONVERT(  DATE, CONVERT(VARCHAR(10), iFV.DEPARTURE_DATE_TIME, 112) )  
 	---- USE ACTIVITY DATE TO SELECT TRIPS INSTEAD DEPARTURE or LANDINGS
 	between CONVERT(  DATE, CONVERT(VARCHAR(10), iDV.VALID_FROM_DATE, 112) )  
 	and CONVERT(  DATE, CONVERT(VARCHAR(10),  iDV.VALID_TO_DATE , 112) )    
 
+	AND COUNTRY_CODE = 'GBW'
+
 -- Need a couple of port nationalities
 left join dbo.D_PORT iDPD on iFV.DEPARTURE_PORT_CODE = iDPD.PORT_CODE
 left join dbo.D_PORT iDPL on iFV.LANDING_PORT_CODE = iDPL.PORT_CODE
 -- inner join dbo.GBPToEuroConversionMultiplier iMp on Year(iFV.RETURN_DATE_TIME) = iMp.YearValid
- 
