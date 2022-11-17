@@ -1,0 +1,133 @@
+---
+title: "3_R_advance_analysis_visualization"
+author: "Roi & Michael"
+date: "09/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load(file = "./training_data/trainin_eflalo_tacsat.RData")
+
+```
+
+
+
+## Advanced R using Tidyverse: Tibble, dplyr, ggplot2 
+
+### Reading and Writing data to and from R
+
+R can deal with a number of file types, many can be loaded/saved using simple 'save' and 'load' functions from the base package, but there are some file type specific functions 
+
+#### RData files
+```{r rdata, message=FALSE , warning= FALSE}
+  save(mm, file = "./output/mm.RData") # saving an R object as an RData file so it can be shared or imported into another project
+  rm(mm)
+  
+  load("./output/mm.RData") # load in the RData file that we just saved and removed
+```
+
+#### CSV files
+```{r csv, message=FALSE , warning= FALSE}
+  write.csv(mm, file = "./output/mm.csv") # write to csv format
+  mmcsv <- read.csv("./output/mm.csv") # read the csv and name the variable
+```
+
+#### Excel files
+```{r xlsx, message=FALSE , warning= FALSE}
+install.packages("xlsx")
+library(xlsx)
+
+write.xlsx(mm, file = "./output/mm.xlsx") # writes an object to xlsx format
+mmxl <- read.xlsx("./output/mm.xlsx", sheetName = "Sheet1") # reads in data from an xlsx format
+```
+
+### Tidyverse package and attached packages 
+
+library(tidyverse) ## loads ggplot2 a, tibble , tidyr and dplyr
+
+
+#### a.Tibbles 
+
+Throughout this book we work with “tibbles” instead of R’s traditional data.frame. Tibbles are data frames, but they tweak some older behaviours to make life a little easier. R is an old language, and some things that were useful 10 or 20 years ago now get in your way. It’s difficult to change base R without breaking existing code, so most innovation occurs in packages. Here we will describe the tibble package, which provides opinionated data frames that make working in the tidyverse a little easier. In most places, I’ll use the term tibble and data frame interchangeably; when I want to draw particular attention to R’s built-in data frame, I’ll call them data.frames.
+
+[https://r4ds.had.co.nz/tibbles.html](url)
+
+##### **Example**
+
+```{r tibbles, message=FALSE , warning= FALSE}
+
+   library(tidyverse)
+
+  # Create a tibble from scratch 
+
+  tibble ( 
+    x = 1:5, 
+    y = 1, 
+    z = x^2+y 
+    )
+
+  # Convert a data.frame into a tibble
+
+   fish_d <- fish_data%>%as_tibble()
+   
+  # Print more than 10 tibbles rows
+   
+   fish_d%>%print()   ## Default print 10 rows
+   fish_d%>%print(n = 15, width = Inf)
+   
+  
+  # Pull a data column from a tibble and convert it into a vector
+   
+   fish_d%>%select(SI_SP)%>%pull()%>%head(100)
+   
+  # Rename a tibble column 
+   
+   fish_d%>%rename( vessel_speed = SI_SP, fishing_time = INTV)
+   
+   
+
+```
+
+
+# b.Dplyr and analysis datasets   ------
+
+Tibbles is the tidyverse standard table format , all results form tidyverse package will be in a tibble format. 
+Dplyr is the tidyverse package used to modify , calcualte and analyse the data in a tibble. 
+
+Dplyr sintax is very similar to SQL , so the methods and uses of Dplyr functions are very similar to SQL language. 
+Let's explore some of them.
+
+
+```{r dplyr, message= FALSE}
+
+# Tibble manipulation
+
+fish_d%>%select( LE_GEAR, LE_MET , INTV)   # select 3 fields 
+fish_d%>%select( -LE_MET )   ### select all minus one of the columns
+
+
+fish_d%>%mutate(sum_fields = SI_SP + INTV) # Create a new field as result of calculation
+
+
+### Average calculation by groups
+
+fish_d%>%group_by(LE_GEAR)%>%summarise(mean = mean(SI_SP), max = max(SI_SP), min = min(SI_SP))
+
+
+
+```
+
+
+
+ 
+ 
+# c.Tidyr -------
+
+
+
+
+
+
+
+
