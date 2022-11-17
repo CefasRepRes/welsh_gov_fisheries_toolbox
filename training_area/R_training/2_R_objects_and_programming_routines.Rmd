@@ -1,0 +1,322 @@
+---
+title: "2_R_objects_and_programming_routines.Rmd"
+author: "Roi & Michael"
+date: "11/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load(file = "./training_data/trainin_eflalo_tacsat.RData")
+```
+
+### R Object Types
+
+R deals with multiple data types, which we will explore now.
+
+#### Vectors
+Vectors are a single item or list of items of the same type, whether that be integers, doubles, strings or logical values. Below are some vectors and some commands which will summarise them.
+
+[https://www.tutorialspoint.com/r/r_vectors.htm](url)
+
+```{r vectors, message=FALSE , warning= FALSE}
+# a single item vector, the L makes the item of type integer, rather than the default double
+num <- 16L
+
+# making a vector of multiple items requires use of the c() function
+num_vec <- c(3,8,24,11,16,81,54,1083,211,516) # multiple integers within this vector
+
+num_seq <- seq(1:100) # a sequence vector of numbers 1-100
+
+print(num_vec)
+
+sort(num_vec) # sorts the items into ascending order
+num_vec_sort <- sort(num_vec) # if yu want the sorting to be permenant, the object must be overwritten by itself
+sort(num_vec, decreasing = TRUE) # sort descending
+sum(num_vec) # adds all values together
+min(num_vec) # prints the minimum value in the vector
+max(num_vec) # prints the maximum value in the vector
+mean(num_vec) # calculates the mean
+range(num_vec) # tells the user the range
+
+# type of tells the user what type of data each object is
+typeof(num)
+typeof(num_vec)
+typeof(num_seq)
+
+```
+
+Vectors can also be used in conjunction for calculations. Items from two vectors can be added together if they have the same number of elements. If not, as shown below, the integer 'num' is added to all items in 'num_vec'.
+
+```{r vectors2, message=FALSE , warning= FALSE}
+sum_vec <- (num_vec + num)
+print(sum_vec)
+```
+
+Vector elements can be assigned names using the standard 'names()' function. This is helpful for direct vector comparison. Below are the mean maths and english scores for a class for the first 6 months of the year. We can use vectors to work out which they are statistically better at, and in which month they may need some extra help.
+
+```{r vectors3, message=FALSE , warning= FALSE}
+maths <- c(55,70,74,86,78,89)
+english <- c(60,81,74,71,80,77)
+
+months <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun")
+
+names(maths) <- months
+names(english) <- months
+
+monthly_scores <- maths + english
+
+print(monthly_scores)
+```
+
+Clearly the students are struggling in January after the christmas break. Lets check if a particular subject needs help.
+
+```{r vectors4, message=FALSE , warning= FALSE}
+total_maths <- sum(maths)
+total_english <- sum(english)
+
+total_maths > total_english
+total_maths - total_english
+```
+
+There is only a difference of 9 between the two, so the biggest issue for the teacher here is the time period, not the subject.
+
+
+#### Factors
+
+Factors are used to store categorical variables, meaning they can belong to a limited number of categories. This differs from continuous data which can belong to an infinite number. An example of categorical data is eye colour, as the options are limited to brown, blue, green. Each entry is assigned to one of these categories, making it categorical. Factors are useful for situations such as survey results, where participants have been given multiple choice options. Factors in R are made using the factor() function.
+
+```{r factors, message=FALSE , warning= FALSE}
+eye_colour <- c("Blue", "Green", "Brown")
+
+ec_factor <- factor(eye_colour)
+print(ec_factor)
+```
+
+Factors can also be split up into nominal and ordinal. Nominal factors have no 'order', e.g. the categories have no real hierarchy, such as a list of eye colours as above. Ordinal factors have natural order, such as men's tshirt sizing. The factor below shows the sizes from a tshirt order, with some sizes receiving multiple orders.
+
+```{r ordinal_factors, message=FALSE , warning= FALSE}
+sizes <- c("x-small", "large", "x-large", "small", "medium", "large", "small", "x-large")
+
+# creating the factor
+size_factor <- factor(sizes, order = TRUE, levels = c("x-small", "small", "medium", "large", "x-large")) # setting the hierarchy from left to right
+print(size_factor)
+
+levels(size_factor) # shows the categories in hierarchical order
+```
+
+The overall results of a factor can be seen using summary(). This shows how it could be useful for survey results.
+
+```{r factors_summary, message=FALSE , warning= FALSE}
+summary(size_factor)
+```
+
+
+#### Matrices
+
+```{r matrices, message=FALSE, warning=FALSE}
+cod <- c(460.3, 314.6, 502.3, 783.1)
+lobster <- c(201.7, 412.1, 101.7, 306.2)
+scallop <- c(115.9, 173.4, 327.4, 293.6)
+halibut <- c(782.4, 290.5, 381.2, 239.7)
+mackerel <- c(510.6, 1091.4, 236.9, 474.3)
+plaice <- c(203.7, 473.8, 573.5, 472.5)
+bass <- c(473.4, 209.1, 920.2, 372.5)
+  
+mm <- matrix(c(cod,
+               lobster,
+               scallop,
+               halibut,
+               mackerel,
+               plaice,
+               bass), nrow = 7, byrow = TRUE)
+cols <- c("UK", "Denmark", "France", "Netherlands")
+species  <- c("cod", "lobster", "scallop", "halibut", "mackerel", "plaice", "bass")
+  
+colnames(mm) <- cols
+rownames(mm) <- species
+```
+
+```{r matrices2, message=FALSE, warning=FALSE}
+head(mm)
+summary(mm)
+View(mm)
+colSums(mm)
+```
+
+
+#### Data Frames
+
+When a data frame such as fish_data is loaded into the workspace, a good place to start is investigating it. There are a few commands which will provide you with information on the dataframe. These are good commands to run in the console, as it is unlikely you are going to want to open the data frame every time your code is run.
+
+```{r dataframes, message=FALSE, warning=FALSE}
+load(file = "./training_data/trainin_eflalo_tacsat.RData")
+
+str(fish_data) # tells you all the columns and begins listing their contents. Columns are denoted by the $.
+
+head(fish_data) # head and tail are similar but provide it in the normal data frame format
+tail(fish_data)
+
+View(fish_data)
+```
+
+The subset() function is extremely useful when it comes to dataframes. This code subsets the data to only records where the total catch weight was over 2000kg.
+
+```{r dataframes2, message=FALSE, warning=FALSE}
+subset_fd <- subset(fish_data, subset = fish_data$LE_KG_TOT > 2000)
+```
+
+Filters can also be used with the filter() function, which Roi will speak on later.
+
+Data frames can also be sorted, similarly to vectors, using the order() function. This allows the programmer to see the lowest or highest of a certain column.
+
+```{r dataframes3, message=FALSE, warning=FALSE}
+weight <- order(subset_fd$LE_KG_TOT)
+subset_fd <- subset_fd[weight, ]
+View(subset_fd)
+```
+
+#### Lists
+Lists are able to gather a variety of the previously mentioned R objects under one variable name. They do not have to be related at all. Lists are initiated using the list() function, with the elements being entered between the brackets.
+
+```{r lists, message=FALSE , warning= FALSE}
+my_list <- list(subset_fd, mm, int)
+print(my_list)
+```
+
+We can name the elements of our list to make them easier to remember. These names will be written above each element in the print statement.
+
+```{r lists2, message=FALSE , warning= FALSE}
+my_list <- list(fish = subset_fd, marine_matrix = mm, integer = int)
+print(my_list)
+```
+
+
+### Reference elements of an object (vector,data.frame)
+
+Elements of vectors and lists can be accessed using an index format. Each item is assigned an index number, meaning it can be called upon or drawn from the vector. This is done using square brackets and the c() function.
+
+```{r indexing, message=FALSE , warning= FALSE}
+num_vec
+num_vec <- sort(num_vec)
+
+num_vec_lim <- num_vec[c(2,5,8)] # pulling out the 2nd, 5th and 8th item in the vector and assigning it to a new object
+num_vec_lim
+```
+
+Furthermore, you can directly replace items in a vector or list by using the sub function. This will replace part of the text in the selected item with new text. In this case, the 2nd [2] item in the object 'n' is selected and the letters 'te' are replaced with 'x', this change is assigned to the variable 'replaced_text'. This change is only temporary until 'replaced_text' is applied to n[2].
+
+```{r substituting, message=FALSE , warning= FALSE}
+n <-c(100, 'test')
+n[2]
+replaced_text <- sub('te', 'x', n[2]) ## function to replace a string 
+    
+# Replace element of a vector object
+n[2] <- replaced_text ## replace permanently
+n  # print result
+```
+
+Programmers can address specific columns in data frames using $. R is helpful in that it provides a drop down list of all the columns in the data frame.
+
+```{r column_index, message=FALSE , warning= FALSE}
+print(fish_data$LE_KG_TOT)
+#max.print(fish_data$LE_KG_TOT)
+```
+
+In this case, the fish_data data frame contains over 93,000 entries, which would be far too many to print to the console. R limits prints to 1000 items, unless specifically told to print all of them via the max.print() function, which is commented out above so that it doesn't run.
+
+Similarly to vectors, columns can be accessed by their index value. This allows you to extract certain columns from a data frame and apply them to a new variable. Indexing data frames usually works on a [row,column] basis, however if rows aren't specified, R will assume you are trying to access a column rather than a single row, so the syntax is simply fish_data[13]. In the first example below, it is written as [13]. This means we want entries from the 13th column, and there are no specific rows selected, so by default, all are selected.
+
+```{r  df_index, message=FALSE , warning= FALSE}
+le_kg_tot <- fish_data[13]
+head(le_kg_tot)
+```
+
+The same is true for selecting multiple columns with no gaps between them.
+```{r  df_index2, message=FALSE , warning= FALSE}
+fish_2_5 <- fish_data[2:5]
+head(fish_2_5)
+```
+
+It gets slightly more complicated when trying to access multiple columns which are not next to one another. Within the brackets you must first specify that you do not wish to limit the rows by leaving the space for rows blank: fish_data[,columns]. Following this, multiple columns can be selected at once using sequence syntax. using c(), the below code selects columns 3-7, column 13 and column 14, without limiting the rows.
+
+```{r df_index3, message=FALSE , warning= FALSE}
+fish_sub <- fish_data[,c(3:7,13,14)]
+head(fish_sub)
+```
+
+Finally, to select specific rows and columns, simply put the row numbers prior to the comma within the square brackets[]. The following code will take rows 1-25 of columns 3-7, 13 and 14 and put them into a new data frame.
+
+```{r df_index4, message=FALSE , warning= FALSE}
+fish_rowcol_sub <- fish_data[c(1:25),c(3:7,13,14)]
+head(fish_rowcol_sub)
+```
+
+When trying to call on a specific element of a list, you can use [[element index value]]. Or, if the elements are names, you can call it using the $.
+
+```{r list_index, message=FALSE , warning= FALSE}
+print(my_list[[3]])
+print(my_list$marine_matrix)
+```
+
+### Loops
+
+Loops make it possible to automate tasks. They make code much neater than writing out individual lines, applying functions to variables over and over. The basic syntax of a for loop is as follows.
+
+```{r forloops, message=FALSE , warning= FALSE}
+for (i in x){
+  
+}
+```
+
+i is the iterator, meaning it represents every object within the variable x, which may be a list or vector etc. It does not technically represent them all, as it only represents the current item going through the loop. The easiest way to imagine this is to imagine the loop as a single process, understand what is happening to one item and then repeating it for every item in x. the iterator does not have to be called i, it can be called whatever you like.
+
+```{r forloops2, message=FALSE , warning= FALSE}
+num_vec <- sort(num_vec)
+
+for (i in num_vec){
+  print(i)
+}
+```
+
+This loop will calculate what 4 of each number in the vector equals. The paste function simply lets you buff out the print statements to make them more user friendly by showing the whole calculation.
+```{r forloops3, message=FALSE , warning= FALSE}
+for (i in num_vec){
+  print(paste(4, '*', i, '=', 4*i))
+}
+```
+
+if statements can be used to stop a for loop at a certain point.
+
+```{r if_statements, message=FALSE , warning= FALSE}
+limit = 1000
+
+for (i in num_vec){
+  if(i > limit)
+    break
+  print(paste(4, '*', i, '=', 4*i))
+}
+```
+
+While loops only allow the action to occur until the iterator meets a certain condition, causing the loop to break.
+
+```{r while, message=FALSE , warning= FALSE}
+j <- 1
+while (j < 6) {
+  print(j)
+  j = j+1
+}
+```
+We can also use the if and next functions to skip certain iterations. This will continue the loop similarly to above, but will exclude 3.
+
+```{r while2, message=FALSE , warning= FALSE}
+i <- 0
+while (i < 6) {
+  i <- i + 1
+  if (i == 3) {
+    next
+  }
+  print(i)
+}
+```
+
