@@ -1,0 +1,202 @@
+---
+title: "1_R_introduction"
+author: "Roi & Michael"
+date: "11/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Basics of R programming
+
+### R IDE
+
+The main screen consists of:
+
+#### Coding area
+The coding area is where all code is written, for instance the programmer can begin by typing print(), which in a command. Inside the brackets type “Hello world!” encased in “”. Now press run; this will print the words Hello world! To the console below the coding area.
+
+#### Console
+The console is where R evaluates the code the programmer has written above. Anything printed, the result of any calculation and all lines of code processed will appear here after they have been run.
+
+Additionally, any errors will appear here with an explanation of what is wrong. For example, if the “” are removed from inside the brackets and the code is run, it will produce an error.
+
+You can also run individual lines of code here such as simple calculations or to check results.
+
+#### Environment
+The environment is where variables are stored, such as lists and data frames. In the coding area type the following: 
+
+```{r, environment, message=FALSE, warning=FALSE}
+test <- seq(1:20)
+print(test)
+```
+
+This will create a list of numbers 1-20 and print them to the console. The sequence is assigned to the variable name ‘test’ via the <- symbol. This variable can be seen in the environment in the top right.
+
+#### Explorer
+Finally, the explorer (bottom right) is a source for multiple pieces of information. It is where file paths can be explored, such as your project’s directory, plots can be viewed, and packages can be installed. Additionally, instructions on how to use many commands in R can be found under the help tab. We will explore these aspects throughout the course.
+
+### Variables
+
+#### Assignments
+Assignments simply mean applying commands or data to a given name. For example, instead of just printing “Hello world!”, we can assign this text to a variable with the name of our choosing and then print that, this will have the same effect. However, variables are extremely useful for pieces of information that will be used more than once or will benefit from being viewable in the environment. Additionally, when applying function to a variable, it will need to be assigned, otherwise it will just print to the console what the result would be if you were to apply it. When creating these, and for general use of R, it is good practice to use only lower case letters, and use underscores instead of spaces.
+
+```{r assignments, message=FALSE, warning= FALSE}
+
+print("Hello world!")
+hw <- "Hello world!"
+print(hw)
+
+```
+
+#### Data types
+R can deal with a variety of data types including integers, doubles, logical data, characters, date/time stamps. Any data you bring into R will come in one or a mixture of these formats and they dictate how the data must be dealt with and what commands must be used.
+
+```{r data_types, message=FALSE, warning= FALSE}
+
+int <- 16L
+typeof(integer)
+class(int)
+    
+dou <- 16
+typeof(double)
+class(dou)
+    
+log <- (TRUE)
+typeof(logical)
+    
+char <- ("R coding course")
+typeof(character)
+    
+date <- date()
+print(date)
+
+```
+
+#### Basic Operations
+R can easily be used like a calculator, performing simple arithmetic such as shown. All answers are of course printed to the console after running. If you wanted to assign the result to a variable which can be called upon later, you would do that as we have above.
+
+```{r basic_operations, message=FALSE, warning= FALSE}
+
+16*41 #multiply
+12-2  #minus
+36/6  #divide
+14+7  #plus
+2^3   #indices
+  
+2*10/2^2  #multiple operations at once
+
+```
+
+#### Matrices & Data Frames
+
+##### Matrices
+Matrices are a type of R object in which contain columns and rows. They are most commonly used for containing numerical elements which can be used in a variety of mathematical calculations such as summing columns.
+
+```{r matrices_1, message=FALSE, warning= FALSE}
+
+cod <- c(460.3, 314.6)
+lobster <- c(201.7, 412.1)
+scallop <- c(115.9, 173.4)
+
+marine_matrix <- matrix(c(cod, lobster, scallop), nrow = 3, byrow = TRUE)
+  
+measure <- c("weight_kg","value_gbp")
+species <- c("cod", "lobster", "scallop")
+  
+colnames(marine_matrix) <- measure
+rownames(marine_matrix) <- species
+
+```
+
+##### Data Frames
+Data frames are also two-dimensional structures; however, they differ from matrices in that the rows contain all the information for each data entry, which is represented under each column. Data frames are more suitable when working with a variety of data types which will appear across the columns, which should all contain the same number of entries.
+
+```{r data_frame_1, message=FALSE, warning= FALSE}
+
+load(file = "./training_data/trainin_eflalo_tacsat.RData")
+
+```
+
+#### R packages and basic function uses
+
+```{r data_frame_1, message=FALSE, warning= FALSE}
+
+length(fish_data) # get the length of a variable
+paste ("text", 1,sep = ",")
+seq()
+max()
+min()
+mean()
+head()
+
+```
+
+### Exercise 1
+
+#### Install Packages
+Let’s begin by installing some packages, which contain the commands used in R programming. We must then load the libraries. You can do this using the code below if you know the name of the package you wish to use, otherwise you can use the CRAN, which is found in the explorer. Select 'Packages' > 'Install' > Type the package name > 'Install'.
+
+```{r exercise1, message=FALSE, warning=FALSE}
+  install.packages("tidyverse", "ggplot2")
+  
+  library(tidyverse)
+  library(ggplot2)
+```
+
+#### Run code in console
+We can run code from within the console, without typing it in our more ‘permanent’ coding window. Type the following in the console:
+
+```{r code_in_console, message=FALSE, warning=FALSE}
+15 + 23
+```
+
+Now press CTRL+ENTER. This will print the result right below, which should say 38.
+
+Any stretch of code can be run from the console, although it is not advisable to be running large amounts there as you will not receive the measures put in place by R to ensure your code is working correctly, as you will in if you write it in the coding area. It is more useful for simple, single lines of code which will tell you about your data suich as below.
+
+```{r other_console_examples, message=FALSE, warning=FALSE}
+head(fish_data)
+tail(fish_data)
+summarise(fish_data)
+
+```
+
+
+#### Script in code area
+
+The coding are, whilst designed for scripting, can still get confusing. For the reason, comments can be made throughout your code using #. This will turn the text green and R will not run any code which has a # at the beginning of the line. This is useful for keeping track of what each part of your code does. Additionally, when sharing code with others, comments are extremely useful as they will tell the recipient what each section or line is doing.
+
+```{r commenting, message=FALSE, warning=FALSE}
+# This text is commented out
+
+print("Hello world") # prints Hello world! to the console
+
+head(fish_data) # prints the first 6 rows of the data frame
+```
+
+Code in the coding area can be run line by line or in chunks. To run a singular line, you can go to the line and press the run button at the top, or you can press ctrl + enter. Both will run the selected region. Additionally, by highlighting multiple lines of code, sections of the script can be run together.
+
+#### R packages and basic function uses
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
