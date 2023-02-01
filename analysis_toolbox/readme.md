@@ -14,3 +14,6 @@ Index
 b_1_load_eflalo_tacsat.Rmd
 
 b_2_cleaning_vms_data.Rmd
+
+
+ ## Fisheries data outputs visualization  
