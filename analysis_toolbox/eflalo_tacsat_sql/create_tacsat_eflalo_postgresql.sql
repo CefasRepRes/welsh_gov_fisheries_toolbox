@@ -45,7 +45,16 @@ create table welsh_gov_fish_tool.eflalo_le  (
 	
 	
 create table welsh_gov_fish_tool.eflalo_spe  (
-
+	
+	 LE_ID
+	 eflalo_ft_FT_REF
+	 LE_SPE
+	 LE_KG
+	 LE_VALUE
+	)  	  
+	
+	
+create table welsh_gov_fish_tool.eflalo_tacsat  (
 	
 VE_REF
 SI_LATI
