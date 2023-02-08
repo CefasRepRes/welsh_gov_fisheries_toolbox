@@ -1,7 +1,6 @@
 create schema welsh_gov_fish_tool; 
 
 
-
 create table welsh_gov_fish_tool.eflalo_ft  (
 
 	FT_REF varchar (150),
@@ -27,46 +26,46 @@ create table welsh_gov_fish_tool.eflalo_ft  (
 
 create table welsh_gov_fish_tool.eflalo_le  (
 	
-	LE_ID
-	LE_CDAT
-	LE_STIME
-	LE_ETIME
-	LE_SLAT 
-	LE_SLON 
-	LE_ELAT
-	LE_ELON
-	LE_GEAR
-	LE_MSZ
-	LE_RECT
-	LE_DIV
-	LE_MET
-	eflalo_ft_FT_REF
+    "LE_ID" bigint,
+    "LE_CDAT" date,
+    "LE_STIME" time without time zone,
+    "LE_ETIME" time without time zone,
+    "LE_SLAT" double precision,
+    "LE_SLON" double precision,
+    "LE_ELAT" double precision,
+    "LE_ELON" double precision,
+    "LE_GEAR" character varying(20) COLLATE pg_catalog."default",
+    "LE_MSZ" numeric,
+    "LE_RECT" character varying(25) COLLATE pg_catalog."default",
+    "LE_DIV" character varying(40) COLLATE pg_catalog."default",
+    "LE_MET" text COLLATE pg_catalog."default",
+    eflalo_ft_ft_ref bigint
 ) 
 	
 	
 create table welsh_gov_fish_tool.eflalo_spe  (
 	
-	 LE_ID
-	 eflalo_ft_FT_REF
-	 LE_SPE
-	 LE_KG
-	 LE_VALUE
+	 LE_ID bigint,
+	 eflalo_ft_FT_REF bigint,
+	 LE_SPE character varying(30) COLLATE pg_catalog."default",
+	 LE_KG numeric,
+	 LE_VALUE numeric
 	)  	  
 	
 	
 create table welsh_gov_fish_tool.eflalo_tacsat  (
 	
-VE_REF
-SI_LATI
-SI_LONG
-SI_DATE
-SI_TIME
-SI_DATIM
-SI_SP
-SI_HE
-SI_HARB
-SI_STATE
-SI_FT
-INTV
-SI_YEAR
+VE_REF varchar(50),
+SI_LATI double precision,
+SI_LONG double precision,
+SI_DATE date,
+SI_TIME time without time zone,
+SI_DATIM timestamptz,
+SI_SP double precision,
+SI_HE integer,
+SI_HARB integer,
+SI_STATE integer,
+SI_FT bigint,
+INTV double precision,
+SI_YEAR numeric
 ) 
