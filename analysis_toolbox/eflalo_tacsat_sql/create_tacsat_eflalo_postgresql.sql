@@ -55,7 +55,7 @@ create table welsh_gov_fish_tool.eflalo_spe  (
 	
 create table welsh_gov_fish_tool.eflalo_tacsat  (
 	
-VE_REF varchar (50),
+VE_REF varchar(50),
 SI_LATI double precision,
 SI_LONG double precision,
 SI_DATE date,
