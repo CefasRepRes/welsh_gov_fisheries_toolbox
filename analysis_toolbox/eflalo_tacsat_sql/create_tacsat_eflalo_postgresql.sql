@@ -34,11 +34,11 @@ create table welsh_gov_fish_tool.eflalo_le  (
     "LE_SLON" double precision,
     "LE_ELAT" double precision,
     "LE_ELON" double precision,
-    "LE_GEAR" character varying(20) COLLATE pg_catalog."default",
+    "LE_GEAR" varchar (20),
     "LE_MSZ" numeric,
-    "LE_RECT" character varying(25) COLLATE pg_catalog."default",
-    "LE_DIV" character varying(40) COLLATE pg_catalog."default",
-    "LE_MET" text COLLATE pg_catalog."default",
+    "LE_RECT" varchar (25),
+    "LE_DIV" varchar (40),
+    "LE_MET" text,
     eflalo_ft_ft_ref bigint
 ) 
 	
@@ -47,7 +47,7 @@ create table welsh_gov_fish_tool.eflalo_spe  (
 	
 	 LE_ID bigint,
 	 eflalo_ft_FT_REF bigint,
-	 LE_SPE character varying(30) COLLATE pg_catalog."default",
+	 LE_SPE varchar (30),
 	 LE_KG numeric,
 	 LE_VALUE numeric
 	)  	  
