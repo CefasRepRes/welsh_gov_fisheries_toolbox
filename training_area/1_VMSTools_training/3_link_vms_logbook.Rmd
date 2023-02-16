@@ -1,0 +1,30 @@
+---
+title: "3_link_vms_logbook"
+author: "Roi & Mike"
+date: "16/02/2023"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For loading the data if the user came back to the process later on.
+
+```{r load data, include=FALSE}
+load("./output/tacsatClean.RData")
+load("./output/eflaloClean.RData")
+```
+
+```{r setup, include=FALSE}
+tacsatp <- mergeEflalo2Tacsat(eflalo,tacsat)
+head(tacsatp)
+
+print(length(which(tacsatp$FT_REF == 0))) # number of records not able to link
+```
+
+```{r setup, include=FALSE}
+
+```
