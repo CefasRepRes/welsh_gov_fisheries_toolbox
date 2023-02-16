@@ -11,6 +11,13 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r library, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(vmstools)
+```
+
 For loading the data if the user came back to the process later on.
 
 ```{r load data, include=FALSE}
@@ -18,13 +25,52 @@ load("./output/tacsatClean.RData")
 load("./output/eflaloClean.RData")
 ```
 
-```{r setup, include=FALSE}
+Next, the FT_REF column from eflalo is added to the tacsat data. This is done via a merge, which takes place based on the vessel name, year and time stamp. If the vessel criteria match up and all of the VMS pings align with the departure and arrival times of the logbook trip, then the records are matched. If there was no possible match, a 0 is applied to the entry in the FT_REF column.
+
+```{r merge tacsat eflalo, include=FALSE}
 tacsatp <- mergeEflalo2Tacsat(eflalo,tacsat)
-head(tacsatp)
+head(tacsatp) # the new column can be seen on the end here
 
 print(length(which(tacsatp$FT_REF == 0))) # number of records not able to link
 ```
 
-```{r setup, include=FALSE}
+Before analising further, making a backup is sensible so that all of the analysis does not have to be run again if something goes wrong.
 
+```{r backup, include=FALSE}
+tacsat_bk <- tacsatp
 ```
+
+Now the rest of the data can be pulled into the tacsatp dataset based on the FT_REF column. Here is an example on the backup data that was just created: the gear column is attached.
+
+```{r gear match, include=FALSE}
+tacsat_bk$LE_GEAR <- eflalo$LE_GEAR[match(tacsat_bk$FT_REF,eflalo$FT_REF)]
+head(tacsat_bk) # these have 0s so specific rows can be selected for checking the work
+
+print(tacsat_bk[10:15,]) # calling rows 10-15
+```
+
+From this selection of data, it looks like the merge has been successful, as the LE_GEAR column is now filled with the TBB gear type. Checking every entry for this trip is important, as if the gear type changes, it is unlikely the merge has worked properly. This can be done by making a subset of the data, limiting it to one specific FT_REF.
+
+```{r gear match, include=FALSE}
+# this can be changed to one from your dataset, for example the one seen in the console as a result of the previous print statement
+tacsat_sub <- subset(tacsat_bk, FT_REF == "272058")
+view(tacsat_sub)
+```
+
+Now the whole trip can be seen. Further confidence in the merge can be gained from the SI_DATIM column, which should be filled with consecutive or similar days.
+
+Once comfortable with how that works and that it has been successful, all the columns can be merged to the tacsatp data using the match function.
+
+```{r link tacsat eflalo, message=FALSE, warning=FALSE}
+tacsatp$LE_GEAR  = eflalo$LE_GEAR [match(tacsatp$FT_REF, eflalo$FT_REF)]
+tacsatp$VE_LEN   = eflalo$VE_LEN  [match(tacsatp$FT_REF, eflalo$FT_REF)]
+tacsatp$VE_KW    = eflalo$VE_KW   [match(tacsatp$FT_REF, eflalo$FT_REF)]
+tacsatp$LE_RECT  = eflalo$LE_RECT [match(tacsatp$FT_REF, eflalo$FT_REF)]
+tacsatp$LE_MET   = eflalo$LE_MET  [match(tacsatp$FT_REF, eflalo$FT_REF)]
+tacsatp$LE_WIDTH = eflalo$LE_WIDTH[match(tacsatp$FT_REF, eflalo$FT_REF)]
+tacsatp$VE_FLT   = eflalo$VE_FLT  [match(tacsatp$FT_REF, eflalo$FT_REF)]
+tacsatp$LE_CDAT  = eflalo$LE_CDAT [match(tacsatp$FT_REF, eflalo$FT_REF)]
+tacsatp$VE_COU   = eflalo$VE_COU  [match(tacsatp$FT_REF, eflalo$FT_REF)]
+```
+
+

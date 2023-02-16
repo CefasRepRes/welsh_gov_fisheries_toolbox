@@ -1,0 +1,18 @@
+---
+title: "4_link_to_spatial_grids"
+author: "Roi & Mike"
+date: "08/02/2023"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The splitAmongPings function 
+
+```{r setup, include=FALSE}
+
+```

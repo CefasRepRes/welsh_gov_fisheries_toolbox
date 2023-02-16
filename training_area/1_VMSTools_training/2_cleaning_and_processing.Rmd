@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
+library(vmstools)
 ```
 
 ## Data Cleaning and Processing
@@ -158,6 +159,19 @@ for(iSpec in idx) eflalo[which(eflalo[,iSpec] > an(specBounds[(iSpec-idx[1]+1),2
 
 # Following this, set all NA values to 0
 for(i in kgeur(colnames(eflalo))) eflalo[which(is.na(eflalo[,i]) == T),i] <- 0
+```
+
+Consistency is a key aspect of the data cleaning process, thus, dates and times must be kept in the same format.
+
+```{r date time, message=FALSE, warning=FALSE}
+eflalo$FT_DDAT =  ymd( eflalo$FT_DDAT , tz = "GMT" )  
+eflalo$FT_LDAT =   ymd(eflalo$FT_LDAT  , tz = "GMT" ) 
+eflalo$LE_CDAT =   ymd(eflalo$LE_CDAT  , tz = "GMT" ) 
+eflalo$FT_DDATIM = ymd_hms( paste ( eflalo$FT_DDAT ,eflalo$FT_DTIME         ) , tz = "GMT"   ) 
+eflalo$FT_LDATIM = ymd_hms( paste ( eflalo$FT_LDAT ,eflalo$FT_LTIME         )  , tz = "GMT"  ) 
+eflalo$year = lubridate::year(eflalo$FT_DDATIM )
+eflalo$month = lubridate::month(eflalo$FT_LDATIM)
+eflalo$quarter = lubridate::quarter(eflalo$FT_LDATIM)
 ```
 
 Following this cleaning, you can save the outputs of both datasets. They are saved with the suffix Clean, as this is what the next part of the VMStools sequence is expecting. The following code will make an output directory in the current workspace. This location can be found by using the getwd() function.
