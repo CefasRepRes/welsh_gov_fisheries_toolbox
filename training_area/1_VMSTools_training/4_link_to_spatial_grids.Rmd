@@ -11,8 +11,61 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The splitAmongPings function 
+```{r library, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(vmstools)
+```
 
-```{r setup, include=FALSE}
+Implementing a spatial secondary spatial element such as ICES rectangles or Csquares is simple with the VMStools package. The ICESrectangle function uses the SI_LATI and SI_LONG columns to decipher which ICES rectangle each point is in. Remember, tacsatp is now in use instead of tacsat, this is simply the original tacsat dataset, with the changes made so far applied. Previously, the LE_RECT column has been created by using the match function, which was used in the previous section to pull the ICES rectangle data from the eflalo dataset. It is also possible to do it this way.
+
+```{r ices, include=FALSE}
+tacsatp$LE_RECT <- ICESrectangle(tacsatp)
+head(tacsatp)
+```
+
+Csquares have multiple spatial resolutions, so this must be specified in the command.
+
+```{r csquare, include=FALSE}
+tacsatp$CSQUARE <- CSquare(tacsatp$SI_LONG, tacsatp$SI_LATI, degrees = 0.5)
+head(tacsatp)
+```
+
+It can be noted that entries with the same ICES rectangle may have different Csquares, depending on the degrees value chosen.
+
+The split among pings function evenly aportions the weight and value of the landings in each spatial grid area evenly across the number of pings within it. For this function to work, the data must be in data frame format. It may already be so, but just to be sure.
+
+```{r data frame, include=FALSE}
+tacsatp <- as.data.frame(tacsatp)
+eflalo <- as.data.frame(eflalo)
+```
+
+In order to run the function, it must be dictated whether a vessel is fishing or not, as the landings data must only be distributed between fishing pings. To create this distinction, the vessel's speed will be used to decide its state. The numbers may vary by data, but for this example, any vessels traveling between 1 and 6 knots will be labeled as fishing.
+
+```{r state, include=FALSE}
+fishing <- c(1:6) # set the range which is deemed as "fishing speed"
+
+# if the SI_SP column has a value in the fishing range, it will apply 1 to the SI_STATE column, if not, then it applies 0
+tacsatp$SI_STATE <- ifelse(tacsatp$SI_SP %in% fishing, 1, 0)
+```
+
+Run the split among pings function.
+
+```{r split among pings, include=FALSE}
+tacsatEflalo  = vmstools::splitAmongPings ( tacsat=tacsatp, 
+                                                eflalo=eflalo, 
+                                                variable="all",
+                                                level="day",
+                                                conserve=T )
+```
+
+Save the output.
+
+```{r split among pings, include=FALSE}
+save(tacsatEflalo,file="./output/tacsatEflalo.RData")
+```
+
+```{r plotting, include=FALSE}
 
 ```

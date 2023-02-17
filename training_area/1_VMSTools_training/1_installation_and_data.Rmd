@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Prior to any analysis of logbook and VMS data, the VMStools package must be installed. This isn't available on the CRAN, so we must download the zip file and install it locally. VMStools has multiple dependencies: other packages which it relies upon. These will be installed first.
 
-```{r, dependencies, message=FALSE, warning=FALSE}
+```{r dependencies, message=FALSE, warning=FALSE}
 vmstoolsPackages <-
 c("cluster","data.table","doBy","maps","mapdata","maptools","PBSmapping","sp")
 
@@ -26,14 +26,14 @@ for(i in vmstoolsPackages) try(install.packages(pkgs=i,repos=getOption("repos"))
 
 Now, download the VMStools package from this [link](https://github.com/nielshintzen/vmstools/releases). Choose the vmstools_0.76.zip for Windows and save it in your downloads. Now install the package using the following code; the pathway may need to be adjusted if you have not saved the .zip file in your downloads.
 
-```{r, install, message=FALSE, warning=FALSE}
+```{r install, message=FALSE, warning=FALSE}
 path2VMStoolsDownload <- "C:/downloads/" #this folder is an example folder
 install.packages(paste(path2VMStoolsDownload,"vmstools_0.76.zip",sep=""))
 ```
 
 Now, as with any package, the library must be activated.
 
-```{r, library, message=FALSE, warning=FALSE}
+```{r library, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(dplyr)
 library(tidyverse)
@@ -45,25 +45,32 @@ library(vmstools)
 
 In this case, the VMS and logbook data will be stored in .csv format, meaning there is no requirement to connect directly to the database from R. CSVs can be read into R using the read.csv function. The csv is assigned to an object so it can be called upon and manipulated.
 
-```{r, read_csv, message=FALSE, warning=FALSE}
+```{r read_csv, message=FALSE, warning=FALSE}
 tacsat <- read.csv("your/vms/file/path/here")
 eflalo <- read.csv("your/logbook/file/path/here")
 ```
 
 It is useful to check the formats of the data. This can be done by checking all the necessary columns are present.
 
-```{r, columns, message=FALSE, warning=FALSE}
+```{r columns, message=FALSE, warning=FALSE}
 names(tacsat)
 names(eflalo)
 ```
 
 And that the data entries themselves are as expected.
 
-```{r, data_check, message=FALSE, warning=FALSE}
+```{r data_check, message=FALSE, warning=FALSE}
 head(tacsat)# shows the first 6 entries for each column
 str(tacsat) # allows you to see data types
 
 head(eflalo)
 str(eflalo)
+```
+
+In the instance the data has lower case column names, which can be preferred in SQL for ease of use, the toupper() function, combined with names(), will change their case. This is necessary when using the VMStools package, as the functions are expecting upper case column names.
+
+```{r toupper, message=FALSE, warning=FALSE}
+names(tacsat) <- toupper(names(tacsat)) # overwrites the current names of tacsat with the same names, but passed through the toupper function
+names(eflalo) <- toupper(names(eflalo))
 ```
 
