@@ -19,9 +19,16 @@ library(vmstools)
 
 ## Cleaning VMS data
 
-Data cleaning is an extremely important part of the processing of VMS data. Many errors within the data are commonly caused by technical issues. Sometimes VMS points are recorded at longitudes/latitudes that are not on the earth. 
+Data cleaning is an extremely important part of the processing of VMS data.
+Many errors within the data are commonly caused by technical issues. Sometimes
+VMS points are recorded at longitudes/latitudes that are not on the earth. 
 
-The following code removes VMS points which are recorded incorrectly and so their numbers make it impossible for them to be on the earth. Ideally, the length of 'oog' (number of impossible points) will be low, meaning as many points as possible are usable. These points are identified by their latitudes and longitudes being out of the range of that which we use for the planet: if they fall outside of this range, they must be incorrect and therefore removed.
+The following code removes VMS points which are recorded incorrectly and so
+their numbers make it impossible for them to be on the earth. Ideally, the
+length of 'oog' (number of impossible points) will be low, meaning as many
+points as possible are usable. These points are identified by their latitudes
+and longitudes being out of the range of that which we use for the planet: if
+they fall outside of this range, they must be incorrect and therefore removed.
 
 ```{r off_globe, message=FALSE, warning=FALSE}
 oog <- which(abs(tacsat$SI_LATI) > 90 | abs(tacsat$SI_LONG) > 180)
@@ -31,7 +38,10 @@ oog <- unique(c(oog,which(tacsat$SI_HE < 0 | tacsat$SI_HE >  360)))
 length(oog)
 ```
 
-Sometimes duplicates are created, meaning 2 VMS pings are recorded by the same vessel at the exact same time, making an exact duplicate record. The following code creates a column containing the VE_REF, coordinates and the date/time of each VMS ping, in order to establish duplicates.S
+Sometimes duplicates are created, meaning 2 VMS pings are recorded by the same
+vessel at the exact same time, making an exact duplicate record. The following
+code creates a column containing the VE_REF, coordinates and the date/time of
+each VMS ping, in order to establish duplicates.
 
 ```{r duplicates, message=FALSE, warning=FALSE}
 tacsat$SI_DATIM <- as.POSIXct(paste(tacsat$SI_DATE,tacsat$SI_TIME,sep=" "), 
@@ -46,7 +56,11 @@ tacsat          <- tacsat[!duplicated(uniqueTacsat),] # removes duplicated tacsa
 print(nrow(tacsat)) # how many rows after duplicates removal?
 ```
 
-Next, points which appear on land must be eliminated. Similarly to not being within the bounds of the earth, points which are registered on land masses cannot be correct and therefore must be removed. This is done by importing a dataset for the European coastline and finding the points which intersect with the land. This is done using the pointOnLand function included with the 
+Next, points which appear on land must be eliminated. Similarly to not being
+within the bounds of the earth, points which are registered on land masses
+cannot be correct and therefore must be removed. This is done by importing a
+dataset for the European coastline and finding the points which intersect with
+the land. This is done using the pointOnLand function included with VMStools.
 
 ```{r on land, message=FALSE, warning=FALSE}
 data(europa) # the dataset for the European coastline comes included in the vmstools package, it is called upon here
@@ -61,9 +75,20 @@ pol     <- tacsat[which(idx==1),] #points on land
 tacsat  <- tacsat[which(idx==0),] #tacsat not on land
 ```
 
-The errors found up to now are certain; VMS pings should not be duplicated and they cannot come from inland areas. However, some errors are not so obvious. These may include records that are traveling at very high speeds or spend significant time in harbours, rather than the open water. To remove these, a speed threshold can be set, which will eliminate any points with associated speeds higher than the specific value chosen. It is rare for points to have speeds greater than 20 knots, so spThres is set to 20, but this can be changed accordingly.
+The errors found up to now are certain; VMS pings should not be duplicated
+and they cannot come from inland areas. However, some errors are not so obvious.
+These may include records that are traveling at very high speeds or spend
+significant time in harbours, rather than the open water. To remove these,
+a speed threshold can be set, which will eliminate any points with associated
+speeds higher than the specific value chosen. It is rare for points to have
+speeds greater than 20 knots, so spThres is set to 20, but this can be changed
+accordingly.
 
-By creating a summary of the speed column in the tacsat data, it can be seen that the average speeds are around 2-4 knots, whilst the maximum is much higher at 46.81, suggesting it is an outlier. This is supported by the subsequent histogram, which allows for an appropriate threshold to be set based on the frequency of vessels traveling at each speed.
+By creating a summary of the speed column in the tacsat data, it can be seen
+that the average speeds are around 2-4 knots, whilst the maximum is much
+higher at 46.81, suggesting it is an outlier. This is supported by the
+subsequent histogram, which allows for an appropriate threshold to be set
+based on the frequency of vessels traveling at each speed.
 
 ```{r high speed, message=FALSE, warning=FALSE}
 summary(tacsat$SI_SP) # summarise the speed (SI_SP) statistics
@@ -74,7 +99,8 @@ idx <- which(tacsat$SI_SP > spThres) # creating an object containing all records
 tacsat <- tacsat[-idx,] # removing the idx object just created, so only the records with <20 speed remain
 ```
 
-Now to remove points within ports and harbours. This is done by calling on the harbours dataset built into the VMStools package.
+Now to remove points within ports and harbours. This is done by calling on the
+harbours dataset built into the VMStools package.
 
 ```{r harbours, message=FALSE, warning=FALSE}
 data(harbours) # calls in the harbours dataset
@@ -90,7 +116,10 @@ tacsat <- tacsat[which(idx==0),]
 
 ### Cleaning Logbook data
 
-Errors in logbook data mostly stem from human error, for example an arrival date set before the departure date - an impossible occurrence. Additionally, vessel or gear information such as mesh size or vessel length should be within reasonable bounds; those outside can be removed.
+Errors in logbook data mostly stem from human error, for example an arrival
+date set before the departure date - an impossible occurrence. Additionally,
+vessel or gear information such as mesh size or vessel length should be within
+reasonable bounds; those outside can be removed.
 
 First, check for duplicates.
 
@@ -98,7 +127,10 @@ First, check for duplicates.
 eflalo <- eflalo[!duplicated(eflalo$LE_ID),]
 ```
 
-If for some reason the data is problematic and the above doesn't work as it should, the following will take many of the columns and combine them into one, creating a unique column due to the number of elements included. Then duplicate rows can be removed.
+If for some reason the data is problematic and the above doesn't work as it
+should, the following will take many of the columns and combine them into one,
+creating a unique column due to the number of elements included.
+Then duplicate rows can be removed.
 
 ```{r efl duplicates, message=FALSE, warning=FALSE}
 
@@ -109,7 +141,10 @@ ID <- paste(eflalo$VE_REF, eflalo$VE_FLT, eflalo$VE_COU, eflalo$VE_LEN, eflalo$V
 eflalo <- eflalo[!duplicated(ID),]
 ```
 
-As previously stated, entries where the landing time/date is earlier than the departure time are clearly wrong, these an be removed by creating a time-stamp for departure and arrival dates and finding entries where landing time is greater than departure.
+As previously stated, entries where the landing time/date is earlier than
+the departure time are clearly wrong, these an be removed by creating a
+time-stamp for departure and arrival dates and finding entries where landing
+time is greater than departure.
 
 ```{r dates, message=FALSE, warning=FALSE}
 eflalop           <- eflalo
@@ -129,7 +164,10 @@ eflalo            <- eflalo[idx,]
 print(nrow(eflalo))
 ```
 
-Extremely large catches must also be dealt with; if the largest catch of a species is over 10x larger than the 2nd largest, it is unlikely to be correct. The following code creates a threshold for each species based on a specified multiplier of the 2nd largest catch per species.
+Extremely large catches must also be dealt with; if the largest catch of a
+species is over 10x larger than the 2nd largest, it is unlikely to be correct.
+The following code creates a threshold for each species based on a specified
+multiplier of the 2nd largest catch per species.
 
 ```{r large catch, message=FALSE, warning=FALSE}
 # Retrieving the unique names of all species in the datset
@@ -161,7 +199,8 @@ for(iSpec in idx) eflalo[which(eflalo[,iSpec] > an(specBounds[(iSpec-idx[1]+1),2
 for(i in kgeur(colnames(eflalo))) eflalo[which(is.na(eflalo[,i]) == T),i] <- 0
 ```
 
-Consistency is a key aspect of the data cleaning process, thus, dates and times must be kept in the same format.
+Consistency is a key aspect of the data cleaning process, thus, dates and
+times must be kept in the same format.
 
 ```{r date time, message=FALSE, warning=FALSE}
 eflalo$FT_DDAT =  ymd( eflalo$FT_DDAT , tz = "GMT" )  
@@ -174,7 +213,10 @@ eflalo$month = lubridate::month(eflalo$FT_LDATIM)
 eflalo$quarter = lubridate::quarter(eflalo$FT_LDATIM)
 ```
 
-Following this cleaning, you can save the outputs of both datasets. They are saved with the suffix Clean, as this is what the next part of the VMStools sequence is expecting. The following code will make an output directory in the current workspace. This location can be found by using the getwd() function.
+Following this cleaning, you can save the outputs of both datasets. They are
+saved with the suffix Clean, as this is what the next part of the VMStools
+sequence is expecting. The following code will make an output directory in the
+current workspace. This location can be found by using the getwd() function.
 
 ```{r save, message=FALSE, warning=FALSE}
 getwd()
