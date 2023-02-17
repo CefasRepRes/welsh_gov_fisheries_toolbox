@@ -65,7 +65,3 @@ Save the output.
 ```{r split among pings, include=FALSE}
 save(tacsatEflalo,file="./output/tacsatEflalo.RData")
 ```
-
-```{r plotting, include=FALSE}
-
-```
