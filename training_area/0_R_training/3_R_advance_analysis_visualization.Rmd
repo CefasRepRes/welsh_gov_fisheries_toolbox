@@ -120,10 +120,47 @@ fish_d%>%group_by(LE_GEAR)%>%summarise(mean = mean(SI_SP), max = max(SI_SP), min
 
 
 
- 
- 
-# c.Tidyr -------
+# c.ggplot2 -------
 
+ggplot2 is an extremely useful package when it comes to plotting data. for example, the following code creates a column graph depicting the total weight caught by each egar type, in the fish_data dataset.
+
+```{r ggplot2, message= FALSE}
+unique(fish_data$LE_GEAR) # Lists the gear tyes in the dataset
+
+ggplot(data = fish_data) +
+  geom_col(mapping = aes(x = LE_GEAR, y = LE_KG_TOT))
+```
+
+Now the value.
+
+```{r ggplot2, message= FALSE}
+ggplot(data = fish_data) +
+  geom_col(mapping = aes(x = LE_GEAR, y = LE_EURO_TOT))
+```
+
+Use of par enables you to organise the outputs, so they can be viewed side by side.
+
+```{r ggplot2, message= FALSE}
+par(mfrow=c(1,2))
+
+ggplot(data = fish_data) +
+  geom_col(mapping = aes(x = LE_GEAR, y = LE_KG_TOT))
+
+ggplot(data = fish_data) +
+  geom_col(mapping = aes(x = LE_GEAR, y = LE_KG_TOT))
+```
+
+Colours can be changed with a simple color command.
+
+```{r ggplot2, message= FALSE}
+par(mfrow=c(1,2))
+
+ggplot(data = fish_data) +
+  geom_col(mapping = aes(x = LE_GEAR, y = LE_KG_TOT), color = "blue")
+
+ggplot(data = fish_data) +
+  geom_col(mapping = aes(x = LE_GEAR, y = LE_KG_TOT), colour = "orange")
+```
 
 
 
