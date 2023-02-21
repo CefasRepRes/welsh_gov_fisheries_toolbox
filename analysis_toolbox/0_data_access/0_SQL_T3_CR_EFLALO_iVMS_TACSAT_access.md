@@ -1,31 +1,31 @@
-declare @Year int = 2022
+# SQL script to extract EFLALO and TACSAT data from Welsh Goverment fisheries databases 
 
-select FishingTripDmk, ft.TripIdentifier, ft.StartDatetime, DATEADD(dd, 1, ft.EndDatetime) as EndDatetime, ft.DeparturePortDmk, ft.ArrivalPortDmk, ft.RegisteredFishingVesselDmk, v.RSSNumber
-into #U10TripsToExtract
-from DM.DimFishingTrip ft with(nolock)
-left join DM.DimVesselRegistration v with(nolock) on ft.RegisteredFishingVesselDmk = v.RegisteredFishingVesselDmk
-where YEAR(CAST(StartDatetime AS DATE)) = @Year
-and TripIdentifier like 'GBR-TRP-SDS-%'
+---
+
+This document provide the scripts needed to extract Catch Recorder (logbook) data in EFLALO format and iVMS/VMS data in TACSAT format from Welsh government fisheries database sources. 
+
+Welsh Government access to commercial fisheries databases requires the use of CITRIX virtual environments. In consequences , the EFLALO and TACSAT data extracted in the CITRIX environment needs to be transferred in the Welsh Government local analysis environments ( Fisheries department computers ). 
+
+At the time we are developing this version of the Fisheries Toolbox  , the data need to be copied into a CSV file in the CITRIX environment and transferred into local computers to follow the analysis . Therefore , the final step of the extraction process requires save each of the data sets extracted in CSV files with the following name convention: 
+
+  -   eflalo_ft.csv
+  -   eflalo_le.csv
+  -   eflalo_spe.csv
+  -   tacsat.csv
+
+### 1. Extract Catch recorder data in EFLALO format specification. The EFLALO data is extracted in three data blocks: 
+
+  -   **EFLALO_FT** (Fishing Trip): Data related to vessel and a fishing trip details. Departure and return dates and harbour , vessel length, vessel name, etc.
+  -   **EFLALO_LE** (Log Event): Dataset with information of the fishing events (log events) within a given fishing trip . One Fishing Trip can include several Log Events. The Log Event records include information on date and time of the event,  gear used, ICES statistical rectangle, etc. 
+  -   **EFLALO_SPE** (Species): Dataset with captured species information. Each Log Event must have a species catch record with the species been captured and the weight caught. 
+  
 
 
-select FishingTripDmk, ft.TripIdentifier, ft.StartDatetime, ft.EndDatetime, ft.DeparturePortDmk, ft.ArrivalPortDmk, ft.RegisteredFishingVesselDmk, v.RSSNumber
-into #O10TripsToExtract
-from DM.DimFishingTrip ft with(nolock)
-left join DM.DimVesselRegistration v with(nolock) on ft.RegisteredFishingVesselDmk = v.RegisteredFishingVesselDmk
-where YEAR(CAST(StartDatetime AS DATE)) = @Year
-and TripIdentifier not like 'GBR-TRP-SDS-%'
+#### 1.1 Extract EFLALO_FT dataset: 
 
-select *
-into #TripsToExtract
-from
-(
-	select * from #U10TripsToExtract
-	union
-	select * from #O10TripsToExtract
-) r
 
-drop table #U10TripsToExtract
-drop table #O10TripsToExtract
+
+```sql 
 
 
 -- eflao_ft
@@ -57,6 +57,21 @@ left join DM.DimSite rtp with(nolock) on x.ArrivalPortDmk = rtp.SiteDmk
 where fo.ActivityType = 'DEPARTURE'
 order by x.FishingTripDmk
 
+
+
+
+```
+
+#### 1.2 Extract EFLALO_LE dataset: 
+
+The extraction of EFLALO_LE required a workaround to include both data with Mesh Size information provided and join qwith data without mesh size information. 
+
+**Step 1**: Extract EFLALO_LE for log event records  with mesh size information and save in a temporary table named: *LeWithMesh*
+
+
+```sql 
+
+
 -- eflalo_le
 select distinct
 	  fo.FishingOperationDmk as LE_ID
@@ -83,6 +98,12 @@ left join DM.DimFAOFishingArea fao with(nolock) on fo.FAOFishingAreaDmk = fao.FA
 where fo.ActivityType = 'FISHING_OPERATION'
 and gc.FishingGearType is not null
 order by x.FishingTripDmk, fo.FishingOperationDmk
+
+```
+
+**Step 2**: The log events stored in the temproary table *LeWithMesh* are joined to log events with no mesh size included
+
+```sql
 
 select distinct
 	  fo.FishingOperationDmk as LE_ID
@@ -117,6 +138,17 @@ order by eflalo_ft_FT_REF, LE_ID
 
 drop table #LeWithMesh
 
+```
+
+
+
+#### 1.3 Extract EFLALO_SPE dataset
+
+Finally , the last block dataset includes the data with the species information captures during each fishing event recorded in Log Events table.
+
+
+```sql 
+
 -- eflalo_spe
 select 
 	  fo.FishingOperationDmk as LE_ID
@@ -131,6 +163,18 @@ left join DM.DimSpecies s with(nolock) on s.SpeciesDmk = foc.SpeciesDmk
 where fo.ActivityType = 'FISHING_OPERATION'
 group by fo.FishingOperationDmk, x.FishingTripDmk, s.FAOSpeciesCode
 order by x.FishingTripDmk, fo.FishingOperationDmk
+
+
+
+```
+
+
+
+### 2. Extract iVMS/VMS data TACSAT format specification. 
+
+The TACSAT data is extracted for the trips selected in *#TripsToExtract* table. 
+
+```sql 
 
 -- tacsat
 select distinct
@@ -152,3 +196,54 @@ inner join dm.FactVesselPosition p with(nolock) on x.RegisteredFishingVesselDmk 
 order by x.FishingTripDmk
 
 drop table #TripsToExtract
+
+
+```
+
+
+
+### 3. Auxiliary temporary tables to extract EFLALO and TACSAT for a selected fishing trips. 
+
+This script is applied for the selection of the fishing trips of interest and  to obtain EFLALO and TACSAT trips related data. Due to the large volumes of records that could be included in the TACSAT (iVMS) dataset , it is recommended to extract data by temporal ranges. 
+
+In this example there were selected trips only for the year 2022.And trips have been selected both for Over 10 m trips and Under 10 meters trips: 
+
+  - Under 10 meters trips : Includes the SQL clause  *WHERE TripIdentifier like 'GBR-TRP-SDS-%'*
+  - Over 10 meters trips : Includes the SQL clause  *WHERE TripIdentifier not like 'GBR-TRP-SDS-%'*
+  
+In the final step of this script , the both dataset are united and stored in the table **#TripsToExtract** used for the EFLALO and TACSAT extraction. 
+
+```sql 
+
+declare @Year int = 2022
+
+select FishingTripDmk, ft.TripIdentifier, ft.StartDatetime, DATEADD(dd, 1, ft.EndDatetime) as EndDatetime, ft.DeparturePortDmk, ft.ArrivalPortDmk, ft.RegisteredFishingVesselDmk, v.RSSNumber
+into #U10TripsToExtract
+from DM.DimFishingTrip ft with(nolock)
+left join DM.DimVesselRegistration v with(nolock) on ft.RegisteredFishingVesselDmk = v.RegisteredFishingVesselDmk
+where YEAR(CAST(StartDatetime AS DATE)) = @Year
+and TripIdentifier like 'GBR-TRP-SDS-%'
+
+
+select FishingTripDmk, ft.TripIdentifier, ft.StartDatetime, ft.EndDatetime, ft.DeparturePortDmk, ft.ArrivalPortDmk, ft.RegisteredFishingVesselDmk, v.RSSNumber
+into #O10TripsToExtract
+from DM.DimFishingTrip ft with(nolock)
+left join DM.DimVesselRegistration v with(nolock) on ft.RegisteredFishingVesselDmk = v.RegisteredFishingVesselDmk
+where YEAR(CAST(StartDatetime AS DATE)) = @Year
+and TripIdentifier not like 'GBR-TRP-SDS-%'
+
+select *
+into #TripsToExtract
+from
+(
+	select * from #U10TripsToExtract
+	union
+	select * from #O10TripsToExtract
+) r
+
+drop table #U10TripsToExtract
+drop table #O10TripsToExtract
+
+
+
+```

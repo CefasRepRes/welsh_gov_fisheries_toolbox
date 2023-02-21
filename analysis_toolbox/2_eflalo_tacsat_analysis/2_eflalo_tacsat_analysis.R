@@ -1,18 +1,20 @@
 
-for(year in yearsToSubmit)  {
   
-  print(year)
-  
-  load(file = paste0(outPath,paste0("cleanEflalo",year,".RData")) )
-  load(file = paste0(outPath, paste("cleanTacsat", year, ".RData")) )
+  load(file = '.\\..\\data\\eflalo_gbw.RData' )
+  load(file = '.\\..\\data\\tacsat_gbw.RData' )
   
   
   # 2.1 Merge the TACSAT and EFLALO data together --------------------------------------------
   
   # Merge eflalo and tacsat =================================
   
-  tacsatp <- mergeEflalo2Tacsat(eflalo,tacsat)
+  tacsatp= tacsat_gbw%>%mutate(FT_REF = SI_FT) 
   
+  head(tacsat_gbw)
+  
+  
+  
+
   # Assign gear and length to tacsat =================================
   
   
@@ -31,45 +33,30 @@ for(year in yearsToSubmit)  {
   # Save not merged tacsat data = 
   
   
-  tacsatpmin <- subset(tacsatp, FT_REF == 0)
-  save(
-    tacsatpmin,
-    file = file.path(outPath, paste0("tacsatNotMerged", year, ".RData"))
-  )
-  
-  tacsatp <- subset(tacsatp,FT_REF != 0)
-  save(
-    tacsatp,
-    file = file.path(outPath, paste0("tacsatMerged", year, ".RData"))
-  )
-  
-  
   # 2.2  Define activity  ---------------------------------------------------------------------
   
   
   # Calculate time interval between points ===================================
-  tacsatp <- intervalTacsat(tacsatp, level = "trip", fill.na = TRUE)
-  
+ 
+
   # Reset values that are simply too high to 2x the regular interval rate  
   
+  intvThres = 2
   
   tacsatp$INTV[tacsatp$INTV > intvThres] <- 2 * intvThres
   
   
   # Remove points with NA's in them in critial places ========================
   
+  head(tacsatp)
+  tacsatp%>%filter(
+    !is.na(VE_REF)  |
+    !is.na(SI_LONG) | 
+    !is.na(SI_LATI) |
+    !is.na(SI_DATIM)| 
+    !is.na(SI_SP)
+  )
   
-  idx <-
-    which(
-      is.na(tacsatp$VE_REF) == TRUE |
-        is.na(tacsatp$SI_LONG) == TRUE |
-        is.na(tacsatp$SI_LATI) == TRUE |
-        is.na(tacsatp$SI_DATIM) == TRUE |
-        is.na(tacsatp$SI_SP) == TRUE
-    )
-  if (length(idx) > 0) {
-    tacsatp <- tacsatp[-idx, ]
-  }
   
   
   # Define speed thresholds associated with fishing for gears =====================

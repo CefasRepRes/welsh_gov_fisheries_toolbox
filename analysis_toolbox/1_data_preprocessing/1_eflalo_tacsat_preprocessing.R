@@ -1,46 +1,215 @@
-# 1  Load the data  -----------------------------------------------------------
+options(dplyr.width = Inf, dplyr.print_min = 500)
+library(vmstools)
 
-# 1.1 Load vmstools underlying data ===========================================
 
-# data(euharbours); if(substr(R.Version()$os,1,3)== "lin")
-data(harbours)
-data(ICESareas)
-data(europa)
+#### QUALITY CONTROL:  Clean data with potential  outliers ########
 
-eorpa <- NULL
-for(d in 1:1991){
-  eorpa <- rbind(eorpa, europa@polygons[[d]]@Polygons[[1]]@coords, c(NA, NA))
-}
 
+
+# 1. Clean the EFLALO data  ============================================================================
+
+
+  ## 1.1  Number of EFLALO records and fishing Log Events records
+
+    ## Q1.1: How many overall records are by  trip?  
+    
+    eflalo_gbw%>%group_by(FT_REF)%>%summarise(n = n())%>%arrange(desc(n))
+    
+    
+    ## Q1.2: How many log events are by  trip?  
+    
+    
+    eflalo_gbw%>%distinct (FT_REF, LE_ID ) %>%group_by(FT_REF)%>%summarise(n = n())%>%arrange(desc(n))
+    
+    ## Q1.3: Do we find a range of values that aren't realist when compared with the whole data stats?
+    
+      ## Select a trip with more record associated and explore the data 
+      
+      eflalo_gbw%>%filter( FT_REF == 10295820110      )
+
+
+
+  
+  ## 1.2 Duration of the fishing trips 
+  
+  ## Observe the trips with more days duration . Identify outliers and potential errors in Departure and Landing dates. 
+  
+  eflalo_gbw%>%select(trip_days, FT_REF, FT_DDATIM,FT_LDATIM,  VE_LEN)%>%arrange(desc(trip_days))
+  
+  ## Q2.1: If outliers have been identified? Should be removed those entried records or data can be fixed?
+  
+  ## Filter out those outlier trips durations
+  
+   trips_in = eflalo_gbw%>%filter(trip_days <= 10)%>%select(FT_REF)%>%pull()
+
+   eflalo_gbw = eflalo_gbw%>%filter(FT_REF %in% trips_in)
+   
+    ## Q2.2: Why we have done a 2 steps filtering?
+   
+   
+   
+   
+   
+    
+   # 1.3 Warn for outlying catch records ----------------------------------------------------------
+   
+    ## Select a logarithm scale landing weight threshold ( e.g. 1.5)
+   
+   landingThreshold = 1.5
+   
+   ## Identify the records with species captures over expected thresholds 
+   
+      eflalo_gbw%>%group_by(  LE_GEAR, LE_SPE)%>%arrange( LE_GEAR, LE_SPE,  LE_KG  )%>%
+      mutate (diff_le_kg =   lead (log10(LE_KG), n = 1) - log10 ( LE_KG) ) %>% #select (rr1, rr2)
+      filter(!is.na(diff_le_kg))%>%
+      summarise(max = max(diff_le_kg), min = min(diff_le_kg) ) %>%
+      filter(max > landingThreshold)
+      print(n=200)
+     
+     
+     
+     ## Explore those captures with high difference identified and decide if must be removed from records 
+     
+     eflalo_gbw%>%filter(LE_GEAR == 'GTR' & LE_SPE == 'SOL')%>%select ( LE_KG)%>%arrange(desc(LE_KG))
+     eflalo_gbw%>%filter(LE_GEAR == 'FPO' & LE_SPE == 'TGS')%>%select ( LE_KG)%>%arrange(desc(LE_KG))
+     
+   
+  # 1.4 Check for NA's in catch records ----------------------------------------------------------
+     
+    
+     eflalo_gbw%>%filter(is.na(LE_KG))
+    
+  # 1.5 Check for NA's in time stamp  ----------------------------------------------------------------------------
+     
+     
+     eflalo_gbw%>%filter(is.na(FT_DDATIM) | is.na(FT_LDATIM))
+     
+     
+  
+  
+   # 1.6  Remove non-unique trip numbers -----------------------------------------------------------------------------
+   
+     
+     duplicate_analysis =   eflalo_gbw%>%distinct(VE_REF,FT_REF,  FT_DDAT, FT_LDAT)%>%
+                            group_by(VE_REF, FT_DDAT, FT_LDAT)%>%
+                            summarise(number_trips = n())%>%
+                            mutate(duplicated = ifelse( number_trips >  1, TRUE , FALSE) )
+     
+     ## Explore duplicated trips details
+     
+     eflalo_gbw%>%left_join (duplicate_analysis , by = c ( 'VE_REF', 'FT_DDAT', 'FT_LDAT'))%>%
+              filter(duplicated == TRUE)%>%arrange(VE_REF, FT_REF, LE_SPE)
+     
+     ## Identify the trip id's that are duplicated 
+     
+      duplicate_trips = eflalo_gbw%>%
+                         left_join (duplicate_analysis , by = c ( 'VE_REF', 'FT_DDAT', 'FT_LDAT'))%>%
+                         group_by(FT_REF)%>%mutate ( number_records = n ())%>%  ungroup()%>%
+                         filter(duplicated == TRUE)%>%
+                         distinct(VE_REF, FT_REF, FT_DDAT ,  FT_LDAT , number_records)%>%
+                         arrange(VE_REF,   FT_DDAT ,  FT_LDAT , desc(number_records) )%>%ungroup()%>%
+                         group_by(VE_REF, FT_DDAT,FT_LDAT)%>%
+                         mutate(r_num = row_number() )%>%
+                         filter(r_num > 1)%>%
+                         select(FT_REF)%>%
+                         pull()
+     
+      ## Filter out the duplicated trips
+      
+      eflalo_gbw =   eflalo_gbw %>%
+                    filter( ! FT_REF %in% duplicate_trips   ) 
+   
+    
+   
+    
+   
+   
+   # 1.7 Remove records with arrival date before departure date  ------------------------------------------------------------
+   
+     
+      ## Use the field created with trip duration: trip_days
+      ## A value of 0 or negative would means departure and landing dates are same or reversed
+     
+      eflalo_gbw%>%filter(trip_days <= 0 )
+   
+   
+   # 2.3.7 Remove trip with overlap with another trip --------------------------------------------------------------------------- 
+   
+    ## Identify the vessel trips that have a departure date overlapping with previous return/landing date
+   
+   
+      overlaps_analysis =  eflalo_gbw%>%distinct(VE_REF, FT_REF, FT_DDATIM, FT_LDATIM)%>%
+                           arrange(VE_REF, FT_DDATIM)%>%
+                           group_by(VE_REF)%>%
+                           mutate( overlaps = FT_LDATIM > lead(FT_DDATIM)   )
+     
+     
+     
+     ## Check what vessel and trips dates are overlapping
+     
+       overlaps_analysis%>%
+       filter ( overlaps == TRUE)
+       
+       
+   
+   
+       ## Filter the trips details for the vessel during the overlapping dates 
+       
+       overlaps_analysis%>%
+       filter( VE_REF == 'A15264' & FT_DDATIM > '2022-10-20' & FT_DDATIM < '2022-11-20'  ) %>%
+         arrange( VE_REF, FT_DDATIM)
+       
+       eflalo_gbw%>%
+         filter( VE_REF == 'A15264' & FT_DDATIM > '2022-10-20' & FT_DDATIM < '2022-11-20'  ) %>%
+         group_by(FT_REF)%>%
+         summarise(numb = n())
+       
+       ## Following this analysis we have found out that these trips are duplicated 
+       ## The three overlapping trips have the  same reported species and details
+       
+       eflalo_gbw%>%filter( FT_REF %in% c( '10343392884', '10343392891' ))
+     
+        
+      ## Q1: What are you doing with the overlapping trips? Do we remove them or fix them?
+        ## This will impact the VMS locations associated to these trips , so to avoid duplication and conflicts , correct or delete overlapping trips
+        ## In the example above the ideal solution would be remove 2 out of the 3 duplicated trips recorded
+   
+   
+
+       
+       
+       
+# 2 Clean  TACSAT data  ----------------------------------------------------------------------------------
+       
+       
+# 1.1 Load spatial auxiliary data ===========================================
+
+       
+## Define an object bbox with the area of interest 
+aoi = st_bbox(c(xmin = -15, xmax = 3, ymax = 60, ymin = 40), crs = st_crs(4326))
+       
+welsh_marine_area = st_read(dsn = '.\\..\\data\\wales_plan_area.geojson')
+port_3km = st_read(dsn = '.\\..\\data\\mmo_landing_ports_3km_buffer.geojson')
+land = st_read(dsn = '.\\..\\data\\Europe_coastline_poly.shp')
+land_4326 = land%>%st_transform(4326)
+
+
+europe_aoi = st_crop(x = land_4326, y = aoi)
+
+plot( europe_aoi)
+ 
+ 
+ 
+ 
 
 # 2 Clean the TACSAT and EFLALO data  ----------------------------------------------------------------------------------
+ 
+   
 
-#  Looping through the data years
-for(year in yearsToSubmit){
-  print(year)
+## Filter TACSAT data with the trips result from cleaning EFLALO data
+
+tacsat_gbw = tacsat_gbw%>%filter(SI_FT %in% ( eflalo_gbw%>%distinct(FT_REF)%>%pull()) ) 
   
-  # 2.1 load tacsat and eflalo data from file (they need to be in tacsat2 and eflalo2 format already ==================
-  # see https://github.com/nielshintzen/vmstools/releases/ -> downloads ->Exchange_EFLALO2_v2-1.doc for an example
-  
-  tacsat_name <-
-    load(
-      file.path(
-        dataPath,
-        paste0("tacsat_", year, ".RData")
-      )); #- data is saved as tacsat_2009, tacsat_2010 etc
-  eflalo_name <-
-    load(
-      file.path(
-        dataPath,
-        paste0("eflalo_", year, ".RData")
-      )); #- data is saved as eflalo_2009, eflalo_2010 etc
-  
-  tacsat <- get(tacsat_name) # rename to tacsat
-  eflalo <- get(eflalo_name) # rename to eflalo
-  
-  #- Make sure data is in right format
-  tacsat <- formatTacsat(tacsat)
-  eflalo <- formatEflalo(eflalo)
   
   # 2.2 Take only VMS pings in the ICES areas ==============================================
   
@@ -57,476 +226,168 @@ for(year in yearsToSubmit){
   tacsat <- tacsat[lengths(overs) > 0,]
   
   
-  coordsEflalo <- ICESrectangle2LonLat( na.omit( unique( eflalo$LE_RECT )))
-  coordsEflalo$LE_RECT <- na.omit( unique( eflalo$LE_RECT ))
-  coordsEflalo <-
-    coordsEflalo[
-      is.na( coordsEflalo[, 1] ) == FALSE |
-        is.na( coordsEflalo[, 2] ) == FALSE,
-    ]
-  
-  cornerPoints <- list()
-  for(i in 1:nrow(coordsEflalo)) {
-    cornerPoints[[i]] <-
-      cbind(
-        SI_LONG = coordsEflalo[i, "SI_LONG"] + c(0, 0.5, 1, 1, 0),
-        SI_LATI = coordsEflalo[i, "SI_LATI"] + c(0, 0.25, 0, 0.5, 0.5),
-        LE_RECT = coordsEflalo[i, "LE_RECT"]
-      )
-  }
-  
-  coordsEflalo <-
-    as.data.frame(
-      do.call(
-        rbind,
-        cornerPoints
-      ),
-      stringsAsFactors = FALSE
-    )
-  coordsEflalo$SI_LONG <- as.numeric(coordsEflalo$SI_LONG)
-  coordsEflalo$SI_LATI <- as.numeric(coordsEflalo$SI_LATI)
-  idxI <-
-    over(
-      SpatialPoints(
-        coordsEflalo[, c("SI_LONG", "SI_LATI")],
-        CRS(proj4string(ICESareas))),
-      ICESareas
-    )
-  eflalo <-
-    subset(
-      eflalo,
-      LE_RECT %in% unique(coordsEflalo[which(idxI > 0), "LE_RECT"])
-    )
-  
+ 
   #   2.2 Clean the tacsat data  ============================================================================
   
   
-  # 2.2.1 Keep track of removed points ----------------------------------------------------------------- 
-  
-  remrecsTacsat <-
-    matrix(
-      NA,
-      nrow = 6, ncol = 2,
-      dimnames =
-        list(
-          c("total", "duplicates", "notPossible", "pseudoDuplicates", "harbour", "land"),
-          c("rows", "percentage"))
-    )
-  remrecsTacsat["total", ] <- c(nrow(tacsat), "100%")
   
   # 2.2.2 Remove duplicate records ---------------------------------------------------------------------- 
   
-  tacsat$SI_DATIM <-
-    as.POSIXct(
-      paste(tacsat$SI_DATE, tacsat$SI_TIME),
-      tz = "GMT",
-      format = "%d/%m/%Y  %H:%M"
-    )
-  uniqueTacsat <-
-    paste(tacsat$VE_REF, tacsat$SI_LATI, tacsat$SI_LONG, tacsat$SI_DATIM)
-  tacsat <- tacsat[!duplicated(uniqueTacsat), ]
-  remrecsTacsat["duplicates",] <-
-    c(
-      nrow(tacsat),
-      100 +
-        round(
-          (nrow(tacsat) - as.numeric(remrecsTacsat["total", 1])) /
-            as.numeric(remrecsTacsat["total", 1]) *
-            100,
-          2)
-    )
+  
+  tacsat_gbw%>%
+    group_by(VE_REF, SI_LATI, SI_LONG , SI_DATIM )%>%
+    filter(n()> 1)%>%
+    arrange(VE_REF, SI_DATIM, SI_LATI, SI_LONG)
+  
+  ## From the overlap trip analysis done with EFLALO we can identify if the duplicated VMS locations correspond to those overlaping trips 
+  
+  overlaps_analysis %>%filter(FT_REF %in% c( '10343392891', '10343392884') ) 
+  
+  ##  This confirms that these trips overlaps and therefore the VMS location is duplicated and assigned to the both trips
+  ## To fix this error will require correct overlaping trips and reasign the trip identifiers to VMS locations 
+  
+  
+    
   
   
   # 2.2.3 Remove points that cannot be possible -----------------------------------------------------------
   
-  idx <- which(abs(tacsat$SI_LATI) > 90 | abs(tacsat$SI_LONG) > 180)
-  idx <- unique(c(idx, which(tacsat$SI_HE < 0 | tacsat$SI_HE > 360)))
-  idx <- unique(c(idx, which(tacsat$SI_SP > spThres)))
-  if (length(idx) > 0) tacsat <- tacsat[-idx,]
-  remrecsTacsat["notPossible",] <-
-    c(
-      nrow(tacsat),
-      100 +
-        round(
-          (nrow(tacsat) - as.numeric(remrecsTacsat["total",1])) /
-            as.numeric(remrecsTacsat["total",1]) *
-            100,
-          2)
-    )
+  
+  
+  tacsat_gbw%>%filter(abs(SI_LATI) > 90 || abs(SI_LONG) > 180)
+  tacsat_gbw%>%filter(SI_HE < 0 || SI_HE > 360)
+  tacsat_gbw%>%filter(SI_SP > 25 ) 
+  
+  
   
   # 2.2.4 Remove points which are pseudo duplicates as they have an interval rate < x minutes ------------------
   
-  tacsat <- sortTacsat(tacsat)
-  tacsatp <- intervalTacsat(tacsat, level = "vessel", fill.na = TRUE)
-  tacsat <-
-    tacsatp[
-      which(
-        tacsatp$INTV > intThres |
-          is.na(tacsatp$INTV) == TRUE) ,
-      -grep("INTV", colnames(tacsatp))
-    ]
-  remrecsTacsat["pseudoDuplicates",] <-
-    c(
-      nrow(tacsat),
-      100 +
-        round(
-          (nrow(tacsat) - as.numeric(remrecsTacsat["total", 1])) /
-            as.numeric(remrecsTacsat["total", 1]) *
-            100,
-          2)
-    )
+  ## Convert the TACSAT into a spatial object (SF package)
+  
+  tacsat_gbw_geom = tacsat_gbw%>%ungroup()%>%st_as_sf(., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
+  
+    ## Q1: What is the minimum expected time interval between iVMS positions
+  
+    ## Use that value to filter potential pseudo-duplicates ( values below the minimum expected interval)
+  
+  minInterval = 1 / 60 ## 1 minute converted in hours (0.01666667 hours)
+  
+  tacsat_gbw_geom = tacsat_gbw_geom%>%ungroup()%>%
+                    group_by(VE_REF, SI_FT)%>% arrange (VE_REF, SI_DATIM)%>%
+                    mutate (INTV =  difftime(SI_DATIM , lag(SI_DATIM), units = "hours" )  )%>% ## Calcualte the difference between a iVMS loction time stamp and previous location to calcualte a fishign effort in a given location
+                    mutate(interval_mean = mean(INTV , na.rm = T))%>% ## Calcualte the mean to replace the NA's interval when a VMS location is the 1st of a trip and cannot calculate with a prev. iVMS location
+                    mutate(INTV = ifelse(is.na(INTV), interval_mean, INTV ))%>%  ## Convert the NA's into a effort represented by the mean of that vessel durign given trip
+                    select(- interval_mean) %>%ungroup()
   
   
-  rm(tacsatp) # remove temporary variable tacsatp  
+
+      ##Q2: Check the structure of TACSAT . Did the field types changed?
   
+      str(tacsat_gbw_geom) 
+      
+      ##Q3: Calculate the minimum , maximum  and mean intervals in our data 
+      
+      tacsat_gbw_geom%>%filter(!is.na(INTV))%>%summarise(minIntv = min(INTV), maxIntv = max (INTV), meanIntv = mean(INTV))#*60
+  
+      ##Q4: Explore the intervals with a histogram. Outliers are detected? Can you fix or remove the wrong records?
+      
+      ggplot(tacsat_gbw_geom%>%filter(INTV<1), aes(INTV))+geom_histogram(bins = 50)
+      
+      ## Q5: Use the filter to explore the large intervals records. Take the VE_REF and SI_FT to explore the trip 
+      
+      tacsat_gbw_geom%>%filter(INTV >50 )%>%arrange(VE_REF, SI_DATIM)%>%print(n= 100)%>%select(VE_REF, SI_FT)
+        as.data.frame()
+      
+        ##Q5.1: Can you check the restultd intervals for a given vessel and trip id           
+        
+      tacsat_gbw_geom%>%filter ( VE_REF == 'C21140' &  SI_FT == '10343398870'  ) %>%arrange(SI_DATIM)
+        
+        ##Q5.2: Plot the location sof teh given trip to udnerstand spatial patterns of a given trip
+        
+          tacsat_gbw_geom%>%filter ( VE_REF == 'C21140' &  SI_FT == '10343398870'  )%>%
+          mutate(largeIntv   = ifelse(INTV > 1, TRUE , FALSE))%>%
+          ggplot( ) + geom_sf(aes(color = largeIntv)) + 
+          geom_sf_label ( aes(label = ifelse ( INTV > 30, round(INTV, 1), NA )),  nudge_x = 0.05  ) + theme_minimal()
+        
+  
+  
+
   
   # 2.2.5 Remove points in harbour -----------------------------------------------------------------------------
   
-  idx <-
-    pointInHarbour(
-      tacsat$SI_LONG,
-      tacsat$SI_LATI,
-      harbours, saveHarbourList = FALSE)  
-  pih <- tacsat[which(idx == 1), ]
-  save(pih, file = file.path(outPath, paste0("pointInHarbour", year, ".RData")))
-  tacsat <- tacsat[which(idx == 0), ]
-  remrecsTacsat["harbour",] <-
-    c(
-      nrow(tacsat),
-      100 +
-        round(
-          (nrow(tacsat) - as.numeric(remrecsTacsat["total",1])) /
-            as.numeric(remrecsTacsat["total",1]) *
-            100,
-          2)
-    )
+  ##Q1: Are the vessel iVMS positions in/nearby a harbour?
+          
+    ## Use a SPATIAL JOIN to link spatially the iVMS locations with Port locations.
+    ## The spatial relatioship is the intersection between a iVMS poitn and a polygon representing the area buffered 3Km around the port location
+          
+  tacsat_gbw_ports = st_join(tacsat_gbw_geom, port_3km, join = st_intersects, left = T)%>%
+                     mutate  ( SI_HARB  = ifelse ( is.na (port), FALSE , TRUE))%>%
+                     select ( - names(port_3km))
+
+ 
+          
+    ##Q2: Plot the ports and iVMS locations when in port
+          
+        ggplot() + 
+        geom_sf ( data = welsh_marine_area) + 
+        geom_sf(data = port_3km%>%filter (port %in% c( 'Milford Haven', 'Cardigan') )) +
+        geom_sf ( data = tacsat_gbw_ports%>%slice(1:50000), aes(color  = SI_HARB ))+ theme_minimal() + 
+        coord_sf(xlim = c(- 5.5, -4), ylim = c(51.6, 52.2))
+      
+   
+ 
   
   
   # 2.2.6 Remove points on land -----------------------------------------------------------------------------
   
-  idx <- point.in.polygon(
-    point.x = tacsat$SI_LONG, point.y = tacsat$SI_LATI,
-    pol.x = eorpa[, 1], pol.y = eorpa[, 2]
-  )
-  pol <- tacsat[idx > 0, ]
-  save(
-    pol,
-    file = file.path(outPath, paste0("pointOnLand", year, ".RData"))
-  )
-  tacsat <- tacsat[which(idx == 0), ]
-  remrecsTacsat["land", ] <-
-    c(
-      nrow(tacsat),
-      100 +
-        round(
-          (nrow(tacsat) - as.numeric(remrecsTacsat["total", 1])) /
-            as.numeric(remrecsTacsat["total",1]) * 100,
-          2)
-    )
   
+
   
-  #  Save the remrecsTacsat file
-  
-  save(
-    remrecsTacsat,
-    file = file.path(outPath, paste0("remrecsTacsat", year, ".RData"))
-  )
-  
-  #  Save the cleaned tacsat file
-  
-  save(
-    tacsat,
-    file = file.path(outPath, paste("cleanTacsat", year, ".RData", sep = ""))
-  )
-  
-  message("Cleaning tacsat completed")
-  
-  
-  # 2.3 Clean the eflalo data  ============================================================================
-  
-  
-  # 2.3.1 Keep track of removed points -------------------------------------------------------------------- 
-  
-  remrecsEflalo <-
-    matrix(
-      NA,
-      nrow = 5, ncol = 2,
-      dimnames =
-        list(
-          c("total", "duplicated", "impossible time", "before 1st Jan", "departArrival"),
-          c("rows", "percentage"))
-    )
-  remrecsEflalo["total", ] <- c(nrow(eflalo), "100%")
-  
-  
-  # 2.3.2 Warn for outlying catch records ----------------------------------------------------------
-  
-  # Put eflalo in order of 'non kg/eur' columns, then kg columns, then eur columns
-  idxkg <- grep("LE_KG_", colnames(eflalo))
-  idxeur <- grep("LE_EURO_", colnames(eflalo))
-  idxoth <- which( !(1:ncol(eflalo)) %in% c(idxkg, idxeur) )
-  eflalo <- eflalo[, c(idxoth, idxkg, idxeur)]
-  
-  #First get the species names in your eflalo dataset
-  
-  specs  <-
-    substr(
-      grep("KG", colnames(eflalo), value = TRUE),
-      7, 9
-    )
-  
-  # Define per species what the maximum allowed catch is (larger than that value you expect it to be an error / outlier
-  
-  specBounds <-
-    lapply(
-      as.list(specs),
-      function(x)
-      {
-        specs_cols <- grep(x, colnames(eflalo))
-        idx <-
-          specs_cols[
-            grep("KG", colnames(eflalo)[specs_cols])
-          ]
-        wgh <-
-          sort(
-            unique(
-              eflalo[which(eflalo[, idx] > 0), idx]
-            ))
-        difw <- diff(log10(wgh))
-        ifelse(
-          any(difw > lanThres),
-          wgh[rev( which(difw <= lanThres) + 1)],
-          ifelse(
-            length(wgh) == 0,
-            0,
-            max(wgh, na.rm = TRUE)
-          )
-        )
-      })
-  
-  # Make a list of the species names and the cut-off points / error / outlier point
-  specBounds <- cbind(specs, unlist(specBounds))
-  
-  # Put these values to zero
-  specBounds[which( is.na(specBounds[, 2]) == TRUE), 2] <- "0"
-  
-  # Get the index (column number) of each of the species
-  
-  idx <-
-    unlist(
-      lapply(
-        as.list(specs),
-        function(x)
-        {
-          specs_cols <- grep(x, colnames(eflalo))
-          idx <-
-            specs_cols[
-              grep("KG", colnames(eflalo)[specs_cols])
-            ]
-          idx
-        }
-      ))
-  
-  #If landing > cut-off turn it into an 'NA'
-  
-  warns <- list()
-  fixWarns <- TRUE
-  for (iSpec in idx) {
-    if (
-      length(
-        which(
-          eflalo[, iSpec] >
-          as.numeric(specBounds[(iSpec - idx[1] + 1), 2])
-        )
-      ) > 0)
-    {
-      warns[[iSpec]] <-
-        which(
-          eflalo[, iSpec] >
-            as.numeric(specBounds[(iSpec - idx[1] + 1), 2])
-        )
-      if (fixWarns) {
-        eflalo[
-          which(
-            eflalo[, iSpec] >
-              as.numeric(specBounds[(iSpec - idx[1] + 1), 2])),
-          iSpec
-        ] <- NA
-      }
-    }
-  }
-  
-  save(
-    warns,
-    file = file.path(outPath, paste0("warningsSpecBound", year, ".RData"))
-  )
-  
-  #Turn all other NA's in the eflalo dataset in KG and EURO columns to zero
-  for (i in kgeur(colnames(eflalo))) {
-    eflalo[
-      which(is.na(eflalo[, i]) == TRUE),
-      i] <- 0
-  }
-  
-  
-  
-  # 2.3.3  Remove non-unique trip numbers -----------------------------------------------------------------------------
-  
-  eflalo <-
-    eflalo[
-      !duplicated(paste(eflalo$LE_ID, eflalo$LE_CDAT, sep="-")),
-    ]
-  remrecsEflalo["duplicated",] <-
-    c(
-      nrow(eflalo),
-      100 +
-        round(
-          (nrow(eflalo) - as.numeric(remrecsEflalo["total", 1])) /
-            as.numeric(remrecsEflalo["total", 1]) * 100,
-          2)
-    )
-  
-  
-  # 2.3.4 Remove impossible time stamp records ----------------------------------------------------------------------------
-  
-  eflalo$FT_DDATIM <-
-    as.POSIXct(
-      paste(eflalo$FT_DDAT, eflalo$FT_DTIME, sep = " "),
-      tz = "GMT",
-      format = "%d/%m/%Y  %H:%M")
-  eflalo$FT_LDATIM <-
-    as.POSIXct(
-      paste(eflalo$FT_LDAT, eflalo$FT_LTIME, sep = " "),
-      tz = "GMT",
-      format = "%d/%m/%Y  %H:%M")
-  
-  eflalo <-
-    eflalo[
-      !(is.na(eflalo$FT_DDATIM) | is.na(eflalo$FT_LDATIM)),
-    ]
-  remrecsEflalo["impossible time",] <-
-    c(
-      nrow(eflalo),
-      100 +
-        round(
-          (nrow(eflalo) - as.numeric(remrecsEflalo["total", 1])) /
-            as.numeric(remrecsEflalo["total",1]) * 100,
-          2)
-    )
-  
-  
-  # 2.3.5 Remove trip starting befor 1st Jan ------------------------------------------------------------------------------
-  
-  eflalo <-
-    eflalo[
-      eflalo$FT_DDATIM >=
-        strptime(paste(year,"-01-01 00:00:00",sep=''), "%Y-%m-%d %H:%M"),
-    ]
-  remrecsEflalo["before 1st Jan",] <-
-    c(
-      nrow(eflalo),
-      100 +
-        round(
-          (nrow(eflalo) - as.numeric(remrecsEflalo["total",1])) /
-            as.numeric(remrecsEflalo["total", 1]) *
-            100,
-          2)
-    )
-  
-  
-  # 2.3.6 Remove records with arrival date before departure date  ------------------------------------------------------------
-  
-  eflalop <- eflalo
-  idx <- which(eflalop$FT_LDATIM >= eflalop$FT_DDATIM)
-  eflalo <- eflalo[idx,]
-  remrecsEflalo["departArrival", ] <-
-    c(
-      nrow(eflalo),
-      100 +
-        round(
-          (nrow(eflalo) - as.numeric(remrecsEflalo["total", 1])) /
-            as.numeric(remrecsEflalo["total", 1]) *
-            100,
-          2)
-    )
-  
-  
-  # 2.3.7 Remove trip with overlap with another trip --------------------------------------------------------------------------- 
-  
-  eflalo <- orderBy(~ VE_COU + VE_REF + FT_DDATIM + FT_LDATIM, data = eflalo)
-  
-  overlaps <-
-    lapply(
-      split(eflalo, as.factor(eflalo$VE_REF)),
-      function(x)
-      {
-        x  <- x[!duplicated( paste(x$VE_REF, x$FT_REF)), ]
-        idx <-
-          apply(
-            tril(
-              matrix(
-                as.numeric(
-                  outer(x$FT_DDATIM, x$FT_LDATIM, "-")
-                ),
-                nrow = nrow(x), ncol = nrow(x)
-              ),-1),
-            2,
-            function(y) {
-              which(y < 0, arr.ind = TRUE)
-            }
-          )
+    tacsat_gbw_land = st_join(tacsat_gbw_ports, land_4326, join = st_intersects, left = T)%>%
+      mutate  ( SI_LAND  = ifelse ( is.na (Id), FALSE ,TRUE))%>%
+      select ( - names(land_4326))  
         
-        rows <- which(unlist(lapply(idx, length)) > 0) # first part of the overlapping trips
-        if(length(rows)>0){
-          cols = c()
-          
-          for(k in 1:length(rows)){
-            cols <-c(cols, idx[[rows[k]]] ) # second part of the overlapping trips
-          }
-          
-          x[unique(c(rows, cols)),1:15] # returns all the overlapping trips for the given VE_REF
-          #rownames(x[unique(c(rows, cols)),]) # either the line above or this one, not sure which is better
-          
-        }else{
-          data.frame()
-        }
+      
+    ##Q1: How many points are detected on land? 
         
-      })
-  
-  overlappingTrips = data.frame()
-  for (iOver in 1:length(overlaps)) {
-    if (nrow(overlaps[[iOver]]) > 0) { # if there are overlapping trips for the given VE_REF put them all into one file
-      
-      overlappingTrips = rbind(overlappingTrips, overlaps[[iOver]] )      # returns all overlapping trips
-      
-    }
-  }
-  
-  if(nrow(overlappingTrips>0)){
+    tacsat_gbw_land%>%st_drop_geometry()%>%group_by(SI_LAND)%>%count()
     
-    print("THERE ARE OVERLAPPING TRIPS IN THE DATASET -> SEE THE FILE overlappingTrip SAVED IN THE RESULTS FOLDER")
     
-    save(
-      overlappingTrips,
-      file = file.path(outPath, paste0("overlappingTrips", year, ".RData"))
-    )
-  }
+    
+    ##Q2: Plot the iVMS locations when in land
+    
+    ggplot() + 
+      geom_sf ( data = welsh_marine_area) + 
+      #geom_sf(data = port_3km%>%filter (port %in% c( 'Milford Haven', 'Cardigan') )) +
+      geom_sf ( data = tacsat_gbw_land%>%slice(1:50000), aes(color  = SI_LAND ))+ theme_minimal() + 
+      coord_sf(xlim = c(- 5.5, -4), ylim = c(51.6, 52.2))
+    
+    ## Remove the fields taken from the ports datasets . Not needed for our analysis example
+    
+    
+    
+    tacsat_gbw_df = tacsat_gbw_land%>% filter(SI_LAND == FALSE )
   
   
   
-  #   Save the remrecsEflalo file 
+  
+  
+  #   Save the cleaned EFLALO file 
+    
+   
   
   save(
-    remrecsEflalo,
-    file = file.path(outPath, paste0("remrecsEflalo", year, ".RData"))
+    eflalo_gbw, file = '.\\..\\data\\eflalo_gbw.RData'
   )
+
+
+  #   Save the cleaned TACSAT file 
   
-  #   Save the cleaned eflalo file 
+
+    tacsat_gbw = tacsat_gbw_df
   
   save(
-    eflalo,
-    file = file.path(outPath,paste0("cleanEflalo",year,".RData"))
+    tacsat_gbw_df, file = '.\\..\\data\\tacsat_gbw.RData'
   )
   
-  message("Cleaning eflalo completed")
-} 
+
