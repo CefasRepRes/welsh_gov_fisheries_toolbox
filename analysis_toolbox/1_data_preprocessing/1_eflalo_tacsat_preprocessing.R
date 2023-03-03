@@ -13,19 +13,19 @@ library(vmstools)
 
     ## Q1.1: How many overall records are by  trip?  
     
-    eflalo_gbw%>%group_by(FT_REF)%>%summarise(n = n())%>%arrange(desc(n))
-    
+     res2 = eflalo_gbw%>%group_by(FT_REF) %>% summarise(n = n()) %>% arrange(desc(n))
+      ggplot(res2, aes( n )) + geom_histogram()
     
     ## Q1.2: How many log events are by  trip?  
     
     
-    eflalo_gbw%>%distinct (FT_REF, LE_ID ) %>%group_by(FT_REF)%>%summarise(n = n())%>%arrange(desc(n))
+    eflalo_gbw%>%distinct (FT_REF, LE_ID , trip_days) %>%group_by(FT_REF, trip_days)%>%summarise(n = n())%>%arrange(desc(n))
     
     ## Q1.3: Do we find a range of values that aren't realist when compared with the whole data stats?
     
       ## Select a trip with more record associated and explore the data 
       
-      eflalo_gbw%>%filter( FT_REF == 10295820110      )
+      eflalo_gbw %>% filter( FT_REF == 10343309346      )
 
 
 
@@ -34,7 +34,7 @@ library(vmstools)
   
   ## Observe the trips with more days duration . Identify outliers and potential errors in Departure and Landing dates. 
   
-  eflalo_gbw%>%select(trip_days, FT_REF, FT_DDATIM,FT_LDATIM,  VE_LEN)%>%arrange(desc(trip_days))
+  eflalo_gbw %>% select(trip_days, FT_REF, FT_DDATIM,FT_LDATIM,  VE_LEN) %>% arrange( desc( trip_days ))
   
   ## Q2.1: If outliers have been identified? Should be removed those entried records or data can be fixed?
   
@@ -291,7 +291,7 @@ tacsat_gbw = tacsat_gbw%>%filter(SI_FT %in% ( eflalo_gbw%>%distinct(FT_REF)%>%pu
   
       ##Q4: Explore the intervals with a histogram. Outliers are detected? Can you fix or remove the wrong records?
       
-      ggplot(tacsat_gbw_geom%>%filter(INTV<1), aes(INTV))+geom_histogram(bins = 50)
+      ggplot(tacsat_gbw_geom%>%filter(INTV < 1), aes(INTV) ) + geom_histogram(bins = 50)
       
       ## Q5: Use the filter to explore the large intervals records. Take the VE_REF and SI_FT to explore the trip 
       
@@ -305,7 +305,7 @@ tacsat_gbw = tacsat_gbw%>%filter(SI_FT %in% ( eflalo_gbw%>%distinct(FT_REF)%>%pu
         ##Q5.2: Plot the location sof teh given trip to udnerstand spatial patterns of a given trip
         
           tacsat_gbw_geom%>%filter ( VE_REF == 'C21140' &  SI_FT == '10343398870'  )%>%
-          mutate(largeIntv   = ifelse(INTV > 1, TRUE , FALSE))%>%
+          mutate(largeIntv   = ifelse(INTV > 1 , TRUE , FALSE))%>%
           ggplot( ) + geom_sf(aes(color = largeIntv)) + 
           geom_sf_label ( aes(label = ifelse ( INTV > 30, round(INTV, 1), NA )),  nudge_x = 0.05  ) + theme_minimal()
         
@@ -325,6 +325,7 @@ tacsat_gbw = tacsat_gbw%>%filter(SI_FT %in% ( eflalo_gbw%>%distinct(FT_REF)%>%pu
                      select ( - names(port_3km))
 
  
+          
           
     ##Q2: Plot the ports and iVMS locations when in port
           
