@@ -1,0 +1,136 @@
+---
+title: "1_Load_TACSAT_and_EFLALO_in_R_environment"
+author: "Roi & Mike"
+date: "08/03/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+## Load required libraries
+
+library(lubridate)  ## this package helps with manage date fields 
+library(dplyr)      ## R Package to use pipelines (%>%) analysis language 
+library(sf)         ## R Package for spatial analysis in R ( Simple Features )
+library(ggplot2)    ## R Package for plotting and graphs
+```
+
+
+
+## Load eflalo data blocks and merge them into one dataframe
+
+check the working directory, where all paths are based from, by default. Then read in the eflalo_ft data block. Header = F tells R whether or not to expect the first row to be the headers for each column. If this were set to T for TRUE, it would assume the first row of data was the column names. The sep = part of the function is used as the data will be presented in a csv format, so the values in each row are separated by commas, which is chosen here.
+
+```{r eflalo ft, include=FALSE}
+getwd() # see the present working directory
+
+eflalo_ft = read.csv(file = '.\\..\\data\\eflalo_ft.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+```
+
+Currently, the columns are not named correctly. This can be rectified with the names() function, which is followed by a list of strings containing the new names for the columns. They will be applied in order, so it is important they are aligned correctly with their respective data.
+
+```{r names eflalo ft, include=FALSE}
+names(eflalo_ft)  = c ( "FT_REF", "FT_DCOU", "FT_DHAR", "FT_DDAT", "FT_DTIME", "FT_DDATIM", "FT_LCOU", "FT_LHAR", "FT_LDAT", "FT_LTIME", "FT_LDATIM", "VE_REF", "VE_FLT", "VE_COU","VE_FA", "VE_LEN", "VE_KW", "VE_TON", "FT_YEAR")
+```
+
+Check the data with the following summarisation commands.
+
+```{r eflalo ft summary, include=FALSE}
+head (eflalo_ft)    # calls the first 6 rows
+str(eflalo_ft)      # gives details about each column
+dim(eflalo_ft)      # prints the number of rows and columns in the dataframe
+summary(eflalo_ft)  # additional statistics for numeric columns
+```
+
+Now repeat for the eflalo_le data block.
+
+```{r eflalo le, include=FALSE}
+eflalo_le = read.csv(file = '.\\..\\data\\eflalo_le.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+
+names(eflalo_le)  = c ( "LE_ID", "LE_CDAT", "LE_STIME", "LE_ETIME", "LE_SLAT", "LE_SLON", "LE_ELAT", "LE_ELON", "LE_GEAR", "LE_MSZ", "LE_RECT", "LE_DIV", "LE_MET", "EFLALO_FT_FT_REF")
+
+head (eflalo_le)
+str(eflalo_le)
+dim(eflalo_le)
+```
+
+And now for the eflalo_spe data block.
+
+```{r eflalo spe, include=FALSE}
+eflalo_spe = read.csv(file = '.\\..\\data\\eflalo_spe.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+
+names(eflalo_spe)  = c ( "EFLALO_LE_LE_ID", "EFLALO_FT_FT_REF","LE_SPE", "LE_KG", "LE_VALUE"  )
+
+head (eflalo_spe)
+str(eflalo_spe)
+dim(eflalo_spe)
+```
+
+Join the blocks together to make the complete EFLALO dataset. An inner join retains all data rows that have a match in the other columns. Check the results with head() and str().
+
+```{r merge eflalo, include=FALSE}
+eflalo =    eflalo_ft %>%
+            inner_join (eflalo_le , by =  c("FT_REF" = "EFLALO_FT_FT_REF")) %>%
+            inner_join(eflalo_spe, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
+
+head (eflalo)
+str(eflalo)
+```
+
+Some field require some formatting. the ymd() function orientates the selected columns with dates, into a year-month-day format. Columns with time values associated can be formatted using ymd_hms.
+
+The vessel length field (VE_LEN) is required to be in numerical format; as.numeric sorts that out.
+
+Finally, the year and month columns are created by pulling the information from the previously formatted columns.
+
+```{r eflalo column formatting, include=FALSE}
+eflalo$FT_DDAT =  ymd( eflalo$FT_DDAT   )  ## ymd lubridate function to CAST date into Year Mond Day date format
+eflalo$FT_LDAT =   ymd(eflalo$FT_LDAT  ) 
+eflalo$LE_CDAT =   ymd_hms(eflalo$LE_CDAT  ) 
+eflalo$FT_DDATIM = ymd_hms( eflalo$FT_DDATIM   ) 
+eflalo$FT_LDATIM = ymd_hms( eflalo$FT_LDATIM  ) 
+
+eflalo$VE_LEN = as.numeric(eflalo$VE_LEN)
+
+eflalo$Year = year(eflalo$FT_DDATIM )
+eflalo$Month = month(eflalo$FT_LDATIM)
+```
+
+
+## Load the TACSAT dataset
+
+Load in the tacsat dataset and format the names in the same manner as with the previous eflalo data blocks.
+
+```{r load tacsat, include=FALSE}
+tacsat = read.csv(file = '.\\..\\data\\tacsat.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+
+names(tacsat)  = c ( "VE_REF", "SI_LATI", "SI_LONG", "SI_DATE", "SI_TIME", "SI_DATIM", "SI_SP", "SI_HE", "SI_HARB", "SI_STATE", "SI_FT", "INTV", "SI_YEAR" )
+```
+
+Check the summaries as with eflalo.
+
+```{r tacsat summarisation, include=FALSE}
+dim(tacsat)
+head (tacsat)
+str(tacsat)
+```
+
+Create a backup of the tacsat dataframe. This is done so if some processing does not do correctly or as expected, the data is already loaded in the correct format and can easily be reverted to if necessary. The tacsat dataframe is simply copied into another dataframe under a different name.
+
+```{r tacsat backup, include=FALSE}
+tacsat_bk = tacsat  # create a backup of the data.frame
+```
+
+Format dates, times and numerical columns for consistency purposes. These will be in the same format as the EFLALO data. Also filter to see how many NAs are present in the speed column (SI_SP). This does not change the data as it is not applying the command to the object. It simply prints the number of rows containing NAs. If there are a large number, this can be investigated.
+
+```{r setup, include=FALSE}
+tacsat$SI_DATE  =  ymd( tacsat$SI_DATE   )  
+tacsat$SI_DATIM  =   ymd_hms(tacsat$SI_DATIM  ) 
+tacsat$SI_SP = as.numeric(tacsat$SI_SP)
+tacsat$SI_HE = as.numeric(tacsat$SI_HE)
+
+tacsat%>%filter(is.na(SI_SP))%>%dim()
+```
+
+### The EFLALO and TACSAT datasets have been formatted and are ready for analysis!
