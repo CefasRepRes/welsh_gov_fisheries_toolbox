@@ -124,7 +124,7 @@ tacsat_bk = tacsat  # create a backup of the data.frame
 
 Format dates, times and numerical columns for consistency purposes. These will be in the same format as the EFLALO data. Also filter to see how many NAs are present in the speed column (SI_SP). This does not change the data as it is not applying the command to the object. It simply prints the number of rows containing NAs. If there are a large number, this can be investigated.
 
-```{r setup, include=FALSE}
+```{r tacsat column formatting, include=FALSE}
 tacsat$SI_DATE  =  ymd( tacsat$SI_DATE   )  
 tacsat$SI_DATIM  =   ymd_hms(tacsat$SI_DATIM  ) 
 tacsat$SI_SP = as.numeric(tacsat$SI_SP)
