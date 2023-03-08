@@ -348,7 +348,7 @@ Using the interval between pings on records with the same trip reference, record
 
 Points within harbours are identified by their spatial intersection with the port_3km dataset. This action is completed via a left join, which retains all the data entries in the left table (TACSAT data) and applies the information from corresponding entries in the port_3km dataset.
 
-These points can be plotted as shown below, using ggplot, which adds the Welsh marine area, the chosen ports which are selected within the quotation marks and the vms points which are located inside the ports. Finally, the boundary of the plot is specified so the plot is focussed on the area of interest.
+These points can be plotted as shown below, using ggplot, which adds the Welsh marine area, the chosen ports which are selected within the quotation marks and the vms points which are located inside the ports. Finally, the boundary of the plot is specified so the plot is focused on the area of interest.
 
 ```{r remove points in harbours, include=FALSE}
   # 2.2.5 Remove points in harbour -----------------------------------------------------------------------------

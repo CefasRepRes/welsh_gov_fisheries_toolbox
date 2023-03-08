@@ -69,13 +69,19 @@
     
     ## PLOT 2: Number of trips by gear category 
     
+
     ggplot(data = eflalo_gbw%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR), aes(LE_GEAR)  ) +
-    geom_bar() + 
-    facet_wrap( ~ VE_LEN_CAT)
+      geom_bar() + 
+      facet_wrap( ~ VE_LEN_CAT)
     
     ggplot(data = eflalo_gbw%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR) , aes(VE_LEN_CAT)  ) +
       geom_bar() + 
       facet_wrap( ~ LE_GEAR)
+
+    ggplot(eflalo_gbw%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR), aes(LE_GEAR)) + 
+      geom_bar() + 
+      facet_wrap( ~ VE_LEN_CAT)
+
     
     ## PLOT 3: Main species captured
     

@@ -24,8 +24,10 @@ library(ggplot2)    ## R Package for plotitng and graphs
 
 getwd()
 
+
 eflalo_ft = read.csv(file = '.\\..\\data\\eflalo_ft.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(eflalo_ft)  = c ( "FT_REF", "FT_DCOU", "FT_DHAR", "FT_DDAT", "FT_DTIME", "FT_DDATIM", "FT_LCOU", "FT_LHAR", "FT_LDAT", "FT_LTIME", "FT_LDATIM", "VE_REF", "VE_FLT", "VE_COU","VE_FA", "VE_LEN", "VE_KW", "VE_TON", "FT_YEAR")
+
 
   head (eflalo_ft)
   str(eflalo_ft)
@@ -34,15 +36,19 @@ names(eflalo_ft)  = c ( "FT_REF", "FT_DCOU", "FT_DHAR", "FT_DDAT", "FT_DTIME", "
 
 
  
+
 eflalo_le = read.csv(file = '.\\..\\data\\eflalo_le.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(eflalo_le)  = c ( "LE_ID", "LE_CDAT", "LE_STIME", "LE_ETIME", "LE_SLAT", "LE_SLON", "LE_ELAT", "LE_ELON", "LE_GEAR", "LE_MSZ", "LE_RECT", "LE_DIV", "LE_MET", "EFLALO_FT_FT_REF")
+
 
   head (eflalo_le)
   str(eflalo_le)
   dim(eflalo_le)
 
+
 eflalo_spe = read.csv(file = '.\\..\\data\\eflalo_spe.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(eflalo_spe)  = c ( "EFLALO_LE_LE_ID", "EFLALO_FT_FT_REF","LE_SPE", "LE_KG", "LE_VALUE"  )
+
 
   head (eflalo_spe)
   str(eflalo_spe)
@@ -86,7 +92,7 @@ str(tacsat)
 
 
 
-tacsat_bk = tacsat  ##create a backup of teh data.frame 
+tacsat_bk = tacsat  ##create a backup of the data.frame 
 
 
 tacsat$SI_DATE  =  ymd( tacsat$SI_DATE   )  
