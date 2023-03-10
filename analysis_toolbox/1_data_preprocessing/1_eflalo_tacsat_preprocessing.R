@@ -6,7 +6,7 @@ library(vmstools)
 
 
 
-# 1. Clean the EFLALO data  ============================================================================
+# 1. Clean the EFLALO (CR )  data  ============================================================================
 
 
   ## 1.1  Number of EFLALO records and fishing Log Events records
@@ -40,9 +40,21 @@ library(vmstools)
   
   ## Filter out those outlier trips durations
   
-   trips_in = eflalo_gbw%>%filter(trip_days <= 10)%>%select(FT_REF)%>%pull()
+   trips_in =  eflalo_gbw %>% 
+               filter(trip_days <= 5 ) %>% 
+               select(FT_REF) %>%
+               distinct(FT_REF) %>%
+               pull()
+   
+   length ( trips_in )
+   
+   # < 5 days trips : 9194
+   # < 10 days trips : 9207
+   # total trips : 9228
 
-   eflalo_gbw = eflalo_gbw%>%filter(FT_REF %in% trips_in)
+   eflalo_gbw = eflalo_gbw %>% filter (FT_REF %in% trips_in )
+   
+   dim ( eflalo_gbw )
    
     ## Q2.2: Why we have done a 2 steps filtering?
    
@@ -59,30 +71,40 @@ library(vmstools)
    
    ## Identify the records with species captures over expected thresholds 
    
-      eflalo_gbw%>%group_by(  LE_GEAR, LE_SPE)%>%arrange( LE_GEAR, LE_SPE,  LE_KG  )%>%
-      mutate (diff_le_kg =   lead (log10(LE_KG), n = 1) - log10 ( LE_KG) ) %>% #select (rr1, rr2)
-      filter(!is.na(diff_le_kg))%>%
-      summarise(max = max(diff_le_kg), min = min(diff_le_kg) ) %>%
-      filter(max > landingThreshold)
+      eflalo_gbw %>%
+      group_by(  LE_GEAR, LE_SPE) %>%
+      arrange( LE_GEAR, LE_SPE,  LE_KG  ) %>%
+      mutate (diff_le_kg =   lead ( log10 ( LE_KG ), n = 1) - log10 ( LE_KG) ) %>% #select (rr1, rr2)
+      filter(  ! is.na ( diff_le_kg ) ) %>%              ## filter those values that are not NA ( NULL ) 
+      summarise ( max = max(diff_le_kg) , min = min(diff_le_kg) ) %>%
+      filter ( max > landingThreshold )
       print(n=200)
      
      
      
      ## Explore those captures with high difference identified and decide if must be removed from records 
      
-     eflalo_gbw%>%filter(LE_GEAR == 'GTR' & LE_SPE == 'SOL')%>%select ( LE_KG)%>%arrange(desc(LE_KG))
-     eflalo_gbw%>%filter(LE_GEAR == 'FPO' & LE_SPE == 'TGS')%>%select ( LE_KG)%>%arrange(desc(LE_KG))
+     eflalo_gbw %>% filter( LE_GEAR == 'GTR' & LE_SPE == 'SOL') %>% select ( LE_KG) %>% arrange( desc(LE_KG) )
+     eflalo_gbw %>% filter(LE_GEAR == 'FPO' & LE_SPE == 'TGS') %>% select ( LE_KG)%>%arrange(desc(LE_KG))
+     eflalo_gbw %>% filter(LE_GEAR == 'OTB' & LE_SPE == 'BSS') %>% select ( LE_KG)%>%arrange(desc(LE_KG))
+     
+     
+     ## Filter values no required out 
+     
+     eflalo_gbw = eflalo_gbw %>% filter ( LE_GEAR != 'FPO' & LE_SPE != 'TGS' & LE_KG > 100 )
+     
+     
      
    
   # 1.4 Check for NA's in catch records ----------------------------------------------------------
      
     
-     eflalo_gbw%>%filter(is.na(LE_KG))
+     eflalo_gbw %>% filter(  is.na ( LE_KG ))
     
   # 1.5 Check for NA's in time stamp  ----------------------------------------------------------------------------
      
      
-     eflalo_gbw%>%filter(is.na(FT_DDATIM) | is.na(FT_LDATIM))
+     eflalo_gbw %>% filter( is.na(FT_DDATIM) | is.na(FT_LDATIM) )  
      
      
   
@@ -90,24 +112,30 @@ library(vmstools)
    # 1.6  Remove non-unique trip numbers -----------------------------------------------------------------------------
    
      
-     duplicate_analysis =   eflalo_gbw%>%distinct(VE_REF,FT_REF,  FT_DDAT, FT_LDAT)%>%
+     duplicate_analysis =   eflalo_gbw%>%
+                            distinct(VE_REF , FT_REF,  FT_DDAT, FT_LDAT)%>%
                             group_by(VE_REF, FT_DDAT, FT_LDAT)%>%
-                            summarise(number_trips = n())%>%
-                            mutate(duplicated = ifelse( number_trips >  1, TRUE , FALSE) )
+                            summarise( number_trips = n() ) %>%
+                            mutate ( duplicated = ifelse( number_trips >  1, TRUE , FALSE    )  )  
+ 
      
      ## Explore duplicated trips details
      
-     eflalo_gbw%>%left_join (duplicate_analysis , by = c ( 'VE_REF', 'FT_DDAT', 'FT_LDAT'))%>%
-              filter(duplicated == TRUE)%>%arrange(VE_REF, FT_REF, LE_SPE)
+     eflalo_gbw %>% left_join (duplicate_analysis , by = c ( 'VE_REF', 'FT_DDAT', 'FT_LDAT'))%>%
+     filter(duplicated == TRUE) %>% 
+      arrange(VE_REF, FT_REF, LE_SPE)
      
      ## Identify the trip id's that are duplicated 
      
-      duplicate_trips = eflalo_gbw%>%
+      duplicate_trips =  eflalo_gbw%>%
                          left_join (duplicate_analysis , by = c ( 'VE_REF', 'FT_DDAT', 'FT_LDAT'))%>%
-                         group_by(FT_REF)%>%mutate ( number_records = n ())%>%  ungroup()%>%
-                         filter(duplicated == TRUE)%>%
-                         distinct(VE_REF, FT_REF, FT_DDAT ,  FT_LDAT , number_records)%>%
-                         arrange(VE_REF,   FT_DDAT ,  FT_LDAT , desc(number_records) )%>%ungroup()%>%
+                         group_by(FT_REF)%>%
+                         mutate ( number_records = n ())%>% 
+                         ungroup()%>%
+                         filter(duplicated == TRUE) %>%
+                         distinct(VE_REF, FT_REF, FT_DDAT ,  FT_LDAT , number_records) %>%
+                         arrange( VE_REF,   FT_DDAT ,  FT_LDAT , desc( number_records) )%>%
+                         ungroup()%>%
                          group_by(VE_REF, FT_DDAT,FT_LDAT)%>%
                          mutate(r_num = row_number() )%>%
                          filter(r_num > 1)%>%
@@ -117,7 +145,7 @@ library(vmstools)
       ## Filter out the duplicated trips
       
       eflalo_gbw =   eflalo_gbw %>%
-                    filter( ! FT_REF %in% duplicate_trips   ) 
+                     filter( ! FT_REF %in% duplicate_trips   ) 
    
     
    
@@ -130,7 +158,7 @@ library(vmstools)
       ## Use the field created with trip duration: trip_days
       ## A value of 0 or negative would means departure and landing dates are same or reversed
      
-      eflalo_gbw%>%filter(trip_days <= 0 )
+      eflalo_gbw %>% filter(trip_days <= 0 )
    
    
    # 2.3.7 Remove trip with overlap with another trip --------------------------------------------------------------------------- 
@@ -141,7 +169,7 @@ library(vmstools)
       overlaps_analysis =  eflalo_gbw%>%distinct(VE_REF, FT_REF, FT_DDATIM, FT_LDATIM)%>%
                            arrange(VE_REF, FT_DDATIM)%>%
                            group_by(VE_REF)%>%
-                           mutate( overlaps = FT_LDATIM > lead(FT_DDATIM)   )
+                           mutate( overlaps = FT_LDATIM > lead (FT_DDATIM)   )
      
      
      
@@ -155,8 +183,8 @@ library(vmstools)
    
        ## Filter the trips details for the vessel during the overlapping dates 
        
-       overlaps_analysis%>%
-       filter( VE_REF == 'A15264' & FT_DDATIM > '2022-10-20' & FT_DDATIM < '2022-11-20'  ) %>%
+       overlaps_analysis %>%
+       filter( VE_REF == 'C16095' & FT_DDATIM > '2022-09-01' & FT_DDATIM < '2022-09-25'  ) %>%
          arrange( VE_REF, FT_DDATIM)
        
        eflalo_gbw%>%
@@ -168,12 +196,16 @@ library(vmstools)
        ## The three overlapping trips have the  same reported species and details
        
        eflalo_gbw%>%filter( FT_REF %in% c( '10343392884', '10343392891' ))
-     
+       
+        
+      
         
       ## Q1: What are you doing with the overlapping trips? Do we remove them or fix them?
         ## This will impact the VMS locations associated to these trips , so to avoid duplication and conflicts , correct or delete overlapping trips
         ## In the example above the ideal solution would be remove 2 out of the 3 duplicated trips recorded
    
+       
+  ## # 2.3.8 Spatial analysis of ICES rectangle locations ( spatial component of CR data )
    
 
        
@@ -184,17 +216,25 @@ library(vmstools)
        
 # 1.1 Load spatial auxiliary data ===========================================
 
+      ## LIBRARY SF required for spatial analysis 
        
-## Define an object bbox with the area of interest 
-aoi = st_bbox(c(xmin = -15, xmax = 3, ymax = 60, ymin = 40), crs = st_crs(4326))
+## Define an object bbox ( bounding box )  with the area of interest 
+       
        
 welsh_marine_area = st_read(dsn = '.\\..\\data\\wales_plan_area.geojson')
-port_3km = st_read(dsn = '.\\..\\data\\mmo_landing_ports_3km_buffer.geojson')
-land = st_read(dsn = '.\\..\\data\\Europe_coastline_poly.shp')
-land_4326 = land%>%st_transform(4326)
+port_3km = st_read( dsn = '.\\..\\data\\mmo_landing_ports_3km_buffer.geojson')
+land = st_read ( dsn = '.\\..\\data\\Europe_coastline_poly.shp')
+
+## explore connection to WFS/WMS services ( Welsh Portal ,  OSGB )
+
+land_4326 = land %>% st_transform(4326) 
+
+plot( land_4326)
 
 
-europe_aoi = st_crop(x = land_4326, y = aoi)
+
+aoi = st_bbox( c( xmin = -15, xmax = 3, ymax = 60, ymin = 47), crs = st_crs( 4326 )) ## Define our area of intenrest.  4326 is id for WGS1984 unprojected coordinate system 
+europe_aoi = st_crop (x = land_4326, y = aoi)  ## clip/crop the whole european layer to our of interes 
 
 plot( europe_aoi)
  
@@ -208,8 +248,12 @@ plot( europe_aoi)
 
 ## Filter TACSAT data with the trips result from cleaning EFLALO data
 
-tacsat_gbw = tacsat_gbw%>%filter(SI_FT %in% ( eflalo_gbw%>%distinct(FT_REF)%>%pull()) ) 
+trips_in_clean_eflalo = eflalo_gbw %>% distinct(FT_REF)%>%pull() 
+
+tacsat_gbw = tacsat_gbw %>% filter( SI_FT %in%  trips_in_clean_eflalo  ) 
   
+
+dim(tacsat_gbw)
   
   # 2.2 Take only VMS pings in the ICES areas ==============================================
   
@@ -217,6 +261,7 @@ tacsat_gbw = tacsat_gbw%>%filter(SI_FT %in% ( eflalo_gbw%>%distinct(FT_REF)%>%pu
     sf::st_as_sf() %>% 
     sf::st_make_valid() %>% 
     sf::st_transform(4326)  
+
   overs <- 
     tacsat  %>% 
     sf::st_as_sf(coords = c("SI_LONG", "SI_LATI")) %>% 
@@ -235,13 +280,13 @@ tacsat_gbw = tacsat_gbw%>%filter(SI_FT %in% ( eflalo_gbw%>%distinct(FT_REF)%>%pu
   
   
   tacsat_gbw%>%
-    group_by(VE_REF, SI_LATI, SI_LONG , SI_DATIM )%>%
-    filter(n()> 1)%>%
+    group_by(VE_REF, SI_LATI, SI_LONG , SI_DATIM ) %>%
+    filter( n() > 1) %>%
     arrange(VE_REF, SI_DATIM, SI_LATI, SI_LONG)
   
   ## From the overlap trip analysis done with EFLALO we can identify if the duplicated VMS locations correspond to those overlaping trips 
   
-  overlaps_analysis %>%filter(FT_REF %in% c( '10343392891', '10343392884') ) 
+  overlaps_analysis %>% filter(FT_REF %in% c( '10343378465', '10343379282') ) 
   
   ##  This confirms that these trips overlaps and therefore the VMS location is duplicated and assigned to the both trips
   ## To fix this error will require correct overlaping trips and reasign the trip identifiers to VMS locations 
@@ -276,7 +321,7 @@ tacsat_gbw = tacsat_gbw%>%filter(SI_FT %in% ( eflalo_gbw%>%distinct(FT_REF)%>%pu
                     group_by(VE_REF, SI_FT)%>% arrange (VE_REF, SI_DATIM)%>%
                     mutate (INTV =  difftime(SI_DATIM , lag(SI_DATIM), units = "hours" )  )%>% ## Calcualte the difference between a iVMS loction time stamp and previous location to calcualte a fishign effort in a given location
                     mutate(interval_mean = mean(INTV , na.rm = T))%>% ## Calcualte the mean to replace the NA's interval when a VMS location is the 1st of a trip and cannot calculate with a prev. iVMS location
-                    mutate(INTV = ifelse(is.na(INTV), interval_mean, INTV ))%>%  ## Convert the NA's into a effort represented by the mean of that vessel durign given trip
+                    mutate(INTV = ifelse( is.na(INTV), interval_mean, INTV ))%>%  ## Convert the NA's into a effort represented by the mean of that vessel durign given trip
                     select(- interval_mean) %>%ungroup()
   
   
@@ -295,19 +340,19 @@ tacsat_gbw = tacsat_gbw%>%filter(SI_FT %in% ( eflalo_gbw%>%distinct(FT_REF)%>%pu
       
       ## Q5: Use the filter to explore the large intervals records. Take the VE_REF and SI_FT to explore the trip 
       
-      tacsat_gbw_geom%>%filter(INTV >50 )%>%arrange(VE_REF, SI_DATIM)%>%print(n= 100)%>%select(VE_REF, SI_FT)
+      tacsat_gbw_geom%>%filter(INTV >5 )%>%arrange(VE_REF, SI_DATIM)%>%print(n= 100)%>%select(VE_REF, SI_FT)
         as.data.frame()
       
         ##Q5.1: Can you check the restultd intervals for a given vessel and trip id           
         
-      tacsat_gbw_geom%>%filter ( VE_REF == 'C21140' &  SI_FT == '10343398870'  ) %>%arrange(SI_DATIM)
+      tacsat_gbw_geom%>%filter ( VE_REF == 'C17265' &  SI_FT == '10343379282'  ) %>%arrange(SI_DATIM)
         
         ##Q5.2: Plot the location sof teh given trip to udnerstand spatial patterns of a given trip
         
-          tacsat_gbw_geom%>%filter ( VE_REF == 'C21140' &  SI_FT == '10343398870'  )%>%
-          mutate(largeIntv   = ifelse(INTV > 1 , TRUE , FALSE))%>%
+          tacsat_gbw_geom%>%filter ( VE_REF == 'C17265' &  SI_FT == '10343379282'  )%>%
+          mutate(largeIntv   = ifelse(INTV > 1 , TRUE , FALSE)) %>%
           ggplot( ) + geom_sf(aes(color = largeIntv)) + 
-          geom_sf_label ( aes(label = ifelse ( INTV > 30, round(INTV, 1), NA )),  nudge_x = 0.05  ) + theme_minimal()
+          geom_sf_label ( aes(label = ifelse ( INTV > 30, round(INTV, 1), NA )),  nudge_x = 0.05  ) + theme_minimal()+
         
   
   
