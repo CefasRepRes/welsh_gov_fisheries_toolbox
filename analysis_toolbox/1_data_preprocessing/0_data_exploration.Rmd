@@ -1,0 +1,29 @@
+---
+title: "0_data_exploration"
+author: "Roi & Mike"
+date: "03/03/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(lubridate)
+library(dplyr)
+library(sf)
+library(ggplot2)
+```
+
+# Data Cleaning and Quality Control
+
+## Explore the statistics from EFLALO to get fleet statistics and characterisation
+
+```{r explore eflalo, include=FALSE}
+
+# Explore vessels nationality in the EFLALO records 
+  
+eflalo%>%distinct(VE_COU)
+eflalo%>%distinct(VE_FA)
+eflalo%>%distinct(FT_DCOU)
+
+```

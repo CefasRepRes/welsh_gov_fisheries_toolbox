@@ -1,0 +1,48 @@
+---
+title: "fishing_activity_indicators_analysis_toolbox"
+author: "Roi & Mike"
+date: "21/03/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(vmstools)
+library(tidyverse)
+```
+
+## A toolbox for fishing activity data and indicators analysis
+
+- working off the assumption data cleaning has already taken place?
+
+### a. Spatial and temporal (annual/seasonal/monthly) distribution of all fishing vessel movements in the Welsh zone
+
+- dataset of all vessels, regardless of country of origin
+- data will be included if trip has pings entering any ices rectangle which intersects with the welsh fishing zone
+    - filter these from ICES rectangle dataset and use intersect function from sf to call trips which enter these regions.
+    - can then decide whether to only keep information from pings within the zone or keep all information from trips which have at least one ping within
+- data will include month, quarter and year of each entry
+
+
+### b. Spatial and temporal (annual/seasonal/monthly) distribution of all fishing activity in the Welsh zone 
+
+- similar to above, however only for information within the Welsh zone
+- includes just fishing activity, rather than all vessel movements - can be distinguished by SI_SP
+
+
+### c. Spatial and temporal (annual/seasonal/monthly) distribution of all fishing activity by Welsh registered vessels
+
+- data limited to only vessels which are part of the welsh fishing fleet
+
+
+### d. Ability to produce fishing density ‘heat’ maps for each gear type/ metier of fishing effort or intensity (as appropriate). 
+
+
+### e. Ability to analyse VMS/iVMS data for a specific fishery e.g., scallops, whelks within a given time period. 
+
+
+### f. Ability to identify if fishing activity has occurred within spatial or temporal closures
+
+
+### g. Ability to assess fishing interactions with sensitive features 
