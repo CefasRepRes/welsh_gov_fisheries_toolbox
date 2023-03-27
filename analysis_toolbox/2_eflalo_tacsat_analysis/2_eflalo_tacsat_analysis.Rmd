@@ -1,0 +1,231 @@
+---
+title: "2_eflalo_tacsat_analysis"
+author: "Roi & Mike"
+date: "22/03/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(lubridate)
+library(dplyr)
+library(sf)
+library(ggplot2)
+library(vmstools)
+```
+
+## Merge the eflalo and tacsat data together 
+
+### Load in the previously cleaned eflalo and tacsat data
+
+```{r load data, include=FALSE}
+load(file = '.\\..\\data\\eflalo_gbw.RData' )
+load(file = '.\\..\\data\\tacsat_gbw.RData' )
+```
+
+To ensure columns match between datasets, the SI_FT column will be renamed to FT_REF. This uses mutate to create a new column named FT_REF, instead of replacing the SI_FT column. The column name is specified before the = and the contents are specified after.
+
+```{r SI_FT to FT_REF, include=FALSE}
+tacsatp= tacsat_gbw %>% mutate(FT_REF = SI_FT) 
+  
+head(tacsat_gbw)
+```
+
+### Assign gear and length to tacsat
+
+This code simply retrieves the information from the eflalo dataset and applies it to new columns created in the tacsat dataset, using the matching FT_REF values. to the left of the arrow, the new column is made and named. To the right, it is saying where the information must come from, followed by the criteria inside the brackets. Using the match function, matching FT_REF values are identified and the information is pulled from eflalo and placed in the new tacsat column.
+
+```{r gear and length, include=FALSE}
+  tacsatp$LE_GEAR  <- eflalo$LE_GEAR  [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$LE_MSZ   <- eflalo$LE_MSZ   [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$VE_LEN   <- eflalo$VE_LEN   [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$VE_KW    <- eflalo$VE_KW    [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$LE_RECT  <- eflalo$LE_RECT  [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$LE_MET   <- eflalo$LE_MET   [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$LE_WIDTH <- eflalo$LE_WIDTH [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$VE_FLT   <- eflalo$VE_FLT   [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$LE_CDAT  <- eflalo$LE_CDAT  [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$VE_COU   <- eflalo$VE_COU   [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+```
+
+### Define activity
+
+Reset values which are over twice the regular interval rate. Set a threshold of 2, which will be used as a multiplier and calculate each interval multiplied by the threshold value.
+
+```{r interval threshold, include=FALSE}
+intvThres = 2
+  
+tacsatp$INTV[tacsatp$INTV > intvThres] <- 2 * intvThres
+```
+
+Remove points with NA values in critical places. This includes numerical columns which will be used for calculations. NA values will often cause the result of any calculations to return as NA, making them useless. By removing these, the calculations can go ahead.
+
+```{r remove critical NAs, include=FALSE}
+  head(tacsatp) # check the data first
+
+# remove NAs from these specified columns
+  tacsatp%>%filter(
+    !is.na(VE_REF)  |
+    !is.na(SI_LONG) | 
+    !is.na(SI_LATI) |
+    !is.na(SI_DATIM)| 
+    !is.na(SI_SP)
+  )
+```
+
+Histograms are a useful way of visualising the data so that abnormalities or patterns can be observed.
+
+```{r plot speed histogram, include=FALSE}
+  png(filename = file.path(outPath, paste0("SpeedHistogram_", year, ".png"))) # read in the image using the png function
+
+  # plot the tacsat data using the speed column (SI_SP)
+  ggplot(data = tacsatp, aes(SI_SP)) + # selecting the data and the aesthetics (what specifically will be plotted)
+    geom_histogram( # choose the type of plot, in this case, histogram
+      breaks = seq(0, 20, by =0.4), col = 1) + # specify how the data will be broken up. This scale will be 0-20 in increments of 0.4
+    facet_wrap( ~ LE_GEAR, ncol = 4, scales = "free_y") +
+    labs(x = "Speed (knots)", y = "Frequency") + # label the axis
+    
+    # setting the colour options for text and the main elements of the plot
+    theme(
+      axis.text.y = element_text(colour = "black"),
+      axis.text.x = element_text(colour = "black"),
+      axis.title.y = element_text(size = 14),
+      axis.title.x = element_text(size = 14),
+      panel.background = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black"),
+      panel.border = element_rect(colour = "black", fill = NA)
+    )
+  dev.off()
+```
+
+Create a speed threshold for what is to be considered realistic for fishing activity. This can be chosen based on the histogram, which will show outliers which are unrealistic, this threshold can elimiate those.
+
+```{r speed threshold, include=FALSE}
+  speedarr <-
+    as.data.frame(
+      cbind(
+        LE_GEAR = sort(unique(tacsatp$LE_GEAR)),
+        min = NA,
+        max = NA),
+      stringsAsFactors = FALSE)
+
+# set the range here, with the minimum and maximum speeds
+  speedarr$min <- rep(1, nrow(speedarr)) # It is important to fill out the personally inspected thresholds here!
+  speedarr$max <- rep(6, nrow(speedarr))
+```
+
+
+
+```{r Analyse gears, include=FALSE}
+
+# create two subsets, one where the gear listed in the tacsat data is present in the autoDetectionGears data, and one where it is not
+  subTacsat <- subset(tacsatp, LE_GEAR %in% autoDetectionGears)
+  nonsubTacsat <- subset(tacsatp, !LE_GEAR %in% autoDetectionGears)
+  
+  if (visualInspection == TRUE) # set a criteria which must be met for the code to run
+  {
+    storeScheme <-
+      activityTacsatAnalyse(
+        subTacsat,
+        units = "year",
+        analyse.by = "LE_GEAR",
+        identify = "means")
+  } else # if the criteria was not met for the above code to run, the following code will be executed.
+  {
+    storeScheme <-
+      expand.grid(
+        years = year,
+        months = 0,
+        weeks = 0,
+        analyse.by = unique(subTacsat[, "LE_GEAR"])
+      )
+    storeScheme$peaks <- NA
+    storeScheme$means <- NA
+    storeScheme$fixPeaks <- FALSE
+    storeScheme$sigma0 <- 0.911
+    
+        
+    
+    # Fill the storeScheme values based on analyses of the pictures = 
+    
+    
+    # Define mean values of the peaks and the number of peaks when they are different from 5 # 
+    
+    
+    storeScheme$means[which(storeScheme$analyse.by == "TBB")] <- c("-11.5 -6 0 6 11.5")
+    storeScheme$means[which(storeScheme$analyse.by == "OTB")] <- c("-9 -3 0 3 9")
+    storeScheme$means[which(storeScheme$analyse.by == "OTT")] <- c("-9 -3 0 3 9")
+    storeScheme$means[which(storeScheme$analyse.by == "SSC")] <- c("-9 0 9")
+    storeScheme$means[which(storeScheme$analyse.by == "PTB")] <- c("-10 -3 0 3 10")
+    storeScheme$means[which(storeScheme$analyse.by == "DRB")] <- c("-10 0 10")
+    storeScheme$means[which(storeScheme$analyse.by == "HMD")] <- c("-9 0 9")
+    storeScheme$peaks[which(storeScheme$analyse.by == "SSC")] <- 3
+    storeScheme$peaks[which(storeScheme$analyse.by == "DRB")] <- 3
+    storeScheme$peaks[which(storeScheme$analyse.by == "HMD")] <- 3
+    storeScheme$peaks[which(is.na(storeScheme$peaks) == TRUE)] <- 5
+  }
+  
+  acTa <-
+    activityTacsat(
+      subTacsat,
+      units = "year",
+      analyse.by = "LE_GEAR",
+      storeScheme = storeScheme,
+      plot = FALSE,
+      level = "all")
+  subTacsat$SI_STATE <- acTa
+  subTacsat$ID <- 1:nrow(subTacsat)
+```
+
+Check the results of the previous section. If the results are not satisfactory, rerun the analysis with fixed peaks.
+
+```{r check results of gear analysis, include=FALSE}
+  for (iGear in autoDetectionGears) { # open a for loop to iterate through each item in the autoDetectionGears dataset
+    subDat <- subset(subTacsat,LE_GEAR == iGear)
+    minS <-
+      min(
+        subDat$SI_SP[which(subDat$SI_STATE == "s")],
+        na.rm = TRUE)
+    minF <-
+      min(subDat$SI_SP[which(subDat$SI_STATE == "f")],
+          na.rm = TRUE)
+    if(minS < minF) {
+      storeScheme$fixPeaks[which(storeScheme$analyse.by == iGear)] <- TRUE
+      subacTa <-
+        activityTacsat(
+          subDat,
+          units = "year",
+          analyse.by = "LE_GEAR",
+          storeScheme,
+          plot = FALSE,
+          level = "all"
+        )
+      subTacsat$SI_STATE[subDat$ID] <- subacTa
+    }
+  }
+  subTacsat <-
+    subTacsat[,
+              -rev(grep("ID", colnames(subTacsat)))[1]
+    ]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
