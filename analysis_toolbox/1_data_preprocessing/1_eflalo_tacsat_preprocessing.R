@@ -1,6 +1,11 @@
 options(dplyr.width = Inf, dplyr.print_min = 500)
 library(vmstools)
 
+## Save the inermediate EFLALO and TACSAT datasets
+
+load (  file = '.\\..\\data\\eflalo_gbw.RData' )
+load (  file = '.\\..\\data\\tacsat_gbw.RData' )
+
 
 #### QUALITY CONTROL:  Clean data with potential  outliers ########
 
@@ -217,30 +222,41 @@ library(vmstools)
 # 1.1 Load spatial auxiliary data ===========================================
 
       ## LIBRARY SF required for spatial analysis 
-       
-## Define an object bbox ( bounding box )  with the area of interest 
-       
-       
-welsh_marine_area = st_read(dsn = '.\\..\\data\\wales_plan_area.geojson')
-port_3km = st_read( dsn = '.\\..\\data\\mmo_landing_ports_3km_buffer.geojson')
-land = st_read ( dsn = '.\\..\\data\\Europe_coastline_poly.shp')
+
+setwd('.\\analysis_toolbox\\1_data_preprocessing') ##set up the new location of current Working Directory 
+getwd()
+
+welsh_marine_area = st_read ( dsn = '.\\spatial_layers\\wales_plan_area.geojson' )
+port_3km  = st_read( dsn = '.\\spatial_layers\\mmo_landing_ports_3km_buffer.geojson')
+land = st_read ( dsn = '.\\spatial_layers\\Europe_coastline_poly.shp')
+europe_aoi = st_read ( dsn = '.\\spatial_layers\\europe_aoi.geojson')  ###load the layer with crop are of interest 
 
 ## explore connection to WFS/WMS services ( Welsh Portal ,  OSGB )
 
-land_4326 = land %>% st_transform(4326) 
+welsh_marine_area %>% st_crs()  ## WGS 84 EPSG: 4326
+port_3km %>% st_crs()   ## WGS 84
+land  %>% st_crs() 
+
+land_4326 = land %>% st_transform( 4326 )   ## reproject the sf object ( spatial layer ) into a new coordiante system 
 
 plot( land_4326)
 
 
 
+## Define an object bbox ( bounding box )  with the area of interest 
+
+
 aoi = st_bbox( c( xmin = -15, xmax = 3, ymax = 60, ymin = 47), crs = st_crs( 4326 )) ## Define our area of intenrest.  4326 is id for WGS1984 unprojected coordinate system 
+
 europe_aoi = st_crop (x = land_4326, y = aoi)  ## clip/crop the whole european layer to our of interes 
 
 plot( europe_aoi)
  
+ st_write( europe_aoi, dsn = ".\\spatial_layers\\europe_aoi.geojson", layer = "europe_aoi.geojson")
  
  
  
+ head(tacsat_gbw)
 
 # 2 Clean the TACSAT and EFLALO data  ----------------------------------------------------------------------------------
  
@@ -301,7 +317,7 @@ dim(tacsat_gbw)
   
   tacsat_gbw%>%filter(abs(SI_LATI) > 90 || abs(SI_LONG) > 180)
   tacsat_gbw%>%filter(SI_HE < 0 || SI_HE > 360)
-  tacsat_gbw%>%filter(SI_SP > 25 ) 
+  tacsat_gbw%>%filter(SI_SP > 30 ) 
   
   
   
@@ -309,7 +325,9 @@ dim(tacsat_gbw)
   
   ## Convert the TACSAT into a spatial object (SF package)
   
-  tacsat_gbw_geom = tacsat_gbw%>%ungroup()%>%st_as_sf(., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
+  tacsat_gbw_geom = tacsat_gbw %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
+  
+  st_write( tacsat_gbw_geom, dsn = ".\\..\\data\\tacsat_gbw.geojson", layer = "tacsat_gbw.geojson")
   
     ## Q1: What is the minimum expected time interval between iVMS positions
   
@@ -362,23 +380,28 @@ dim(tacsat_gbw)
   
   ##Q1: Are the vessel iVMS positions in/nearby a harbour?
           
-    ## Use a SPATIAL JOIN to link spatially the iVMS locations with Port locations.
+    ## Use a SPATIAL JOIN to link spatially the iVMS locations within Port locations.
     ## The spatial relatioship is the intersection between a iVMS poitn and a polygon representing the area buffered 3Km around the port location
           
-  tacsat_gbw_ports = st_join(tacsat_gbw_geom, port_3km, join = st_intersects, left = T)%>%
-                     mutate  ( SI_HARB  = ifelse ( is.na (port), FALSE , TRUE))%>%
-                     select ( - names(port_3km))
+  tacsat_gbw_ports = tacsat_gbw_geom %>%
+                      st_join ( port_3km, join = st_intersects, left = T) %>%
+                     mutate  ( SI_HARB  = ifelse ( is.na ( port ), FALSE , TRUE))%>%
+                     select ( - names( port_3km))
+          
+          
+  
 
  
-          
+  st_write( tacsat_gbw_ports, dsn = ".\\..\\data\\tacsat_gbw_port.geojson", layer = "tacsat_gbw_port.geojson")      
           
     ##Q2: Plot the ports and iVMS locations when in port
           
         ggplot() + 
         geom_sf ( data = welsh_marine_area) + 
-        geom_sf(data = port_3km%>%filter (port %in% c( 'Milford Haven', 'Cardigan') )) +
-        geom_sf ( data = tacsat_gbw_ports%>%slice(1:50000), aes(color  = SI_HARB ))+ theme_minimal() + 
-        coord_sf(xlim = c(- 5.5, -4), ylim = c(51.6, 52.2))
+        geom_sf(data = port_3km %>% filter (port %in% c( 'Milford Haven', 'Cardigan') )) +
+        geom_sf ( data = tacsat_gbw_ports %>% slice(1:50000), aes( color  = SI_HARB ) )+ 
+        theme_minimal() + 
+        coord_sf( xlim = c(- 5.5, -4), ylim = c(51.6, 52.2) )
       
    
  
@@ -389,9 +412,12 @@ dim(tacsat_gbw)
   
 
   
-    tacsat_gbw_land = st_join(tacsat_gbw_ports, land_4326, join = st_intersects, left = T)%>%
-      mutate  ( SI_LAND  = ifelse ( is.na (Id), FALSE ,TRUE))%>%
-      select ( - names(land_4326))  
+    tacsat_gbw_land = tacsat_gbw_ports %>% 
+                      st_join( europe_aoi , join = st_intersects, left = T )%>%
+                      mutate  ( SI_LAND  = ifelse ( is.na ( Id ), FALSE ,TRUE))%>%
+                      select ( - names(europe_aoi) )  
+        
+     st_write( tacsat_gbw_land, dsn = ".\\..\\data\\tacsat_gbw_land.geojson", layer = "tacsat_gbw_land.geojson")      
         
       
     ##Q1: How many points are detected on land? 
@@ -411,11 +437,14 @@ dim(tacsat_gbw)
     ## Remove the fields taken from the ports datasets . Not needed for our analysis example
     
     
+    tacsat_gbw_land = tacsat_gbw_land %>% mutate ( SI_STATE = ifelse  (  SI_SP  >= 1 & SI_SP <= 6 , 'f', 's'  ))
     
-    tacsat_gbw_df = tacsat_gbw_land%>% filter(SI_LAND == FALSE )
+    
+    tacsat_gbw_df = tacsat_gbw_land %>% filter(SI_LAND == FALSE & SI_HARB == FALSE & SI_STATE  == 'f' )
   
   
-  
+    st_write( tacsat_gbw_df, dsn = ".\\..\\data\\tacsat_gbw_df.geojson", layer = "tacsat_gbw_df.geojson")      
+    
   
   
   #   Save the cleaned EFLALO file 
@@ -423,7 +452,7 @@ dim(tacsat_gbw)
    
   
   save(
-    eflalo_gbw, file = '.\\..\\data\\eflalo_gbw.RData'
+    eflalo_gbw, file = '.\\..\\data\\eflalo_gbw_qc.RData'
   )
 
 
@@ -433,7 +462,7 @@ dim(tacsat_gbw)
     tacsat_gbw = tacsat_gbw_df
   
   save(
-    tacsat_gbw_df, file = '.\\..\\data\\tacsat_gbw.RData'
+    tacsat_gbw_df, file = '.\\..\\data\\tacsat_gbw_qc.RData'
   )
   
 

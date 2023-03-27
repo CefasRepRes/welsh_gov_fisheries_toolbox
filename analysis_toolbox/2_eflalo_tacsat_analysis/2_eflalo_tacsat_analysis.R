@@ -1,14 +1,14 @@
 
   
-  load(file = '.\\..\\data\\eflalo_gbw.RData' )
-  load(file = '.\\..\\data\\tacsat_gbw.RData' )
+  load(file = '.\\..\\data\\eflalo_gbw_qc.RData' )
+  load(file = '.\\..\\data\\tacsat_gbw_qc.RData' )
   
   
   # 2.1 Merge the TACSAT and EFLALO data together --------------------------------------------
   
   # Merge eflalo and tacsat =================================
   
-  tacsatp = tacsat_gbw%>%mutate(FT_REF = SI_FT) 
+  tacsatp = tacsat_gbw %>% mutate(FT_REF = SI_FT) 
   
   tacsat_gbw %>% left_join( eflalo_gbw , by  = c ('VE_REF' = 'VE_REF' , 'SI_FT' = 'FT_REF' ,   ) )
   
