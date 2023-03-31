@@ -12,8 +12,15 @@
   
   head(tacsat_gbw)
   
-  
-  
+  names(eflalo_gbw)
+  eflalo_gbw = eflalo_gbw%>%
+    pivot_wider(id_cols = c( FT_REF, FT_DCOU, FT_DHAR, FT_DDAT, FT_DTIME, FT_DDATIM,
+                             FT_LCOU, FT_LHAR, FT_LDAT, FT_LTIME, FT_LDATIM, VE_REF,
+                             VE_FLT, VE_COU, VE_FA, VE_LEN, VE_KW, VE_TON, FT_YEAR,
+                             LE_ID, LE_CDAT, LE_STIME, LE_ETIME, LE_SLAT, LE_GEAR,
+                             LE_MSZ, LE_RECT, LE_DIV, LE_MET, EFLALO_FT_FT_REF, Year,
+                             Month, VE_LEN_CAT, trip_days), 
+                names_from = c( LE_SPE), values_from = c( LE_KG, LE_VALUE))
 
   # Assign gear and length to tacsat =================================
   
