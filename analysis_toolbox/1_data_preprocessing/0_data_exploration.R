@@ -16,6 +16,8 @@
   
   eflalo_gbw = eflalo %>% filter( VE_FA == 'Wales')  ##Vessel Fishing authority 
   
+  eflalo_wz = eflalo %>%    ## Spatial filter , any fishign trip in eflalo with a ICES rect within Welsh Zone 
+  
   ## Compare the size change in dimensions of the filtered and non-filtered dataset
   
   eflalo %>% distinct( FT_REF) %>% dim() 
@@ -114,5 +116,11 @@
     
     
     write.csv( x = res1, file =  ".\\..\\data\\data_output\\species_kg_ranked_by_gear.csv", row.names=FALSE)
+    
+    
+    ## Save the inermediate EFLALO and TACSAT datasets
+    
+    save ( eflalo_gbw , file = '.\\..\\data\\eflalo_gbw.RData' )
+    save ( tacsat_gbw , file = '.\\..\\data\\tacsat_gbw.RData' )
     
     

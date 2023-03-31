@@ -1,16 +1,21 @@
 
   
-  load(file = '.\\..\\data\\eflalo_gbw.RData' )
-  load(file = '.\\..\\data\\tacsat_gbw.RData' )
+  load(file = '.\\..\\data\\eflalo_gbw_qc.RData' )
+  load(file = '.\\..\\data\\tacsat_gbw_qc.RData' )
   
   
   # 2.1 Merge the TACSAT and EFLALO data together --------------------------------------------
   
   # Merge eflalo and tacsat =================================
   
-  tacsatp= tacsat_gbw%>%mutate(FT_REF = SI_FT) 
+  tacsatp = tacsat_gbw %>% mutate(FT_REF = SI_FT) 
   
-  head(tacsat_gbw)
+  tacsat_gbw %>% left_join( eflalo_gbw , by  = c ('VE_REF' = 'VE_REF' , 'SI_FT' = 'FT_REF' ,   ) )
+  
+  eflalo_gbw 
+  
+  str(tacsat_gbw)
+  str(eflalo_gbw)
   
   names(eflalo_gbw)
   eflalo_gbw = eflalo_gbw%>%
@@ -24,16 +29,22 @@
 
   # Assign gear and length to tacsat =================================
   
+  ## 1. Assign LOG EVENT id to VMS locations 
+  
+  
+  
   
   tacsatp$LE_GEAR  <- eflalo$LE_GEAR[ match(tacsatp$FT_REF, eflalo$FT_REF)]
   tacsatp$LE_MSZ   <- eflalo$LE_MSZ[  match(tacsatp$FT_REF, eflalo$FT_REF)]
-  tacsatp$VE_LEN   <- eflalo$VE_LEN[  match(tacsatp$FT_REF, eflalo$FT_REF)]
-  tacsatp$VE_KW    <- eflalo$VE_KW[   match(tacsatp$FT_REF, eflalo$FT_REF)]
   tacsatp$LE_RECT  <- eflalo$LE_RECT[ match(tacsatp$FT_REF, eflalo$FT_REF)]
   tacsatp$LE_MET   <- eflalo$LE_MET[  match(tacsatp$FT_REF, eflalo$FT_REF)]
   tacsatp$LE_WIDTH <- eflalo$LE_WIDTH[match(tacsatp$FT_REF, eflalo$FT_REF)]
-  tacsatp$VE_FLT   <- eflalo$VE_FLT[  match(tacsatp$FT_REF, eflalo$FT_REF)]
   tacsatp$LE_CDAT  <- eflalo$LE_CDAT[ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  
+  
+  tacsatp$VE_LEN   <- eflalo$VE_LEN [ match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$VE_KW    <- eflalo$VE_KW[   match(tacsatp$FT_REF, eflalo$FT_REF)]
+  tacsatp$VE_FLT   <- eflalo$VE_FLT[  match(tacsatp$FT_REF, eflalo$FT_REF)]
   tacsatp$VE_COU   <- eflalo$VE_COU[  match(tacsatp$FT_REF, eflalo$FT_REF)]
   
   

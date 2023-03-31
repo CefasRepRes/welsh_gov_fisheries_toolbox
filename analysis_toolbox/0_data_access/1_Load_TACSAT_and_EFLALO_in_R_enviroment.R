@@ -23,7 +23,7 @@ library(ggplot2)    ## R Package for plotitng and graphs
 ## list.files(path = '.\\..\\data') # check the files in your directory 
 
 getwd()
-
+setwd('C:/Users/RM12/OneDrive - CEFAS/Roi/projects/Welsh_Government_Fishing/welsh_gov_fishing_analysis_capacity/welsh_gov_fisheries_toolbox_git')
 
 eflalo_ft = read.csv(file = '.\\..\\data\\eflalo_ft.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(eflalo_ft)  = c ( "FT_REF", "FT_DCOU", "FT_DHAR", "FT_DDAT", "FT_DTIME", "FT_DDATIM", "FT_LCOU", "FT_LHAR", "FT_LDAT", "FT_LTIME", "FT_LDATIM", "VE_REF", "VE_FLT", "VE_COU","VE_FA", "VE_LEN", "VE_KW", "VE_TON", "FT_YEAR")
