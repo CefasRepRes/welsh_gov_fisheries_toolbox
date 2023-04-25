@@ -18,7 +18,24 @@
   str(tacsat_gbw)
   str(eflalo_gbw)
  
-
+  dim( eflalo_gbw)
+  
+  ## Convert EFLALO from LARGE format into WIDE format. This complies with the format required by VMSTOOL 'splitamongpings' function
+    ## Depending the format selected we have to choose Option 1 or Option 2 in step '2.3 Dispatch landings/catches among VMS pings'
+    ## As a general approach , if we want to analyse all species together choose large format if we want to anlyse a number of species choose wide format
+  
+  eflalo_gbw = eflalo_gbw%>%
+    pivot_wider(id_cols = c( FT_REF, FT_DCOU, FT_DHAR, FT_DDAT, FT_DTIME, FT_DDATIM,
+                             FT_LCOU, FT_LHAR, FT_LDAT, FT_LTIME, FT_LDATIM, VE_REF,
+                             VE_FLT, VE_COU, VE_FA, VE_LEN, VE_KW, VE_TON, FT_YEAR,
+                             LE_ID, LE_CDAT, LE_STIME, LE_ETIME, LE_SLAT, LE_GEAR,
+                             LE_MSZ, LE_RECT, LE_DIV, LE_MET, EFLALO_FT_FT_REF, Year,
+                             Month, VE_LEN_CAT ),
+                names_from = c( LE_SPE), values_from = c( LE_KG, LE_VALUE))
+ 
+ 
+  dim( eflalo_gbw)
+  
   # Assign gear and length to tacsat =================================
     # Consider that one fishing trip can use more than one geear, 
     # we use log events instead of fishing trip to linkboth dataset
@@ -54,7 +71,7 @@
  
   ## The result of this query must be 0 records. Meaning all records have an associated gear
   
-  tacsatp %>% filter(is.na(LE_GEAR))
+  tacsatp %>% filter( is.na( LE_GEAR ) )
   
   ## Fill the information for vessel characteristics for those locations with not associated LOG EVENT
   
@@ -67,15 +84,17 @@
     select (-c(VE_LEN2, VE_KW2, VE_COU2))
   
   
-  tacsatp%>%filter(is.na(VE_LEN))
+  tacsatp %>% filter(is.na(VE_LEN))
   
   
    
   # Save not merged tacsat data === 
   
+  
+  
   ## To proceed with analysis we change the format to a data.frame
   
-  tacsatp = tacsatp %>%as.data.frame()
+  tacsatp = tacsatp %>% as.data.frame()
   
   
     # In  this analysis all iVMS has an associated eflallo record
@@ -151,8 +170,8 @@
   autoDetectionGears = c('OTB',  'DRB')
    
   
-  subTacsat <- subset(tacsatp, LE_GEAR %in% autoDetectionGears)%>%as.data.frame()
-  nonsubTacsat <- subset(tacsatp, !LE_GEAR %in% autoDetectionGears)%>%as.data.frame()
+  subTacsat    = subset(tacsatp, LE_GEAR %in% autoDetectionGears)%>%as.data.frame()
+  nonsubTacsat = subset(tacsatp, !LE_GEAR %in% autoDetectionGears)%>%as.data.frame()
    
   
   ## Create the storeScheme object where the speed profiles will be stored
@@ -168,7 +187,7 @@
     
     # Fill the storeScheme values based on analyses of the graphs  
     
-    dat = subTacsat%>%filter ( LE_GEAR == 'OTB' )   
+    dat = subTacsat %>% filter ( LE_GEAR == 'OTB' )   
     
     datmr = dat %>%mutate (SI_SP = -1 * SI_SP )
     datmr = dat %>% bind_rows(datmr)
@@ -232,7 +251,7 @@
   subTacsat%>%group_by(LE_GEAR, SI_STATE)%>% summarise(f_min_s = min (SI_SP ), f_max_s = max (SI_SP ))
   
   ggplot ( subTacsat%>%filter ( LE_GEAR== 'OTB') , aes( x= SI_SP, fill = SI_STATE)  ) + geom_bar ( ) +theme_minimal()
-  ggplot ( subTacsat%>%filter ( LE_GEAR== 'DRB') , aes( x= SI_SP, fill = SI_STATE)  ) + geom_bar (width = 0.1 ) +theme_minimal()
+  ggplot ( subTacsat%>%filter ( LE_GEAR== 'DRB') , aes( x= SI_SP, fill = SI_STATE)  ) + geom_bar (width = 0.1 ) + theme_minimal()
   
   
   
@@ -292,18 +311,40 @@
   
   
   
-  # 2.3 Dispatch landings of merged eflalo at the ping scale  -------------------------------------------------
+  # 2.3 Dispatch landings/catches of merged eflalo at the VMS/iVMS ping scale  -------------------------------------------------
   
   
   ## For all the species together 
   
   
-  
-  idxkgeur = kgeur( colnames(eflalo_gbw ) )
-  
-  captures_total = eflalo_gbw %>% group_by(FT_REF, LE_ID) %>% summarise(LE_KG_TOT = sum( LE_KG), LE_EURO_TOT = 0 ) # LE_KG_TOT = sum( LE_KG) if VALUE data is avaialble
+  ## Option 1: Names in wide format . Each species catch value has its own column 
  
-  eflalo_gbw_tot = eflalo_gbw%>%select(-c (LE_SPE, LE_KG, LE_VALUE))%>%distinct() %>%inner_join(captures_total , by = c("FT_REF", "LE_ID" ))
+  idxkg  =  grep("KG", colnames(eflalo_gbw ) )  
+  idxval =  grep("VALUE", colnames(eflalo_gbw )  ) 
+  
+  eflalo_gbw_tot = eflalo_gbw %>% mutate(LE_KG_TOT = select(.,idxkg) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% mutate(LE_EURO_TOT = NA ) %>% as.data.frame()       
+  
+  
+  ## by species totals
+  
+  eflalo_gbw_tot = eflalo_gbw %>%   mutate(LE_KG_TOT = select(.,contains(c('KG_SOL', 'KG_MAC')) ) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% as.data.frame()       
+  
+  
+  ## keep just the species wanted to be analysed
+  
+  eflalo_gbw_tot = eflalo_gbw %>% select(., -idxkg , -idxval, contains(c('SOL', 'MAC') ) ) %>% filter_at ( vars (contains( c('SOL', 'MAC') ) ) , any_vars(!is.na(.)) ) %>%  as.data.frame()       
+  
+  dim( eflalo_gbw_tot)
+  
+  
+  
+  ## Option 2: Species names in large format . All  species in LE_SPE and  catch value in LE_KG columns
+  
+  
+  captures_total = eflalo_gbw %>% group_by(FT_REF, LE_ID) %>% summarise(LE_KG_TOT = sum( LE_KG), LE_EURO_TOT = 0 ) # LE_KG_TOT = sum( LE_KG) if VALUE data is available
+ 
+
+  eflalo_gbw_tot = eflalo_gbw %>% select(-c (LE_SPE, LE_KG, LE_VALUE)) %>% distinct() %>% inner_join(captures_total , by = c("FT_REF", "LE_ID" ))
   
   
   ## Save the eflalo with total landings before merge with TACSAT 
@@ -311,10 +352,10 @@
   save( eflalo_gbw_tot, file = file.path(outPath, paste0("eflaloTotals", year, ".RData")) )
   
  
-  tacsatp = tacsatp%>%mutate(FT_REF = SI_FT)
+  tacsatp = tacsatp %>% mutate( FT_REF = SI_FT )
   
-  eflaloNM = subset(eflalo_gbw_tot,!FT_REF %in% unique(tacsatp$FT_REF))
   eflaloM =  subset(eflalo_gbw_tot,FT_REF %in% unique(tacsatp$FT_REF))
+  eflaloNM = subset(eflalo_gbw_tot,!FT_REF %in% unique(tacsatp$FT_REF))
   
   dim(eflaloM)
   dim(eflaloNM)
@@ -325,14 +366,19 @@
   
   tacsatEflalo = tacsatp[tacsatp$SI_STATE == 1,] 
   
+  tacsatEflalo = tacsatEflalo %>% filter ( FT_REF %in%  ( eflaloM%>%distinct(FT_REF)%>%pull())   )
+  
+  
   
   #- Split among ping the landings to iVMS locations
+  
+  
  
     tacsatEflalo =
       splitAmongPings(
         tacsat = tacsatEflalo,
         eflalo = eflaloM,
-        variable = "all",
+        variable = "kgs", # "all",
         level = "day",
         conserve = TRUE
       )
@@ -352,128 +398,45 @@
   # 2.4 Assign c-square, year, month, quarter, area and create table 1 ----------------------------------------
   
   
-  tacsatEflalo$Csquare   = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.05)
-  tacsatEflalo$Year      <- year(tacsatEflalo$SI_DATIM)
-  tacsatEflalo$Month     <- month(tacsatEflalo$SI_DATIM)
-  tacsatEflalo$kwHour    <- tacsatEflalo$VE_KW * tacsatEflalo$INTV / 60
-  tacsatEflalo$INTV      <- tacsatEflalo$INTV / 60
-  
-  
-  RecordType <- "VE"
-  
-  if(year == yearsToSubmit[1]) {
-    table1 <-
-      cbind(
-        RT = RecordType,
-        tacsatEflalo[,
-                     c(
-                       "VE_REF", "VE_COU", "Year", "Month", "Csquare", "LE_GEAR",
-                       "LE_MET", "SI_SP", "INTV", "VE_LEN", "kwHour", "VE_KW", "LE_KG_TOT", "LE_EURO_TOT"
-                     )
-        ])
-  } else {
-    
-    table1 <-
-      rbind(
-        table1,
-        cbind(
-          RT = RecordType,
-          tacsatEflalo[,
-                       c(
-                         "VE_REF", "VE_COU", "Year", "Month", "Csquare", "LE_GEAR",
-                         "LE_MET", "SI_SP", "INTV", "VE_LEN", "kwHour", "VE_KW", "LE_KG_TOT", "LE_EURO_TOT"
-                       )
-          ])
-      )
-    
-  }
-  
-  
-  # Save table1   ====================
+  tacsatEflalo$Csquare   =  CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.05)
+  tacsatEflalo$Year      =  year(tacsatEflalo$SI_DATIM)
+  tacsatEflalo$Month     =  month(tacsatEflalo$SI_DATIM)
+  tacsatEflalo$kwHour    =  as.numeric(tacsatEflalo$VE_KW) * tacsatEflalo$INTV  
+  tacsatEflalo$cpue      =  tacsatEflalo$LE_KG_TOT / tacsatEflalo$INTV   
+  tacsatEflalo$INTV      =  tacsatEflalo$INTV 
   
   
   
-  save(
-    table1,
-    file = file.path(outPath, "table1.RData" )
-  )
   
-  message(glue ("Table 1 for year {year} is completed") )
+  
+  
+ 
+   
   
   
   # 2.5 Assign  year, month, quarter, area and create table 2 ----------------------------------------
   
   
   
-  eflalo$Year <- year(eflalo$FT_LDATIM)
-  eflalo$Month <- month(eflalo$FT_LDATIM)
-  eflalo$INTV <- 1 # 1 day
-  eflalo$dummy <- 1
-  res <-
-    aggregate(
-      eflalo$dummy,
-      by = as.list(eflalo[, c("VE_COU", "VE_REF", "LE_CDAT")]),
-      FUN = sum,
-      na.rm <- TRUE
-    )
-  colnames(res) <- c("VE_COU", "VE_REF", "LE_CDAT", "nrRecords")
-  eflalo <- merge(eflalo, res, by = c("VE_COU", "VE_REF", "LE_CDAT"))
-  eflalo$INTV <- eflalo$INTV / eflalo$nrRecords
-  eflalo$kwDays <- eflalo$VE_KW * eflalo$INTV
-  eflalo$tripInTacsat <- ifelse(eflalo$FT_REF %in% tacsatp$FT_REF, "Y", "N") # Y = Yes and N = No
+  eflalo_output = eflalo_gbw_tot
+  
+  eflalo_output$Year      = year(eflalo_output$FT_LDATIM)
+  eflalo_output$Month     = month(eflalo_output$FT_LDATIM)
+  eflalo_output$INTV      = 1 # 1 day
+  
+  eflalo_output = eflalo_output %>% group_by(VE_REF, LE_CDAT) %>% mutate ( nr = row_number() ) %>% 
+                  mutate ( nr = max(nr) ) %>% 
+                  mutate ( INTV = INTV / nr)   %>% 
+                  arrange ( VE_REF , LE_CDAT)  %>% as.data.frame()
+  
+  
+   
+  
+  eflalo_output$kwDays =  as.numeric(eflalo_output$VE_KW) * eflalo_output$INTV
+  eflalo_output$tripInTacsat = ifelse(eflalo_output$FT_REF %in% tacsatp$FT_REF, "Y", "N") # Y = Yes and N = No
+  
+   
   
   
   
-  RecordType <- "LE"
-  
-  if (year == yearsToSubmit[1]) {
-    
-    table2 <-
-      cbind(
-        RT = RecordType,
-        eflalo[
-          ,
-          c(
-            "VE_REF", "VE_COU", "Year", "Month", "LE_RECT", "LE_GEAR", "LE_MET",
-            "VE_LEN", "tripInTacsat", "INTV", "kwDays", "LE_KG_TOT", "LE_EURO_TOT"
-          )
-        ]
-      )
-    
-  } else {
-    
-    table2 <-
-      rbind(
-        table2,
-        cbind(
-          RT = RecordType,
-          eflalo[
-            ,
-            c(
-              "VE_REF", "VE_COU", "Year", "Month", "LE_RECT", "LE_GEAR", "LE_MET",
-              "VE_LEN", "tripInTacsat", "INTV", "kwDays", "LE_KG_TOT", "LE_EURO_TOT"
-            )
-          ]
-        )
-      )
-    
-  }
-  
-  
-  
-  
-  # Save table2   ====================
-  
-  
-  
-  save(
-    table2,
-    file = file.path(outPath, "table2.RData" )
-  )
-  
-  message(glue ("Table 2 for year {year} is completed") )
-  
-  
-  
-  
-}
+ 
