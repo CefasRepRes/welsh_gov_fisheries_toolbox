@@ -101,13 +101,13 @@ Histograms are a useful way of visualising the data so that abnormalities or pat
   dev.off()
 ```
 
-Create a speed threshold for what is to be considered realistic for fishing activity. This can be chosen based on the histogram, which will show outliers which are unrealistic, this threshold can elimiate those.
+Create a speed threshold for what is to be considered realistic for fishing activity. This can be chosen based on the histogram, which will show outliers which are unrealistic, this threshold can eliminate those.
 
 ```{r speed threshold, include=FALSE}
   speedarr <-
     as.data.frame(
       cbind(
-        LE_GEAR = sort(unique(tacsatp$LE_GEAR)),
+        LE_GEAR = sort(unique(tacsatp$LE_GEAR)), # Retrieves all the unique entries in the LE_GEAR column and sorts them alphabetically
         min = NA,
         max = NA),
       stringsAsFactors = FALSE)
@@ -184,18 +184,18 @@ Check the results of the previous section. If the results are not satisfactory, 
 
 ```{r check results of gear analysis, include=FALSE}
   for (iGear in autoDetectionGears) { # open a for loop to iterate through each item in the autoDetectionGears dataset
-    subDat <- subset(subTacsat,LE_GEAR == iGear)
+    subDat <- subset(subTacsat,LE_GEAR == iGear) # create a data subset which takes the current gear type in the loop (iGear)
     minS <-
       min(
-        subDat$SI_SP[which(subDat$SI_STATE == "s")],
+        subDat$SI_SP[which(subDat$SI_STATE == "s")], # create a sub dataset which includes only steaming entries 
         na.rm = TRUE)
     minF <-
-      min(subDat$SI_SP[which(subDat$SI_STATE == "f")],
+      min(subDat$SI_SP[which(subDat$SI_STATE == "f")], # do the same for fishing 
           na.rm = TRUE)
-    if(minS < minF) {
+    if(minS < minF) { # this part of the function will only work if the criteria is met
       storeScheme$fixPeaks[which(storeScheme$analyse.by == iGear)] <- TRUE
       subacTa <-
-        activityTacsat(
+        activityTacsat( 
           subDat,
           units = "year",
           analyse.by = "LE_GEAR",
@@ -212,20 +212,265 @@ Check the results of the previous section. If the results are not satisfactory, 
     ]
 ```
 
+Assign min or max to the sows of SI_SP and progress with analysis.
 
+```{r check results of gear analysis, include=FALSE}
+  # Assign for visually inspected gears a simple speed rule classification =============== 
+  
+  metiers <- unique(nonsubTacsat$LE_GEAR) # retrieve the unique gear types from the nonsubTacsat dataset
+  nonsubTacsat$SI_STATE <- NA # set all entries in the SI_STATE column of the dataset to NA
+  for (mm in metiers) { # for every unique gear type, complete the following
+    nonsubTacsat$SI_STATE[
+      nonsubTacsat$LE_GEAR == mm &
+        nonsubTacsat$SI_SP >= speedarr[speedarr$LE_GEAR == mm, "min"] &
+        nonsubTacsat$SI_SP <= speedarr[speedarr$LE_GEAR == mm, "max"]
+    ] <- "f";
+  }
+  nonsubTacsat$SI_STATE[
+    nonsubTacsat$LE_GEAR == "NA" &
+      nonsubTacsat$SI_SP >= speedarr[speedarr$LE_GEAR == "MIS", "min"] &
+      nonsubTacsat$SI_SP <= speedarr[speedarr$LE_GEAR == "MIS", "max"]
+  ] <- "f"
+  nonsubTacsat$SI_STATE[ is.na(nonsubTacsat$SI_STATE) ] <- "s"
+  
+    # Combine the two dataset together again =============== 
+  
+  
+  tacsatp <- rbindTacsat(subTacsat, nonsubTacsat) # rbind merges the datasets vertically
+  tacsatp <- orderBy( ~ VE_REF + SI_DATIM, data = tacsatp) # sort the rows based on these columns
+  
+  # Set fishing sequences with hauling in the middle to "f" ##################
+  
+  
+  idx <-
+    which(
+      tacsatp$SI_STATE[2:(nrow(tacsatp) - 1)] == "h" &
+        tacsatp$SI_STATE[1:(nrow(tacsatp) - 2)] == "f" &
+        tacsatp$SI_STATE[3:(nrow(tacsatp))    ] == "f" &
+        tacsatp$VE_REF[2:(nrow(tacsatp) - 1)] == tacsatp$VE_REF[1:(nrow(tacsatp) - 2)] &
+        tacsatp$VE_REF[2:(nrow(tacsatp) - 1)] == tacsatp$VE_REF[3:(nrow(tacsatp))]
+    ) + 1
+  tacsatp$SI_STATE[idx] <- "f"
+  
+  # save the outputs
+  save(
+    tacsatp,
+    file = file.path(outPath, paste0("tacsatActivity", year, ".RData"))
+  )
+  
+  message("Defining activity completed")
+  
+    # 2.3 Dispatch landings of merged eflalo at the ping scale  -------------------------------------------------
+  
+  
+  idxkgeur <- kgeur(colnames(eflalo))
+  eflalo$LE_KG_TOT <- rowSums(eflalo[,grep("LE_KG_",colnames(eflalo))],na.rm=T)
+  eflalo$LE_EURO_TOT <- rowSums(eflalo[,grep("LE_EURO_",colnames(eflalo))],na.rm=T)
+  eflalo <- eflalo[, -idxkgeur]
+  eflaloNM <- subset(eflalo,!FT_REF %in% unique(tacsatp$FT_REF))
+  eflaloM <- subset(eflalo,FT_REF %in% unique(tacsatp$FT_REF))
+  
+  tacsatp$SI_STATE[which(tacsatp$SI_STATE != "f")] <- 0
+  tacsatp$SI_STATE[which(tacsatp$SI_STATE == "f")] <- 1
+  
+  tacsatEflalo <- tacsatp[tacsatp$SI_STATE == 1,] 
+  
+  
+  #- There are several options, specify at the top of this script what type of linking you require
+  if (!"trip" %in% linkEflaloTacsat) stop("trip must be in linkEflaloTacsat")
+  if (all(c("day", "ICESrectangle", "trip") %in% linkEflaloTacsat)) {
+    tacsatEflalo <-
+      splitAmongPings(
+        tacsat = tacsatp,
+        eflalo = eflaloM,
+        variable = "all",
+        level = "day",
+        conserve = TRUE
+      )
+  } else
+  {
+    if (
+      all(c("day","trip") %in% linkEflaloTacsat) &
+      !"ICESrectangle" %in% linkEflaloTacsat
+    ) {
+      tmpTa <- tacsatp
+      tmpEf <- eflaloM
+      tmpTa$LE_RECT <- "ALL"
+      tmpEf$LE_RECT <- "ALL"
+      tacsatEflalo <-
+        splitAmongPings(
+          tacsat = tmpTa,
+          eflalo = tmpEf,
+          variable = "all",
+          level = "day",
+          conserve = TRUE
+        )
+    } else
+    {
+      if (
+        all(c("ICESrectangle", "trip") %in% linkEflaloTacsat) &
+        !"day" %in% linkEflaloTacsat
+      )
+      {
+        tacsatEflalo <-
+          splitAmongPings(
+            tacsat = tacsatp,
+            eflalo = eflaloM,
+            variable = "all",
+            level = "ICESrectangle",
+            conserve = TRUE
+          )
+      } else
+      {
+        if (linkEflaloTacsat == "trip" & length(linkEflaloTacsat) == 1)
+        {
+          tacsatEflalo <-
+            splitAmongPings(
+              tacsat = tacsatp,
+              eflalo = eflaloM,
+              variable = "all",
+              level = "trip",
+              conserve = FALSE
+            )
+        }
+      }
+    }
+  }
+  
+  save(
+    tacsatEflalo,
+    file = file.path(outPath, paste0("tacsatEflalo", year, ".RData"))
+  )
+  
+  print("Dispatching landings completed")
+  
+  
+  # 2.4 Assign c-square, year, month, quarter, area and create table 1 ----------------------------------------
+  
+  
+  tacsatEflalo$Csquare   <- CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.05)
+  tacsatEflalo$Year      <- year(tacsatEflalo$SI_DATIM)
+  tacsatEflalo$Month     <- month(tacsatEflalo$SI_DATIM)
+  tacsatEflalo$kwHour    <- tacsatEflalo$VE_KW * tacsatEflalo$INTV / 60
+  tacsatEflalo$INTV      <- tacsatEflalo$INTV / 60
+  
+  
+  RecordType <- "VE"
+  
+  if(year == yearsToSubmit[1]) {
+    table1 <-
+      cbind(
+        RT = RecordType,
+        tacsatEflalo[,
+                     c(
+                       "VE_REF", "VE_COU", "Year", "Month", "Csquare", "LE_GEAR",
+                       "LE_MET", "SI_SP", "INTV", "VE_LEN", "kwHour", "VE_KW", "LE_KG_TOT", "LE_EURO_TOT"
+                     )
+        ])
+  } else {
+    
+    table1 <-
+      rbind(
+        table1,
+        cbind(
+          RT = RecordType,
+          tacsatEflalo[,
+                       c(
+                         "VE_REF", "VE_COU", "Year", "Month", "Csquare", "LE_GEAR",
+                         "LE_MET", "SI_SP", "INTV", "VE_LEN", "kwHour", "VE_KW", "LE_KG_TOT", "LE_EURO_TOT"
+                       )
+          ])
+      )
+    
+  }
+  
+  
+  # Save table1   ====================
+  
+  
+  
+  save(
+    table1,
+    file = file.path(outPath, "table1.RData" )
+  )
+  
+  message(glue ("Table 1 for year {year} is completed") )
+  
+  
+  # 2.5 Assign  year, month, quarter, area and create table 2 ----------------------------------------
+  
+  
+  
+  eflalo$Year <- year(eflalo$FT_LDATIM) # retrieve the year from the FT_LDATIM column
+  eflalo$Month <- month(eflalo$FT_LDATIM) # retrieve the month
+  eflalo$INTV <- 1 # 1 day
+  eflalo$dummy <- 1
+  res <-
+    aggregate(
+      eflalo$dummy,
+      by = as.list(eflalo[, c("VE_COU", "VE_REF", "LE_CDAT")]),
+      FUN = sum,
+      na.rm <- TRUE
+    )
+  colnames(res) <- c("VE_COU", "VE_REF", "LE_CDAT", "nrRecords")
+  eflalo <- merge(eflalo, res, by = c("VE_COU", "VE_REF", "LE_CDAT"))
+  eflalo$INTV <- eflalo$INTV / eflalo$nrRecords
+  eflalo$kwDays <- eflalo$VE_KW * eflalo$INTV # multiply kw and intv to calculate kwdays of effort 
+  eflalo$tripInTacsat <- ifelse(eflalo$FT_REF %in% tacsatp$FT_REF, "Y", "N") # Y = Yes and N = No
+  
+  
+  
+  RecordType <- "LE"
+  
+  if (year == yearsToSubmit[1]) {
+  
+    # if the year matches the entry, horizontally bind the quoted column names to the table2 variable
+    table2 <-
+      cbind(
+        RT = RecordType,
+        eflalo[
+          ,
+          c( # a list of the column headers being attached 
+            "VE_REF", "VE_COU", "Year", "Month", "LE_RECT", "LE_GEAR", "LE_MET",
+            "VE_LEN", "tripInTacsat", "INTV", "kwDays", "LE_KG_TOT", "LE_EURO_TOT"
+          )
+        ]
+      )
+    
+  } else {
+    
+    # if the prior criteria was not met, the following will run
+    table2 <-
+      rbind(
+        table2,
+        cbind(
+          RT = RecordType,
+          eflalo[
+            ,
+            c( # a list of the column headers being attached 
+              "VE_REF", "VE_COU", "Year", "Month", "LE_RECT", "LE_GEAR", "LE_MET",
+              "VE_LEN", "tripInTacsat", "INTV", "kwDays", "LE_KG_TOT", "LE_EURO_TOT"
+            )
+          ]
+        )
+      )
+    
+  }
+  
+  
+  
+  
+  # Save table2   ====================
+  
+  
+  
+  save(
+    table2,
+    file = file.path(outPath, "table2.RData" )
+  )
+  
+  message(glue ("Table 2 for year {year} is completed") )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
 
 
