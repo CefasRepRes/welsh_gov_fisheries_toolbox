@@ -407,6 +407,10 @@
   
   
   
+  save(
+    tacsatEflalo,
+    file = file.path(outPath, paste0("tacsatEflalo_output_", year, ".RData"))
+  )
   
   
   
@@ -436,6 +440,12 @@
   eflalo_output$tripInTacsat = ifelse(eflalo_output$FT_REF %in% tacsatp$FT_REF, "Y", "N") # Y = Yes and N = No
   
    
+  
+  
+  save(
+    eflalo_output,
+    file = file.path(outPath, paste0("eflalo_output_", year, ".RData"))
+  )
   
   
   

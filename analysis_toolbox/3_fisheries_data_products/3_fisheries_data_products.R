@@ -2,8 +2,8 @@
 
 # 3.1 Load TABLE 1 (VMS) and TABLE 2 (LOGBOOK) --------------------------------------------
 
-load(file = paste0(outPath, "table1.RData")  )
-load( file = paste0(outPath, "table2.RData")  )
+load(file = paste0(outPath, "/eflalo_output_", year , ".RData")  )
+load(file = paste0(outPath, "/tacsatEflalo_output_", year , ".RData")  )
 
 
 # 3.2 Replace vessel id by an anonymized id column  --------------------------------------------
