@@ -27,9 +27,9 @@ load(file = '.\\..\\data\\tacsat_gbw.RData' )
 To ensure columns match between datasets, the SI_FT column will be renamed to FT_REF. This uses mutate to create a new column named FT_REF, instead of replacing the SI_FT column. The column name is specified before the = and the contents are specified after.
 
 ```{r SI_FT to FT_REF, include=FALSE}
-tacsatp= tacsat_gbw %>% mutate(FT_REF = SI_FT) 
+tacsatp = tacsat_gbw %>% mutate(FT_REF = SI_FT) 
   
-head(tacsat_gbw)
+head(tacsat_gbw) # observe the new column
 ```
 
 ### Assign gear and length to tacsat
@@ -212,10 +212,10 @@ Check the results of the previous section. If the results are not satisfactory, 
     ]
 ```
 
-Assign min or max to the sows of SI_SP and progress with analysis.
+Assign min or max to the sows of SI_SP and progress with analysis. Entries will be tested to see if they meet set criteria. In this case, the gear type is checked; if it is within the metiers dataset which is created below, and if the speed is within the thresholds set. This information leads to assignment of an SI_STATE value.
 
 ```{r check results of gear analysis, include=FALSE}
-  # Assign for visually inspected gears a simple speed rule classification =============== 
+  # Assign for visually inspected gears a simple speed rule classification
   
   metiers <- unique(nonsubTacsat$LE_GEAR) # retrieve the unique gear types from the nonsubTacsat dataset
   nonsubTacsat$SI_STATE <- NA # set all entries in the SI_STATE column of the dataset to NA
@@ -224,23 +224,24 @@ Assign min or max to the sows of SI_SP and progress with analysis.
       nonsubTacsat$LE_GEAR == mm &
         nonsubTacsat$SI_SP >= speedarr[speedarr$LE_GEAR == mm, "min"] &
         nonsubTacsat$SI_SP <= speedarr[speedarr$LE_GEAR == mm, "max"]
-    ] <- "f";
+    ] <- "f"; # if the gear type is in the metiers dataset, and the speed falls within the thresholds set, set the SI_STATE value to f
   }
   nonsubTacsat$SI_STATE[
     nonsubTacsat$LE_GEAR == "NA" &
       nonsubTacsat$SI_SP >= speedarr[speedarr$LE_GEAR == "MIS", "min"] &
       nonsubTacsat$SI_SP <= speedarr[speedarr$LE_GEAR == "MIS", "max"]
   ] <- "f"
+  # if the gear type is not in the metiers dataset, and the speed does not fall within the thresholds set, set the SI_STATE value to s
   nonsubTacsat$SI_STATE[ is.na(nonsubTacsat$SI_STATE) ] <- "s"
   
-    # Combine the two dataset together again =============== 
   
+  # Combine the two dataset together again 
   
   tacsatp <- rbindTacsat(subTacsat, nonsubTacsat) # rbind merges the datasets vertically
   tacsatp <- orderBy( ~ VE_REF + SI_DATIM, data = tacsatp) # sort the rows based on these columns
   
-  # Set fishing sequences with hauling in the middle to "f" ##################
   
+  # Set fishing sequences with hauling in the middle to "f" 
   
   idx <-
     which(
@@ -252,6 +253,7 @@ Assign min or max to the sows of SI_SP and progress with analysis.
     ) + 1
   tacsatp$SI_STATE[idx] <- "f"
   
+  
   # save the outputs
   save(
     tacsatp,
@@ -260,8 +262,8 @@ Assign min or max to the sows of SI_SP and progress with analysis.
   
   message("Defining activity completed")
   
-    # 2.3 Dispatch landings of merged eflalo at the ping scale  -------------------------------------------------
   
+  # 2.3 Dispatch landings of merged eflalo at the ping scale
   
   idxkgeur <- kgeur(colnames(eflalo))
   eflalo$LE_KG_TOT <- rowSums(eflalo[,grep("LE_KG_",colnames(eflalo))],na.rm=T)
@@ -276,7 +278,8 @@ Assign min or max to the sows of SI_SP and progress with analysis.
   tacsatEflalo <- tacsatp[tacsatp$SI_STATE == 1,] 
   
   
-  #- There are several options, specify at the top of this script what type of linking you require
+  # There are several options, specify at the top of this script what type of linking you require
+  
   if (!"trip" %in% linkEflaloTacsat) stop("trip must be in linkEflaloTacsat")
   if (all(c("day", "ICESrectangle", "trip") %in% linkEflaloTacsat)) {
     tacsatEflalo <-
@@ -345,7 +348,7 @@ Assign min or max to the sows of SI_SP and progress with analysis.
   print("Dispatching landings completed")
   
   
-  # 2.4 Assign c-square, year, month, quarter, area and create table 1 ----------------------------------------
+  # 2.4 Assign c-square, year, month, quarter, area and create table 1 
   
   
   tacsatEflalo$Csquare   <- CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.05)
@@ -385,7 +388,7 @@ Assign min or max to the sows of SI_SP and progress with analysis.
   }
   
   
-  # Save table1   ====================
+  # Save table1
   
   
   
@@ -397,9 +400,7 @@ Assign min or max to the sows of SI_SP and progress with analysis.
   message(glue ("Table 1 for year {year} is completed") )
   
   
-  # 2.5 Assign  year, month, quarter, area and create table 2 ----------------------------------------
-  
-  
+  # 2.5 Assign  year, month, quarter, area and create table 2
   
   eflalo$Year <- year(eflalo$FT_LDATIM) # retrieve the year from the FT_LDATIM column
   eflalo$Month <- month(eflalo$FT_LDATIM) # retrieve the month
@@ -459,10 +460,7 @@ Assign min or max to the sows of SI_SP and progress with analysis.
   
   
   
-  
-  # Save table2   ====================
-  
-  
+  # Save table2
   
   save(
     table2,
