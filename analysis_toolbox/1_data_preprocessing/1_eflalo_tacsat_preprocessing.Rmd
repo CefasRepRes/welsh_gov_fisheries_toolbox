@@ -5,7 +5,7 @@ date: "03/03/2023"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, eval = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(lubridate)
@@ -29,7 +29,7 @@ As can be seen, the output is each trip reference, followed by the n column disp
 
 Following this, the number of log events is calculated and individual trip references can be inspected if they present unrealistic log event or record numbers.
 
-```{r count records & log events, include=FALSE}
+```{r count records & log events, eval = FALSE}
 
   ## Q1.1.1: How many overall records are there per trip?  
     
@@ -55,7 +55,7 @@ Unrealistic trip days suggest human error, so the following code calculates the 
 
 From the code in section 1.2, the number of days is produced, so outliers can be seen. It is evident there are some unrealistic trip times, with one trip supposedly lasting 366 days - likely the wrong year was input. These trips can be filtered out in section 1.1.1, which finds trips which took 10 days or less and assigns them to 'trips_in'. This number cam be edited depending on the dataset. Then, eflalo_gbw is filtered to only include trip references which are present in 'trips_in', successfully removing trips with unrealistic time frames. 
 
-```{r filter trip duration, include=FALSE}
+```{r filter trip duration, eval = FALSE}
   
   ## Observe the trips with more days duration . Identify outliers and potential errors in Departure and Landing dates. 
   
@@ -76,7 +76,7 @@ From the code in section 1.2, the number of days is produced, so outliers can be
 
 Landings can also present unrealistic numbers; by setting a threshold, unreasonably high landings numbers can be identified and removed. Per-species thresholds can be set using log10, where the final value will vary based on the species, so a blanket threshold for all species is not set. The results of the filter can be used in the subsequent code to look into why their landing weights sre exceeding expected values.
 
-```{r filter landing thresholds, include=FALSE}
+```{r filter landing thresholds, eval = FALSE}
    
     ## Select a logarithm scale landing weight threshold ( e.g. 1.5)
    
@@ -104,7 +104,7 @@ Landings can also present unrealistic numbers; by setting a threshold, unreasona
 
 It is useful to check for NA values in numerical or date columns columns as if calculations are enacted on these, it may produce NA values as the result. Filtering to results with NA values allows them to be investigated and to see if they may cause issues further into the analysis.
 
-```{r filter NAs, include=FALSE}
+```{r filter NAs, eval = FALSE}
   # 1.4 Check for NA's in catch records ----------------------------------------------------------
      
     
@@ -120,7 +120,7 @@ It is useful to check for NA values in numerical or date columns columns as if c
 
 Duplicated trips cause inaccuracies in landings data and therefore should be removed. duplicate analysis is creating a variable which provides a boolean response to if a trip is duplicated or not, by checking the trip and vessel references and the departure/landing times. These trips can be investigated by the code in the third block. Finally, trips IDs that are identified as duplicates can be removed via common FT_REF with the duplicated_trips dataset.
 
-```{r filter duplicate trips, include=FALSE}
+```{r filter duplicate trips, eval = FALSE}
      
      duplicate_analysis =   eflalo_gbw%>%distinct(VE_REF,FT_REF,  FT_DDAT, FT_LDAT)%>%
                             group_by(VE_REF, FT_DDAT, FT_LDAT)%>%
@@ -156,7 +156,7 @@ Duplicated trips cause inaccuracies in landings data and therefore should be rem
 
 Another example of human error in input are trips which apparently ended before they began, these can be easily removed thanks to the trip_days column created previously. If the trip days are less than or equal to 0, they are considered impossible.
 
-```{r filter overlaps, include=FALSE}
+```{r filter departure arrival overlap, eval = FALSE}
      
       ## Use the field created with trip duration: trip_days
       ## A value of 0 or negative would means departure and landing dates are same or reversed
@@ -168,7 +168,7 @@ Another example of human error in input are trips which apparently ended before 
 
 Furthermore, a vessel cannot be on two separate trips at once, so trips which overlap one another cannot feasibly occur. The VMS locations of these trips will cause issues as they are technically suggesting a vessel is in two places at once. These trips must be corrected or deleted, this decision can be made on a case by case basis, following the following filtering, which will pull these trips out conveniently.
 
-```{r filter overlaps, include=FALSE}
+```{r filter overlaps different trips, eval = FALSE}
    
     ## Identify the vessel trips that have a departure date overlapping with previous return/landing date
    
@@ -216,7 +216,7 @@ Furthermore, a vessel cannot be on two separate trips at once, so trips which ov
 
 Spatial data is necessary for analysing VMS data. It can be loaded into R as follows.
 
-```{r load spatial data, include=FALSE}
+```{r load spatial data, eval = FALSE}
 ## Define an object bbox with the area of interest 
 aoi = st_bbox(c(xmin = -15, xmax = 3, ymax = 60, ymin = 40), crs = st_crs(4326))
        
@@ -235,7 +235,7 @@ plot( europe_aoi)
 
 Convert spatial grid references to match so the datasets can be used in conjunction for analysis. Next, remove any VMS pings which do not fall inside ICES areas.
 
-```{r edit spatial grid references, include=FALSE}
+```{r edit spatial grid references, eval = FALSE}
 
 ## Filter TACSAT data with the trips result from cleaning EFLALO data
 
@@ -261,7 +261,7 @@ tacsat_gbw = tacsat_gbw%>%filter(SI_FT %in% ( eflalo_gbw%>%distinct(FT_REF)%>%pu
 
 As with EFLALO, removing duplicated trips must occur. The EFLALO data will be used here to aid the filtering.
 
-```{r remove duplicates, include=FALSE}
+```{r remove duplicates, eval = FALSE}
 tacsat_gbw%>%
     group_by(VE_REF, SI_LATI, SI_LONG , SI_DATIM )%>%
     filter(n()> 1)%>%
@@ -279,7 +279,7 @@ tacsat_gbw%>%
 
 Points which supposedly exist outside the extent of earth's longitude and latitude scales can simply be removed with the following code.
 
-```{r remove impossible points, include=FALSE}
+```{r remove impossible points, eval = FALSE}
   tacsat_gbw%>%filter(abs(SI_LATI) > 90 || abs(SI_LONG) > 180)
   tacsat_gbw%>%filter(SI_HE < 0 || SI_HE > 360)
   tacsat_gbw%>%filter(SI_SP > 25 ) 
@@ -291,7 +291,7 @@ As VMS systems ping regularly at 2 hour intervals, double points are almost cert
 
 Using the interval between pings on records with the same trip reference, records which have pinged too frequently in short succession can be identified.
 
-```{r remove pseudo-duplicate points, include=FALSE}
+```{r remove pseudo-duplicate points, eval = FALSE}
   ## Convert the TACSAT into a spatial object (SF package)
   
   tacsat_gbw_geom = tacsat_gbw%>%ungroup()%>%st_as_sf(., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
@@ -350,7 +350,7 @@ Points within harbours are identified by their spatial intersection with the por
 
 These points can be plotted as shown below, using ggplot, which adds the Welsh marine area, the chosen ports which are selected within the quotation marks and the vms points which are located inside the ports. Finally, the boundary of the plot is specified so the plot is focused on the area of interest.
 
-```{r remove points in harbours, include=FALSE}
+```{r remove points in harbours, eval = FALSE}
   # 2.2.5 Remove points in harbour -----------------------------------------------------------------------------
   
   ##Q1: Are the vessel iVMS positions in/nearby a harbour?

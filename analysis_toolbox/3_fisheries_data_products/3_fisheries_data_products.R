@@ -1,9 +1,114 @@
-
+year = 2022
 
 # 3.1 Load TABLE 1 (VMS) and TABLE 2 (LOGBOOK) --------------------------------------------
 
 load(file = paste0(outPath, "/eflalo_output_", year , ".RData")  )
 load(file = paste0(outPath, "/tacsatEflalo_output_", year , ".RData")  )
+
+
+
+
+
+## 3.2 Welsh Gov Fisheries Data Product 
+
+
+head(tacsatEflalo)
+
+
+
+
+
+# TABLE 1. Add the vessel length category using  LENGTHCAT field
+
+
+
+tacsatEflalo$LENGTHCAT <-  table1$VE_LEN%>%cut(    breaks=c(0, 6, 8, 10, 12, 15, 18, 24, 40, 'inf' ), 
+                                             right = FALSE    ,include.lowest = TRUE,
+                                             labels =  vlen_icesc$Key 
+)
+
+
+# TABLE 2. Add the vessel length category using  LENGTHCAT field
+
+tacsatEflalo$LENGTHCAT <-  table2$VE_LEN%>%cut(   breaks=c(0, 6, 8, 10, 12, 15, 18, 24, 40, 'inf' ), 
+                                            right = FALSE    ,include.lowest = TRUE,
+                                            labels =  vlen_icesc$Key 
+)
+
+
+
+
+table1Save <-
+  table1 %>%
+
+  group_by(RT,VE_COU,Year,Month,Csquare,LE_GEAR, met5,  LE_MET,LENGTHCAT) %>%
+  summarise(
+    mean_si_sp       = mean(SI_SP),
+    sum_intv         = sum(INTV, na.rm=TRUE),
+    mean_intv        = mean(INTV, na.rm=TRUE),
+    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    sum_kwHour       = sum(kwHour, na.rm=TRUE),
+    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+    sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+    vessel_ids       = ifelse (
+      n_distinct(VE_ID) < 3,
+      paste(unique(VE_ID), collapse = ";"),
+      'not_required'
+    )
+  ) %>%  relocate( n_vessels,vessel_ids, .before = Csquare)%>%
+  mutate (AverageGearWidth = NA%>%as.numeric()  )%>% ## If this information is available modify this line of the script. By default is assumed not existing gear width information
+  as.data.frame()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # 3.2 Replace vessel id by an anonymized id column  --------------------------------------------
