@@ -18,7 +18,30 @@ head(tacsatEflalo)
 
 
 
-# TABLE 1. Add the vessel length category using  LENGTHCAT field
+# TABLE 1.
+
+#Fishing activity indicators: 
+
+  # Total Fishing effort hours
+  # Total Fishing effort hours * kw
+  # Total Fishing catch weight
+  # Fishing catch value 
+  # Average speed
+  # Average length 
+  # Average Kw 
+
+
+# aggregated by: 
+
+  # Temporal resolution: year, month 
+  # Spatial resolution:  c_square 0.05
+  # Fleet resolution: m4, m5 and vessel length classes
+
+
+
+
+
+# Create vessel length class: Add the vessel length category using  LENGTHCAT field
 
 
 
@@ -47,7 +70,7 @@ table1Save <-
     sum_intv         = sum(INTV, na.rm=TRUE),
     mean_intv        = mean(INTV, na.rm=TRUE),
     mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
-    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    mean_ve_kw       = mean(VE_KW, na.rm = TRUE),
     sum_kwHour       = sum(kwHour, na.rm=TRUE),
     sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
     sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
@@ -63,6 +86,38 @@ table1Save <-
 
 
 
+
+
+# TABLE 2. Add the vessel length category using  LENGTHCAT field
+
+tacsatEflalo$LENGTHCAT
+
+
+
+
+
+table1Save <-
+  table1 %>%
+  
+  group_by(RT,VE_COU,Year,quarter,Csquare,LE_GEAR, met5,  LE_MET,LENGTHCAT) %>%
+  summarise(
+    mean_si_sp       = mean(SI_SP),
+    sum_intv         = sum(INTV, na.rm=TRUE),
+    mean_intv        = mean(INTV, na.rm=TRUE),
+    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    sum_kwHour       = sum(kwHour, na.rm=TRUE),
+    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+    sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+    vessel_ids       = ifelse (
+      n_distinct(VE_ID) < 3,
+      paste(unique(VE_ID), collapse = ";"),
+      'not_required'
+    )
+  ) %>%  relocate( n_vessels,vessel_ids, .before = Csquare)%>%
+  mutate (AverageGearWidth = NA%>%as.numeric()  )%>% ## If this information is available modify this line of the script. By default is assumed not existing gear width information
+  as.data.frame()
 
 
 
