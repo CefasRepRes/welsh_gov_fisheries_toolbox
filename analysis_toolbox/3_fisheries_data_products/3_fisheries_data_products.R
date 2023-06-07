@@ -2,21 +2,48 @@ year = 2022
 
 # 3.1 Load TABLE 1 (VMS) and TABLE 2 (LOGBOOK) --------------------------------------------
 
+#######
+# DELETE BEFORE PUSH #
+#######
+
+library(tidyverse)
+library(lubridate)
+library(xlsx)
+
+outPath = "C:\\Users\\md09\\OneDrive - CEFAS\\projects\\C8529A-welsh-gov\\data\\data-2-output"
+
+#######
+
 load(file = paste0(outPath, "/eflalo_output_", year , ".RData")  )
 load(file = paste0(outPath, "/tacsatEflalo_output_", year , ".RData")  )
-
-
-
-
 
 ## 3.2 Welsh Gov Fisheries Data Product 
 
 
 head(tacsatEflalo)
 
-
-
-
+# table1Save <-
+#   table1 %>%
+# 
+#   group_by(RT,VE_COU,Year,Month,Csquare,LE_GEAR, met5, LE_MET,LENGTHCAT) %>%
+#   summarise(
+#     mean_si_sp       = mean(SI_SP),
+#     sum_intv         = sum(INTV, na.rm=TRUE),
+#     mean_intv        = mean(INTV, na.rm=TRUE),
+#     mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+#     mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+#     sum_kwHour       = sum(kwHour, na.rm=TRUE),
+#     sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+#     sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+#     n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+#     vessel_ids       = ifelse (
+#       n_distinct(VE_ID) < 3,
+#       paste(unique(VE_ID), collapse = ";"),
+#       'not_required'
+#     )
+#   ) %>%  relocate( n_vessels,vessel_ids, .before = Csquare)%>%
+#   mutate (AverageGearWidth = NA%>%as.numeric()  )%>% ## If this information is available modify this line of the script. By default is assumed not existing gear width information
+#   as.data.frame()
 
 # TABLE 1.
 
@@ -43,47 +70,227 @@ head(tacsatEflalo)
 
 # Create vessel length class: Add the vessel length category using  LENGTHCAT field
 
+len_labels = c("0-5m", "5-7m", "7-10m", ">10m")
+
+tacsatEflalo$LENGTHCAT <- tacsatEflalo$VE_LEN %>% cut(breaks=c(0, 5, 7, 10, 'inf'), 
+                                                      right = FALSE ,include.lowest = TRUE,
+                                                      labels = len_labels
+                                                      )
 
 
-tacsatEflalo$LENGTHCAT <-  table1$VE_LEN%>%cut(    breaks=c(0, 6, 8, 10, 12, 15, 18, 24, 40, 'inf' ), 
-                                             right = FALSE    ,include.lowest = TRUE,
-                                             labels =  vlen_icesc$Key 
-)
+quar_labels = c("1", "2", "3", "4")
+tacsatEflalo$QUARTER = tacsatEflalo$Month %>% cut(breaks = c(0, 4, 7, 10, 12),
+                                                  right = F, include.lowest = T,
+                                                  labels = quar_labels
+                                                  )
 
-
-# TABLE 2. Add the vessel length category using  LENGTHCAT field
-
-tacsatEflalo$LENGTHCAT <-  table2$VE_LEN%>%cut(   breaks=c(0, 6, 8, 10, 12, 15, 18, 24, 40, 'inf' ), 
-                                            right = FALSE    ,include.lowest = TRUE,
-                                            labels =  vlen_icesc$Key 
-)
+tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
 
 
 
+# New field added for the 2020 datacall including unique vessels id's  #
+# This vessel id is used to calculate unique vessels in a c-square and  #
+VE_lut <- data.frame(VE_REF = unique(c(tacsatEflalo$VE_REF, eflalo_output$VE_REF)))
+fmt <- paste0("%0", floor(log10(nrow(VE_lut))) + 1, "d")
+VE_lut$VE_ID <- paste0(tacsatEflalo$VE_COU[1], sprintf(fmt, 1:nrow(VE_lut))) # use relevant country code!
 
-table1Save <-
+
+# join onto data tables
+table1 <- left_join(tacsatEflalo, VE_lut)
+table2 <- left_join(eflalo_output, VE_lut)
+
+table1$VE_KW = as.numeric(table1$VE_KW)
+
+# Table 1
+
+### Quarter, 0.05 Csquare, gear, metier
+
+table1.1 = 
   table1 %>%
-
-  group_by(RT,VE_COU,Year,Month,Csquare,LE_GEAR, met5,  LE_MET,LENGTHCAT) %>%
+  group_by(VE_COU,QUARTER,Csquare,LE_GEAR,LE_MET) %>%
   summarise(
     mean_si_sp       = mean(SI_SP),
-    sum_intv         = sum(INTV, na.rm=TRUE),
+    sum_intv         = sum(INTV, na.rm = TRUE),
     mean_intv        = mean(INTV, na.rm=TRUE),
     mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
     mean_ve_kw       = mean(VE_KW, na.rm = TRUE),
     sum_kwHour       = sum(kwHour, na.rm=TRUE),
     sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
-    sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
     n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
     vessel_ids       = ifelse (
       n_distinct(VE_ID) < 3,
       paste(unique(VE_ID), collapse = ";"),
       'not_required'
     )
-  ) %>%  relocate( n_vessels,vessel_ids, .before = Csquare)%>%
-  mutate (AverageGearWidth = NA%>%as.numeric()  )%>% ## If this information is available modify this line of the script. By default is assumed not existing gear width information
+  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare) %>%
+  #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
   as.data.frame()
 
+write.xlsx(table1.1, "./data-products/table1.xlsx",sheetName = "1.1", row.names = F, append = T)
+
+
+### Year, 0.05 Csquare, gear, metier
+table1.2 = 
+  table1 %>%
+  group_by(VE_COU,Year,Csquare,LE_GEAR,LE_MET) %>%
+  summarise(
+    mean_si_sp       = mean(SI_SP),
+    sum_intv         = sum(INTV, na.rm = TRUE),
+    mean_intv        = mean(INTV, na.rm=TRUE),
+    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    sum_kwHour       = sum(kwHour, na.rm=TRUE),
+    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+    vessel_ids       = ifelse (
+      n_distinct(VE_ID) < 3,
+      paste(unique(VE_ID), collapse = ";"),
+      'not_required'
+    )
+  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare) %>%
+  mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+  as.data.frame()
+
+write.xlsx(table1.2, "./data-products/table1.xlsx",sheetName = "1.2", row.names = F, append = T)
+
+
+### Month, 0.05 Csquare, gear, metier
+
+table1.3 = 
+  table1 %>%
+  group_by(VE_COU,Year,Csquare,LE_GEAR,LE_MET) %>%
+  summarise(
+    mean_si_sp       = mean(SI_SP),
+    sum_intv         = sum(INTV, na.rm = TRUE),
+    mean_intv        = mean(INTV, na.rm=TRUE),
+    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    sum_kwHour       = sum(kwHour, na.rm=TRUE),
+    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+    vessel_ids       = ifelse (
+      n_distinct(VE_ID) < 3,
+      paste(unique(VE_ID), collapse = ";"),
+      'not_required'
+    )
+  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare) %>%
+  mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+  as.data.frame()
+
+write.xlsx(table1.3, "./data-products/table1.xlsx",sheetName = "1.3", row.names = F, append = T)
+
+
+### Year, 0.01 Csquare, gear, metier, length category
+
+table1.4 = 
+  table1 %>%
+  group_by(VE_COU,Year,Csquare_01,LE_GEAR,LE_MET,LENGTHCAT) %>%
+  summarise(
+    mean_si_sp       = mean(SI_SP),
+    sum_intv         = sum(INTV, na.rm = TRUE),
+    mean_intv        = mean(INTV, na.rm=TRUE),
+    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    sum_kwHour       = sum(kwHour, na.rm=TRUE),
+    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+    vessel_ids       = ifelse (
+      n_distinct(VE_ID) < 3,
+      paste(unique(VE_ID), collapse = ";"),
+      'not_required'
+    )
+  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare_01) %>%
+  #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+  as.data.frame()
+
+write.xlsx(table1.4, "./data-products/table1.xlsx",sheetName = "1.4", row.names = F, append = T)
+
+
+### Year, 0.01 Csquare, metier, length category
+
+table1.5 = 
+  table1 %>%
+  group_by(VE_COU,Year,Csquare_01,LE_MET,LENGTHCAT) %>%
+  summarise(
+    mean_si_sp       = mean(SI_SP),
+    sum_intv         = sum(INTV, na.rm = TRUE),
+    mean_intv        = mean(INTV, na.rm=TRUE),
+    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    sum_kwHour       = sum(kwHour, na.rm=TRUE),
+    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+    vessel_ids       = ifelse (
+      n_distinct(VE_ID) < 3,
+      paste(unique(VE_ID), collapse = ";"),
+      'not_required'
+    )
+  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare_01) %>%
+  #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+  as.data.frame()
+
+write.xlsx(table1.5, "./data-products/table1.xlsx",sheetName = "1.5", row.names = F, append = T)
+
+
+
+
+### Quarter, 0.01 Csquare, metier
+
+table1.6 = 
+  table1 %>%
+  group_by(VE_COU,QUARTER,Csquare_01,LE_MET) %>%
+  summarise(
+    mean_si_sp       = mean(SI_SP),
+    sum_intv         = sum(INTV, na.rm = TRUE),
+    mean_intv        = mean(INTV, na.rm=TRUE),
+    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    sum_kwHour       = sum(kwHour, na.rm=TRUE),
+    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+    vessel_ids       = ifelse (
+      n_distinct(VE_ID) < 3,
+      paste(unique(VE_ID), collapse = ";"),
+      'not_required'
+    )
+  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare_01) %>%
+  #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+  as.data.frame()
+
+write.xlsx(table1.6, "./data-products/table1.xlsx",sheetName = "1.6", row.names = F, append = T)
+
+
+### Month, 0.05 Csquare, metier
+
+table1.7 = 
+  table1 %>%
+  group_by(VE_COU,Month,Csquare,LE_MET) %>%
+  summarise(
+    mean_si_sp       = mean(SI_SP),
+    sum_intv         = sum(INTV, na.rm = TRUE),
+    mean_intv        = mean(INTV, na.rm=TRUE),
+    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    sum_kwHour       = sum(kwHour, na.rm=TRUE),
+    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+    vessel_ids       = ifelse (
+      n_distinct(VE_ID) < 3,
+      paste(unique(VE_ID), collapse = ";"),
+      'not_required'
+    )
+  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare) %>%
+  #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+  as.data.frame()
+
+write.xlsx(table1.7, "./data-products/table1.xlsx",sheetName = "1.7", row.names = F, append = T)
 
 
 
@@ -134,39 +341,7 @@ table1Save <-
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 3.2 Replace vessel id by an anonymized id column  --------------------------------------------
+# 3.2 Replace vessel id by an anonymised id column  --------------------------------------------
 
 
 # New field added for the 2020 datacall including unique vessels id's  #
