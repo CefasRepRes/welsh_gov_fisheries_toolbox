@@ -1,4 +1,4 @@
-# SQL script to extract EFLALO and TACSAT data from Welsh Goverment fisheries databases 
+# SQL script to extract EFLALO and TACSAT data from Welsh Goverment fisheries databases --use SRDBT3 Database
 
 ---
 
