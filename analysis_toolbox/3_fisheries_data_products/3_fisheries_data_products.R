@@ -26,26 +26,40 @@ plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2
 }
 
 
-plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2 = NULL  ) {
-  
-  gg1 =  ggplot() + geom_sf( data =   world     ) +
-    geom_sf (data = data_plot , aes(color = get( col_plot),  fill = get(col_plot)) ) +
-    theme_bw() +
-    coord_sf(xlim = lons, ylim = lats, expand = FALSE) +
-    labs(fill = "Effort") # +
-  # facet_wrap( ~ get( col_facet1) + get( col_facet2)  )
-  if ( is.null( col_facet2 )  )  {
-    gg1 =  gg1 +
-      facet_wrap( ~ get( col_facet1)  )
-  } else  {
-    gg1 =  gg1 +
-      facet_wrap( ~ get( col_facet1) +get( col_facet2)   )
-  }
-  return(gg1)
-}
+# plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2 = NULL  ) {
+#   
+#   gg1 =  ggplot() + geom_sf( data =   world     ) +
+#     geom_sf (data = data_plot , aes(color = get( col_plot),  fill = get(col_plot)) ) +
+#     theme_bw() +
+#     coord_sf(xlim = lons, ylim = lats, expand = FALSE) +
+#     labs(fill = "Effort") # +
+#   # facet_wrap( ~ get( col_facet1) + get( col_facet2)  )
+#   if ( is.null( col_facet2 )  )  {
+#     gg1 =  gg1 +
+#       facet_wrap( ~ get( col_facet1)  )
+#   } else  {
+#     gg1 =  gg1 +
+#       facet_wrap( ~ get( col_facet1) +get( col_facet2)   )
+#   }
+#   return(gg1)
+# }
 
+# create folders for outputs if they do not exist 
 
+# input folder
 inPath = "C:\\Users\\md09\\OneDrive - CEFAS\\projects\\C8529A-welsh-gov\\data\\data-2-output"
+
+# data products folder
+dir.create("C:\\Users\\md09\\Documents\\git\\welsh_gov_fisheries_toolbox\\analysis_toolbox\\3_fisheries_data_products\\data-products")
+outPath = "C:\\Users\\md09\\Documents\\git\\welsh_gov_fisheries_toolbox\\analysis_toolbox\\3_fisheries_data_products\\data-products\\"
+
+# geojson output folder
+dir.create(paste0(outPath, "geojson"))
+gjPath = paste0(outPath, "geojson\\")
+
+# plots folder
+dir.create(paste0(outPath, "plots"))
+plotsPath = paste0(outPath, "plots\\")
 
 #######
 
@@ -90,11 +104,6 @@ table2 <- left_join(eflalo_output, VE_lut)
 table1$VE_KW = as.numeric(table1$VE_KW)
 
 
-# make the data products directory if it doesn't exist
-dir.create("C:\\Users\\md09\\Documents\\git\\welsh_gov_fisheries_toolbox\\analysis_toolbox\\3_fisheries_data_products\\data-products")
-outPath = "C:\\Users\\md09\\Documents\\git\\welsh_gov_fisheries_toolbox\\analysis_toolbox\\3_fisheries_data_products\\data-products\\"
-
-
 # Table 1
 
 ### Quarter, 0.05 Csquare, gear
@@ -121,7 +130,7 @@ table1.1 =
   #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
   as.data.frame()
 
-write.csv(table1.1, paste0(outPath, "table1_1.csv"))
+write.csv(table1.1, paste0(outPath, year, "_table1_1.csv"))
 
 
 ### Year, 0.05 Csquare, gear
@@ -147,7 +156,7 @@ table1.2 =
   mutate(AverageGearWidth = NA %>% as.numeric()) %>%
   as.data.frame()
 
-write.csv(table1.2, paste0(outPath, "table1_2.csv"))
+write.csv(table1.2, paste0(outPath, year, "_table1_2.csv"))
 
 
 ### Month, 0.05 Csquare, gear
@@ -174,7 +183,7 @@ table1.3 =
   mutate(AverageGearWidth = NA %>% as.numeric()) %>%
   as.data.frame()
 
-write.csv(table1.3, paste0(outPath, "table1_3.csv"))
+write.csv(table1.3, paste0(outPath, year, "_table1_3.csv"))
 
 
 ### Quarter, 0.01 Csquare, gear, length category
@@ -201,7 +210,7 @@ table1.4 =
   #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
   as.data.frame()
 
-write.csv(table1.4, paste0(outPath, "table1_4.csv"))
+write.csv(table1.4, paste0(outPath, year, "_table1_4.csv"))
 
 
 ### Year, 0.01 Csquare, gear, length category
@@ -228,7 +237,7 @@ table1.5 =
   #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
   as.data.frame()
 
-write.csv(table1.5, paste0(outPath, "table1_5.csv"))
+write.csv(table1.5, paste0(outPath, year, "_table1_5.csv"))
 
 
 ### Month, 0.01 Csquare, gear, length category
@@ -255,7 +264,7 @@ table1.6 =
   #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
   as.data.frame()
 
-write.csv(table1.6, paste0(outPath, "table1_6.csv"))
+write.csv(table1.6, paste0(outPath, year, "_table1_6.csv"))
 
 
 
@@ -331,10 +340,6 @@ table1.4_geom = csquares_0_01_split_centroids %>% inner_join(table1.4, by = c("c
 table1.5_geom = csquares_0_01_split_centroids %>% inner_join(table1.5, by = c("csquare" = "Csquare_01"))
 table1.6_geom = csquares_0_01_split_centroids %>% inner_join(table1.6, by = c("csquare" = "Csquare_01"))
 
-# create a folder to save the geojsons to
-dir.create(paste0(outPath, "geojson"))
-gjPath = paste0(outPath, "geojson\\")
-
 
 st_write(table1.1_geom, paste0(gjPath, "table1_1_geom.geojson"), layer = "table1_1_geom.geojson") ## save as geojson 
 st_write(table1.2_geom, paste0(gjPath, "table1_2_geom.geojson"), layer = "table1_2_geom.geojson")
@@ -343,9 +348,6 @@ st_write(table1.4_geom, paste0(gjPath, "table1_4_geom.geojson"), layer = "table1
 st_write(table1.5_geom, paste0(gjPath, "table1_5_geom.geojson"), layer = "table1_5_geom.geojson")
 st_write(table1.6_geom, paste0(gjPath, "table1_6_geom.geojson"), layer = "table1_6_geom.geojson")
 
-# create a directory for plot outputs
-dir.create(paste0(outPath, "plots"))
-plotsPath = paste0(outPath, "plots\\")
 
 # create and save the plot images
 res1 = plot_function(data_plot = table1.1_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "QUARTER")
