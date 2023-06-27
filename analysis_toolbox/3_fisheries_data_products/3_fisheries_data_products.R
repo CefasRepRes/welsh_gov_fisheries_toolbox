@@ -5,6 +5,7 @@ library(lubridate)
 library(vmstools)
 library(sf)
 library(rnaturalearth)
+library(devtools)
 
 # function for plotting data products - to be used later, it is just common practice to put functions at the top of scripts
 plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2 = NULL  ) {
@@ -308,6 +309,8 @@ csquares_0_05_split_centroids = st_bind_cols( grid_0_05,
                                          lon = round ( grid_0_05_centroid[,"X"],5 ), 
                                          lat = round ( grid_0_05_centroid[,"Y"],5)  )
 
+st_write(csquares_0_05_split_centroids, paste0(gjPath, "csquares_0_05_split_centroids.geojson"), layer = "csquares_0_05_split_centroids") ## save as geojson 
+
 ##spatial grid 0_01
 
 cell_resolution_001 = 0.01 
@@ -324,11 +327,14 @@ csquares_0_01_split_centroids = st_bind_cols( grid_0_01,
                                               lon = round ( grid_0_01_centroid[,"X"],5 ), 
                                               lat = round ( grid_0_01_centroid[,"Y"],5)  )
 
+st_write(csquares_0_01_split_centroids, paste0(gjPath, "csquares_0_01_split_centroids.geojson"), layer = "csquares_0_01_split_centroids") ## save as geojson 
+
+
 ## Plot the tables 
 
 # read in the world shapefile, or use the ne_countries function from the natural earth package if available
 world = read_sf("C:\\Users\\md09\\OneDrive - CEFAS\\data\\europe_coastline_shp", "Europe_coastline") %>% st_transform(., crs = 4326)
-#world <- ne_countries(scale = "large", returnclass = "sf")
+world <- ne_countries(scale = "large", returnclass = "sf")
 
 
 ## Add the spatial grid geometry to the fisheries data products tables: 
