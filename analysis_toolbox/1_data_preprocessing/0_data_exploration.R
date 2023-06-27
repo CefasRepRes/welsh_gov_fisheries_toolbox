@@ -1,6 +1,35 @@
 ########### DATA EXPLORATION, QUALITY CONTROL AND CLEANING ##########################
 
 
+### Define the data to explore and merge it if necessary
+
+## Welsh OVER 10 meters
+
+eflalo_w_o10m_gbw  = eflalo_w_o10m %>% filter ( VE_LEN >= 10 )
+tacsat_w_o10m_gbw = tacsat_w_o10m %>% filter( SI_FT %in% ( eflalo_w_o10m_f%>%distinct(FT_REF )%>%pull() ) )
+
+
+## Welsh UNDER 10 meters
+
+eflalo_uk_u10m_gbw = eflalo_uk_u10m %>% filter( VE_FA == 'Wales')  ##Vessel Fishing authority 
+ft_eflalo_gbw = eflalo_uk_u10m_gbw %>% select(FT_REF) %>% pull()  ## get the unique FT id's in the eflalo with welsh fleet records
+tacsat_uk_u10m_gbw = tacsat_uk_u10m %>% filter( SI_FT %in%   ft_eflalo_gbw )  ## filter TACSAT (ivms) for welsh fleet trips in eflalo
+
+
+### THERE IS UNDER 10 METERS VESSELS IN IFISH . This explore these data  and how appears both in IFISH and T3 differently. 
+
+eflalo_w_o10m %>% filter ( VE_LEN < 10 ) %>% inner_join( eflalo_uk_u10m , by = c("VE_REF" = "VE_REF", "FT_DDAT" = "FT_DDAT" , "LE_CDAT" = "LE_CDAT", "LE_SPE" = "LE_SPE" )  )  %>% select (FT_REF.x , FT_REF.y ,   FT_DDAT , FT_LDAT.x ,FT_LDAT.y , LE_KG.x, LE_KG.y)
+
+
+##merge both datasets into a unique one
+
+ 
+
+eflalo_gbw= eflalo_w_o10m_f %>% bind_rows(eflalo_uk_u10m_f %>%select(-VE_FA)  )
+
+
+eflalo_gbw%>%filter(source == 'T3')
+
 #### EXPLORATION:  Initial EFLALO and TACSAT exploration ########
 
 ## Explore the stats from EFLALO to get fleet statistics and fleet characterization
@@ -11,10 +40,11 @@
   eflalo %>% distinct(VE_COU)
   eflalo%>%distinct(VE_FA)
   eflalo%>%distinct(FT_DCOU)
+  eflalo%>%distinct(VE_REF)
   
   ## Filter (if necessary) the vessels from nationality required using the Fishing Authority field (VE_FA)
   
-  eflalo_gbw = eflalo %>% filter( VE_FA == 'Wales')  ##Vessel Fishing authority 
+ 
   
   eflalo_wz = eflalo %>%    ## Spatial filter , any fishign trip in eflalo with a ICES rect within Welsh Zone 
   
@@ -24,15 +54,15 @@
   eflalo_gbw %>% distinct(FT_REF)%>%dim() 
   
   
-  ## We need to filter the TACSAT data that is related to the filtered trips 
+ 
+  
+  ## Check vessel length categories
+  
+  eflalo_gbw %>%select(VE_LEN)%>%mutate( VE_LEN = as.numeric(VE_LEN)) %>% summary()
+  eflalo_gbw%>%distinct(VE_REF, VE_LEN)%>%mutate( VE_LEN = round(VE_LEN, 0 )) %>% group_by(VE_LEN) %>% tally() %>% ggplot(., aes(VE_LEN, n)) + geom_bar(stat = "identity") +scale_x_continuous( breaks = seq(1:32) )
+  eflalo_gbw %>% ggplot( . , aes( VE_LEN)) + geom_histogram()
   
   
-  ft_eflalo_gbw = eflalo_gbw %>% select(FT_REF) %>% pull()  ## get the unique FT id's in the eflalo with welsh fleet records
-
-  tacsat_gbw = tacsat %>% filter( SI_FT %in%   ft_eflalo_gbw )  ## filter TACSAT (ivms) for welsh fleet trips in eflalo
-  
-  dim(tacsat)
-  dim(tacsat_gbw)
   
   
   ## Create the VESSEL LENGTH CAGTEGORY to explore data by vessel length classes
