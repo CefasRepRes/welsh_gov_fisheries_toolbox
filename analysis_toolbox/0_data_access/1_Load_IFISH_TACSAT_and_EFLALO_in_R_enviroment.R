@@ -13,14 +13,14 @@
 library(lubridate)  ## this package helps with manage date fields 
 library(dplyr)      ## R Package to use pipelines (%>%) analysis language 
 library(sf)         ## R Package for spatial analysis in R ( Simple Features )
-library(ggplot2)    ## R Package for plotitng and graphs
+library(ggplot2)    ## R Package for plotting and graphs
 
 
 
 ## FLEET SEGMENT: UK Over 10 meters vessels
 ## Filter: 
   ## Date: 2022
-## UK country: GBW ( Welsh vessels)
+## UK country: GBW (Welsh vessels)
 
 
 #### LOAD THE EFLALO and TACSAT FOR WELSH REGISTERED VESSELS OVER 10 meters LENGHT
