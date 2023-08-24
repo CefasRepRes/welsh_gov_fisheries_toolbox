@@ -89,7 +89,7 @@ str(eflalo)
 
 eflalo$FT_DDAT =  ymd( eflalo$FT_DDAT   )  ## ymd lubridate function to CAST date into Year Month Day date format
 eflalo$FT_LDAT =   ymd(eflalo$FT_LDAT  ) 
-eflalo$LE_CDAT =   ymd_hms(eflalo$LE_CDAT  ) 
+#eflalo$LE_CDAT =   ymd_hms(eflalo$LE_CDAT  ) 
 eflalo$FT_DDATIM = ymd_hms( eflalo$FT_DDATIM   ) 
 eflalo$FT_LDATIM = ymd_hms( eflalo$FT_LDATIM  ) 
 
@@ -130,6 +130,7 @@ tacsat$SI_HE = as.numeric(tacsat$SI_HE)
 tacsat$fleet = 'w_o10m' # not to be included if using data not limited to welsh vessels
 tacsat$source  = 'GEOFISH'
 
+head(tacsat)
 
 tacsat%>%filter(is.na(SI_SP))%>%dim()
 

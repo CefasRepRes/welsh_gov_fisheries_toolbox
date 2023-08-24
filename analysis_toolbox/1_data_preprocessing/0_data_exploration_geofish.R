@@ -101,9 +101,6 @@ ggplot(data = eflalo_gbw %>% filter( trip_days < 500 ) ) +
 ggplot(data = eflalo_gbw%>%filter(trip_days < 50) , aes ( x = trip_days, y = VE_LEN )) + 
   geom_point(  )
 
-ggplot(data = eflalo_gbw%>%filter(trip_days < 50) , aes ( x = trip_days, y = VE_LEN )) + 
-  geom_point(  )
-
 
 # write the output to csv ----
 write.csv( x = res1, file =  ".\\..\\data\\data_output\\species_kg_ranked_by_gear.csv", row.names=FALSE)
