@@ -5,6 +5,7 @@ library(lubridate)
 library(vmstools)
 library(sf)
 library(rnaturalearth)
+library(devtools)
 
 # function for plotting data products - to be used later, it is just common practice to put functions at the top of scripts
 plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2 = NULL  ) {
@@ -68,7 +69,7 @@ year = 2022
 load(file = paste0(inPath, "/eflalo_output_", year , ".RData")  )
 load(file = paste0(inPath, "/tacsatEflalo_output_", year , ".RData")  )
 
-## 3.2 Welsh Gov Fisheries Data Product 
+## 3.2 Welsh Gov Fisheries Data Product ----
 
 
 
@@ -310,6 +311,8 @@ csquares_0_05_split_centroids = st_bind_cols( grid_0_05,
                                          lon = round ( grid_0_05_centroid[,"X"],5 ), 
                                          lat = round ( grid_0_05_centroid[,"Y"],5)  )
 
+st_write(csquares_0_05_split_centroids, paste0(gjPath, "csquares_0_05_split_centroids.geojson"), layer = "csquares_0_05_split_centroids") ## save as geojson 
+
 ##spatial grid 0_01
 
 cell_resolution_001 = 0.01 
@@ -326,10 +329,16 @@ csquares_0_01_split_centroids = st_bind_cols( grid_0_01,
                                               lon = round ( grid_0_01_centroid[,"X"],5 ), 
                                               lat = round ( grid_0_01_centroid[,"Y"],5)  )
 
+st_write(csquares_0_01_split_centroids, paste0(gjPath, "csquares_0_01_split_centroids.geojson"), layer = "csquares_0_01_split_centroids") ## save as geojson 
+
+
 ## Plot the tables 
 
 # read in the world shapefile, or use the ne_countries function from the natural earth package if available
+<<<<<<< HEAD
 #world = read_sf("C:\\Users\\md09\\OneDrive - CEFAS\\data\\europe_coastline_shp", "Europe_coastline") %>% st_transform(., crs = 4326)
+=======
+>>>>>>> 2921d36e8e25cd950fd5f6510fe2cf5862eac23f
 world <- ne_countries(scale = "large", returnclass = "sf")
 
 
@@ -342,6 +351,7 @@ table1.4_geom = csquares_0_01_split_centroids %>% inner_join(table1.4, by = c("c
 table1.5_geom = csquares_0_01_split_centroids %>% inner_join(table1.5, by = c("csquare" = "Csquare_01"))
 table1.6_geom = csquares_0_01_split_centroids %>% inner_join(table1.6, by = c("csquare" = "Csquare_01"))
 
+# write tables to geojson
 
 st_write(table1.1_geom, paste0(outPath, "table1_1_geom.geojson"), layer = "table1_1_geom.geojson") ## save as geojson 
 st_write(table1.2_geom, paste0(outPath, "table1_2_geom.geojson"), layer = "table1_2_geom.geojson")
@@ -369,95 +379,3 @@ ggsave(plot = res5, filename = paste0("table1_5_plot.png"), path = plotsPath, wi
 
 res6 = plot_function(data_plot = table1.6_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Month")
 ggsave(plot = res6, filename = paste0("table1_6_plot.png"), path = plotsPath, width = 16, height = 9, dpi = 300)
-
-
-# plots = seq(1:6)
-# 
-# for (p in plots) {
-# 
-#   t = st_read(paste0("./data-products/geojson/table1_", p, ".geojson"))
-# 
-#   ggplot() + geom_sf( data = world   ) +
-#     geom_sf (data = t , aes(color = sum_intv,  fill = sum_intv) ) +
-#     theme_bw() +
-#     coord_sf(xlim = lons, ylim = lats, expand = FALSE) +
-#     facet_wrap( ~ LE_GEAR + colnames(t)[6])
-# 
-#   ggsave(filename = paste0("table1_", p, "_plot.png"), path = "./data-products/plots/")
-# 
-#   rm(t)
-# 
-#   print(paste0("Finished plotting table1_", p))
-# }
-# 
-# ################################################################################
-# 
-# years = seq(2009:2022)
-# 
-# for (y in years) {
-#   
-#   dir.create(paste0("./data-products/plots/", y))
-#   
-#   plotsQ = c(1,4)
-#   
-#   for (p in plotsQ) {
-#     
-#     t = st_read(paste0("./data-products/geojson/table1_", p, ".geojson"))
-#     
-#     
-#     tc = colnames(t)[6]
-#     res = plot_function(data_plot = table1.1, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = tc)
-#     
-#     
-#     ggsave(filename = paste0("table1_", p, "_plot_", y, ".png"), path = "./data-products/plots/")
-#     
-#     rm(t)
-#     
-#     print(paste0("Finished plotting table1_", p, "for year ", y))
-#   }
-#   
-#   
-#   plotsY = c(2,5)
-#   
-#   for (p in plots2Y) {
-#     
-#     t = st_read(paste0("./data-products/geojson/table1_", p, ".geojson"))
-#     
-#     plot_function(data_plot = table1.1, col_plot =  'sum_intv',col_facet1 = "LE_GEAR",col_facet2 =  "Year")
-#     
-#     ggsave(filename = paste0("table1_", p, "_plot_", y, ".png"), path = "./data-products/plots/")
-#     
-#     rm(t)
-#     
-#     print(paste0("Finished plotting table1_", p, "for year ", y))
-#   }
-#   
-#   plotsM = c(3,6)
-#   
-#   for (p in plotsM) {
-#     
-#     t = st_read(paste0("./data-products/geojson/table1_", p, ".geojson"))
-#     
-#     ggplot() + geom_sf( data = world   ) +
-#       geom_sf (data = t , aes(color = sum_intv,  fill = sum_intv) ) +
-#       theme_bw() +
-#       coord_sf(xlim = lons, ylim = lats, expand = FALSE) + 
-#       facet_wrap( ~ LE_GEAR + Month)
-#     
-#     ggsave(filename = paste0("table1_", p, "_plot_", y, ".png"), path = "./data-products/plots/")
-#     
-#     rm(t)
-#     
-#     print(paste0("Finished plotting table1_", p, "for year ", y))
-#   }
-# }
-
-## 2 more examples of graphs 
-
-
-
-
-
-
-
-
