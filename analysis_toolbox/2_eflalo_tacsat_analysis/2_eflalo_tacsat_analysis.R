@@ -48,19 +48,20 @@
                   select(FT_REF, LE_CDAT, LE_GEAR,LE_MSZ, LE_RECT, LE_MET, VE_LEN, VE_KW, VE_COU) %>%
                   distinct()
   
- 
   
   
-  tacsatp =  tacsat_gbw %>% left_join( eflalo_sel, by = c("SI_FT" = "FT_REF", "SI_DATE" = "LE_CDAT"  )   )
+    tacsatp =  tacsat_gbw%>%  left_join( eflalo_sel  , by = c("SI_FT" = "FT_REF" ) )    # , "SI_DATE" = "LE_CDAT"  )   )
   
-  tacsatp%>%as.data.frame()
+    tacsatp%>%filter ( is.na(LE_GEAR)) ## must be 0 , that means all iVMS records have an associated EFLALO records 
   
-  ## Get the first gear by fishing trip to fill VMS records with  not associated Log Event .
+  
+  
+  ## Get the first most used gear by fishing trip to fill VMS records with  not associated Log Event .
     ## As a result some VMS records have not gear associated
   
-  ft =   eflalo_sel  %>%arrange( FT_REF , LE_CDAT) %>% 
-    select (FT_REF, LE_GEAR)%>% rename( LE_GEAR2 = LE_GEAR)%>%
-    group_by(FT_REF)%>%slice(1)
+  ft =    eflalo_sel%>% filter(FT_REF == 10343375608)  %>%arrange( FT_REF , LE_CDAT) %>% 
+          select (FT_REF, LE_GEAR)%>% rename( LE_GEAR2 = LE_GEAR)%>%
+          group_by(FT_REF)%>%slice(1)
    
   ## Assign  the main of gear of each trip to the VMS locations with not gear assigned
   
@@ -273,7 +274,7 @@
    
   }
   
-  ## In the dataset we area analysing there aren't NA's or MISC egar , so this section doesn't apply in this example
+  ## In the dataset we are analysing there aren't NA's or MISC gear , so this section doesn't apply in this example
   
   sp_gear =  speedarr %>%filter(LE_GEAR == 'MIS')
   
@@ -369,10 +370,18 @@
   tacsatEflalo = tacsatEflalo %>% filter ( FT_REF %in%  ( eflaloM%>%distinct(FT_REF)%>%pull())   )
   
   
+  ## if LE_KG or LE_VALUE is NA , replace by 0s'
+  
+  
+  eflaloM = eflaloM %>% mutate ( LE_VALUE_TOT = 0 )
+  eflaloM = eflaloM %>% mutate ( LE_EURO_TOT = LE_VALUE_TOT   )
+  
+  
+  
   
   #- Split among ping the landings to iVMS locations
   
-  
+  ?splitAmongPings
  
     tacsatEflalo =
       splitAmongPings(
@@ -380,10 +389,13 @@
         eflalo = eflaloM,
         variable = "kgs", # "all",
         level = "day",
-        conserve = TRUE
+        conserve = FALSE
       )
  
     tacsatEflalo%>%filter(!is.na( LE_KG_TOT  ) ) 
+    
+    eflaloM%>%summarise(TOT = sum(LE_KG_TOT))
+    tacsatEflalo%>%summarise(TOT = sum(LE_KG_TOT))
     
     
   
@@ -392,8 +404,20 @@
     file = file.path(outPath, paste0("tacsatEflalo", year, ".RData"))
   )
   
+  
+  load ( file.path(outPath, paste0("tacsatEflalo", year, ".RData") ) ) 
   print("Dispatching landings completed")
   
+  tacsatp%>% filter(SI_STATE == 1 & SI_FT == 10343375608)%>% dim()
+  eflaloM %>% filter(FT_REF == 10343375608)
+  tacsatEflalo%>% filter(FT_REF == 10343375608) %>% summarise(tot = sum ( LE_KG_TOT))
+  
+  ##Vessel level 
+  
+     
+  
+  eflaloM %>% filter(VE_REF == 'A16337')%>% summarise(tot = sum ( LE_KG_TOT))
+  tacsatEflalo%>% filter(VE_REF == 'A16337') %>% summarise(tot = sum ( LE_KG_TOT))
   
   # 2.4 Assign c-square, year, month, quarter, area and create table 1 ----------------------------------------
   

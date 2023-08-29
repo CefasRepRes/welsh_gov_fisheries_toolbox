@@ -47,7 +47,7 @@ plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2
 # create folders for outputs if they do not exist 
 
 # input folder
-inPath = "C:\\Users\\md09\\OneDrive - CEFAS\\projects\\C8529A-welsh-gov\\data\\data-2-output"
+inPath = "C:\\Users\\RM12\\OneDrive - CEFAS\\Roi\\projects\\Welsh_Government_Fishing\\welsh_gov_fishing_analysis_capacity\\data\\data_output"
 
 # data products folder
 dir.create("C:\\Users\\md09\\Documents\\git\\welsh_gov_fisheries_toolbox\\analysis_toolbox\\3_fisheries_data_products\\data-products")
@@ -69,6 +69,8 @@ load(file = paste0(inPath, "/eflalo_output_", year , ".RData")  )
 load(file = paste0(inPath, "/tacsatEflalo_output_", year , ".RData")  )
 
 ## 3.2 Welsh Gov Fisheries Data Product 
+
+
 
 # Create vessel length class: Add the vessel length category using  LENGTHCAT field
 
@@ -110,7 +112,7 @@ table1$VE_KW = as.numeric(table1$VE_KW)
 
 table1.1 = 
   table1 %>%
-  group_by(VE_COU,QUARTER,Csquare,LE_GEAR ) %>%
+  group_by(VE_COU,Year, QUARTER,Csquare,LE_GEAR ) %>%
   summarise(
     mean_si_sp       = mean(SI_SP),
     sum_intv         = sum(INTV, na.rm = TRUE),
@@ -126,7 +128,7 @@ table1.1 =
       paste(unique(VE_ID), collapse = ";"),
       'not_required'
     )
-  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare) %>%
+  ) %>% relocate(n_vessels, vessel_ids, .after = LE_GEAR) %>%
   #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
   as.data.frame()
 
@@ -189,7 +191,7 @@ write.csv(table1.3, paste0(outPath, year, "_table1_3.csv"))
 ### Quarter, 0.01 Csquare, gear, length category
 
 table1.4 = 
-  table1 %>%
+  table1 %>% 
   group_by(VE_COU,QUARTER,Csquare_01,LE_GEAR,LENGTHCAT) %>%
   summarise(
     mean_si_sp       = mean(SI_SP),
@@ -313,7 +315,7 @@ csquares_0_05_split_centroids = st_bind_cols( grid_0_05,
 cell_resolution_001 = 0.01 
 csquare_resolution_001 = 0.01
 
-grid_0_01  = st_make_grid( bbox_aoi,  cellsize = cell_resolution_001, square = TRUE, offset = c(min(lons),min(lats)))#%>% as(Class="Spatial")
+grid_0_01  = st_make_grid( bbox_aoi,  cellsize = cell_resolution_001, square = TRUE,   offset = c(min(lons),min(lats)))#%>% as(Class="Spatial")
 
 grid_0_01_centroid  = st_sf (grid_0_01) %>%  st_centroid (.) %>% st_coordinates() 
 grid_0_01csquares =  CSquare ( grid_0_01_centroid[,"X"], grid_0_01_centroid[,"Y"],  csquare_resolution_001 )
@@ -327,8 +329,8 @@ csquares_0_01_split_centroids = st_bind_cols( grid_0_01,
 ## Plot the tables 
 
 # read in the world shapefile, or use the ne_countries function from the natural earth package if available
-world = read_sf("C:\\Users\\md09\\OneDrive - CEFAS\\data\\europe_coastline_shp", "Europe_coastline") %>% st_transform(., crs = 4326)
-#world <- ne_countries(scale = "large", returnclass = "sf")
+#world = read_sf("C:\\Users\\md09\\OneDrive - CEFAS\\data\\europe_coastline_shp", "Europe_coastline") %>% st_transform(., crs = 4326)
+world <- ne_countries(scale = "large", returnclass = "sf")
 
 
 ## Add the spatial grid geometry to the fisheries data products tables: 
@@ -341,17 +343,17 @@ table1.5_geom = csquares_0_01_split_centroids %>% inner_join(table1.5, by = c("c
 table1.6_geom = csquares_0_01_split_centroids %>% inner_join(table1.6, by = c("csquare" = "Csquare_01"))
 
 
-st_write(table1.1_geom, paste0(gjPath, "table1_1_geom.geojson"), layer = "table1_1_geom.geojson") ## save as geojson 
-st_write(table1.2_geom, paste0(gjPath, "table1_2_geom.geojson"), layer = "table1_2_geom.geojson")
-st_write(table1.3_geom, paste0(gjPath, "table1_3_geom.geojson"), layer = "table1_3_geom.geojson")
-st_write(table1.4_geom, paste0(gjPath, "table1_4_geom.geojson"), layer = "table1_4_geom.geojson")
-st_write(table1.5_geom, paste0(gjPath, "table1_5_geom.geojson"), layer = "table1_5_geom.geojson")
-st_write(table1.6_geom, paste0(gjPath, "table1_6_geom.geojson"), layer = "table1_6_geom.geojson")
+st_write(table1.1_geom, paste0(outPath, "table1_1_geom.geojson"), layer = "table1_1_geom.geojson") ## save as geojson 
+st_write(table1.2_geom, paste0(outPath, "table1_2_geom.geojson"), layer = "table1_2_geom.geojson")
+st_write(table1.3_geom, paste0(outPath, "table1_3_geom.geojson"), layer = "table1_3_geom.geojson")
+st_write(table1.4_geom, paste0(outPath, "table1_4_geom.geojson"), layer = "table1_4_geom.geojson")
+st_write(table1.5_geom, paste0(outPath, "table1_5_geom.geojson"), layer = "table1_5_geom.geojson")
+st_write(table1.6_geom, paste0(outPath, "table1_6_geom.geojson"), layer = "table1_6_geom.geojson")
 
 
 # create and save the plot images
 res1 = plot_function(data_plot = table1.1_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "QUARTER")
-ggsave(plot = res1, filename = paste0("table1_1_plot.png"), path = plotsPath, width = 16, height = 9, dpi = 300)
+ggsave(plot = res1, filename = paste0("table1_1_plot.png"), path = outPath, width = 16, height = 9, dpi = 300)
 
 res2 = plot_function(data_plot = table1.2_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Year")
 ggsave(plot = res2, filename = paste0("table1_2_plot.png"), path = plotsPath, width = 16, height = 9, dpi = 300)

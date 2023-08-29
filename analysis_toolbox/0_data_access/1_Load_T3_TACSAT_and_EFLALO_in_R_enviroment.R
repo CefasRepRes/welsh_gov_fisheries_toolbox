@@ -25,7 +25,24 @@ library(ggplot2)    ## R Package for plotitng and graphs
 getwd()
 setwd('C:/Users/RM12/OneDrive - CEFAS/Roi/projects/Welsh_Government_Fishing/welsh_gov_fishing_analysis_capacity/welsh_gov_fisheries_toolbox_git')
 
-eflalo_ft = read.csv(file = '.\\..\\data\\uk_u10m_eflalo\\eflalo_ft.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+
+## SELECT THE DATA TO BE LOADED 
+
+###  1. WELSH FLEET ACTIVITY ANALYSIS 
+
+folder_t3 = 'uk_u10m_tacsat_eflalo'
+folder_geofish = 'welsh_fleet_o10m_tacsat_eflalo'
+
+
+  
+## 2. WELSH WATER ACTIVITY ANALYSIS 
+
+
+folder_t3 = 'uk_u10m_tacsat_eflalo'
+folder_geofish = 'uk_u10m_tacsat_eflalo'
+
+
+eflalo_ft = read.csv(file = paste0('.\\..\\data\\', folder , '\\eflalo_ft.csv') , header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(eflalo_ft)  = c ( "FT_REF", "FT_DCOU", "FT_DHAR", "FT_DDAT", "FT_DTIME", "FT_DDATIM", "FT_LCOU", "FT_LHAR", "FT_LDAT", "FT_LTIME", "FT_LDATIM", "VE_REF", "VE_FLT", "VE_COU","VE_FA", "VE_LEN", "VE_KW", "VE_TON", "FT_YEAR")
 
 
@@ -39,7 +56,7 @@ names(eflalo_ft)  = c ( "FT_REF", "FT_DCOU", "FT_DHAR", "FT_DDAT", "FT_DTIME", "
 
  
 
-eflalo_le = read.csv(file = '.\\..\\data\\uk_u10m_eflalo\\eflalo_le.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+eflalo_le = read.csv(file = '.\\..\\data\\uk_u10m_tacsat_eflalo\\eflalo_le.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(eflalo_le)  = c ( "LE_ID", "LE_CDAT", "LE_STIME", "LE_ETIME", "LE_SLAT", "LE_SLON", "LE_ELAT", "LE_ELON", "LE_GEAR", "LE_MSZ", "LE_RECT", "LE_DIV", "LE_MET", "EFLALO_FT_FT_REF")
 
 
@@ -48,7 +65,7 @@ names(eflalo_le)  = c ( "LE_ID", "LE_CDAT", "LE_STIME", "LE_ETIME", "LE_SLAT", "
   dim(eflalo_le)
 
 
-eflalo_spe = read.csv(file = '.\\..\\data\\uk_u10m_eflalo\\eflalo_spe.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+eflalo_spe = read.csv(file = '.\\..\\data\\uk_u10m_tacsat_eflalo\\eflalo_spe.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(eflalo_spe)  = c ( "EFLALO_LE_LE_ID", "EFLALO_FT_FT_REF","LE_SPE", "LE_KG", "LE_VALUE"  )
 
 
@@ -92,12 +109,12 @@ eflalo$source  = 'T3'
 
 ## 2. Load TACSAT data    
 
-tacsat = read.csv(file = '.\\..\\data\\uk_u10_tacsat\\tacsat.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+tacsat = read.csv(file = '.\\..\\data\\uk_u10m_tacsat_eflalo\\tacsat.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(tacsat)  = c ( "VE_REF", "SI_LATI", "SI_LONG", "SI_DATE", "SI_TIME", "SI_DATIM", "SI_SP", "SI_HE", "SI_HARB", "SI_STATE", "SI_FT", "INTV", "SI_YEAR" )
 
 dim(tacsat)
 head (tacsat)
-str(tacsat)
+str(tacsat) ##List of fields and field type
 
 
  
@@ -105,7 +122,7 @@ str(tacsat)
 tacsat_bk = tacsat  ##create a backup of the data.frame 
 
 
-tacsat$SI_DATE  =  ymd( tacsat$SI_DATE   )  
+tacsat$SI_DATE  =    ymd( tacsat$SI_DATE   )  ### reformatting the data in required format . Change to dmy if your system date format is different
 tacsat$SI_DATIM  =   ymd_hms(tacsat$SI_DATIM  ) 
 tacsat$SI_SP = as.numeric(tacsat$SI_SP)
 tacsat$SI_HE = as.numeric(tacsat$SI_HE)

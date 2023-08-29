@@ -32,3 +32,13 @@ welsh_marine_area %>% st_bbox()
         geom_sf (data = welsh_marine_area ,  fill = "transparent"   ) +
         theme_bw() +
         coord_sf(xlim = c( -8.0,-1.5 ), ylim =  c( 50.5, 55), expand = FALSE)  
+
+        
+
+## save the ices rectangle selected for welsh waters
+        
+st_write( ices_rect_welsh, dsn = ".\\..\\..\\..\\data\\ices_rectangle_welsh.geojson", layer = "ices_rectangle_welsh.geojson")
+
+
+paste( shQuote( ices_rect_welsh%>%distinct(icesname)%>%pull(), type="sh"   ) , collapse = ',' )
+        

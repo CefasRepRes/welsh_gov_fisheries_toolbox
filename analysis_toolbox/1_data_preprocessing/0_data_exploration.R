@@ -23,8 +23,9 @@ eflalo_w_o10m %>% filter ( VE_LEN < 10 ) %>% inner_join( eflalo_uk_u10m , by = c
 
 ##merge both datasets into a unique one
 
- 
 
+eflalo_gbw = eflalo_uk_u10m_gbw
+tacsat_gbw = tacsat_uk_u10m_gbw
 eflalo_gbw= eflalo_w_o10m_f %>% bind_rows(eflalo_uk_u10m_f %>%select(-VE_FA)  )
 
 
@@ -58,8 +59,8 @@ eflalo_gbw%>%filter(source == 'T3')
   
   ## Check vessel length categories
   
-  eflalo_gbw %>%select(VE_LEN)%>%mutate( VE_LEN = as.numeric(VE_LEN)) %>% summary()
-  eflalo_gbw%>%distinct(VE_REF, VE_LEN)%>%mutate( VE_LEN = round(VE_LEN, 0 )) %>% group_by(VE_LEN) %>% tally() %>% ggplot(., aes(VE_LEN, n)) + geom_bar(stat = "identity") +scale_x_continuous( breaks = seq(1:32) )
+  eflalo_gbw %>% select(VE_LEN)%>%mutate( VE_LEN = as.numeric(VE_LEN)) %>% summary()
+  eflalo_gbw %>% distinct(VE_REF, VE_LEN) %>% mutate( VE_LEN = round(VE_LEN, 0 )) %>% group_by(VE_LEN) %>% tally() %>% ggplot(., aes(VE_LEN, n)) + geom_bar(stat = "identity") +scale_x_continuous( breaks = seq(1:32) )
   eflalo_gbw %>% ggplot( . , aes( VE_LEN)) + geom_histogram()
   
   

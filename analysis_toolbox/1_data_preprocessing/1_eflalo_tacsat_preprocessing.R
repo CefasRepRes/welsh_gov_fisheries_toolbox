@@ -23,10 +23,40 @@ load (  file = '.\\data\\tacsat_gbw.RData' )
 res2 = eflalo_gbw%>%group_by(FT_REF) %>% summarise(n = n()) %>% arrange(desc(n))
 ggplot(res2, aes( n )) + geom_histogram()
 
+
 ## Q1.2: How many log events are by  trip?  
 
 
-eflalo_gbw%>%distinct (FT_REF, LE_ID , trip_days) %>%group_by(FT_REF, trip_days)%>%summarise(n = n())%>%arrange(desc(n))
+res21= eflalo_gbw%>%distinct (FT_REF, LE_ID , trip_days) %>%group_by(FT_REF, trip_days)%>%summarise(n = n())%>%arrange(desc(n))
+ggplot(res21, aes( n )) + geom_histogram()
+
+ 
+# Q1.2.1 . How we assign GEAR and ICES RECTANGLE to iVMS records . Example of different cases: 
+
+
+      ### EXAMPLE OF A TRIP WITH 1 DAY DURATION AND > 1 GEARS REPORTED 
+      
+
+      ## 3 GEARS
+      eflalo_gbw %>% filter(FT_REF == 10343309346) %>% as.data.frame()
+      
+      tacsatp =  tacsat_gbw%>% filter(SI_FT == 10343301550  )  & SI_SP >=0 & SI_SP <= 6 ) %>%arrange( SI_DATIM)  %>% left_join( eflalo_sel %>% filter(FT_REF == 10343309346), by = c("SI_FT" = "FT_REF", "SI_DATE" = "LE_CDAT"  )   )
+      
+      ### 2 GEARS WITH VMS 
+      eflalo_gbw %>% filter(FT_REF == 10343303228) %>% as.data.frame()
+
+     
+
+
+
+      ##NOT iVMS record associated to trips with more than 1 log event records( use of multiple gears) 
+      
+      
+      ### EXAMPLE OF A TRIP WITH 3 DAYS DURATION AND ONE GEAR REPORTED
+      
+      eflalo_sel %>% filter(FT_REF == 10343375608)
+      eflalo_gbw %>% filter(FT_REF == 10343375608) %>%as.data.frame()
+
 
 ## Q1.3: Do we find a range of values that aren't realist when compared with the whole data stats?
 
@@ -95,11 +125,13 @@ eflalo_gbw %>% filter( LE_GEAR == 'GTR' & LE_SPE == 'SOL') %>% select ( LE_KG) %
 eflalo_gbw %>% filter(LE_GEAR == 'FPO' & LE_SPE == 'TGS') %>% select ( LE_KG)%>%arrange(desc(LE_KG))
 eflalo_gbw %>% filter(LE_GEAR == 'OTB' & LE_SPE == 'BSS') %>% select ( LE_KG)%>%arrange(desc(LE_KG))
 
+## Explore specific fishing trip information for outliers values
 
+eflalo_gbw %>% filter( LE_GEAR == 'GTR' & LE_SPE == 'SOL' & LE_KG  > 1000)  
+eflalo_gbw %>% filter( FT_REF == 10343326193     )
 ## Filter values no required out 
 
-eflalo_gbw = eflalo_gbw %>% filter ( LE_GEAR != 'FPO' & LE_SPE != 'TGS' & LE_KG > 100 )
-
+eflalo_gbw = eflalo_gbw %>% filter (! FT_REF %in% c( 10343326193))  
 
 
 
@@ -187,7 +219,6 @@ overlaps_analysis%>%
 
 
 
-
 ## Filter the trips details for the vessel during the overlapping dates 
 
 overlaps_analysis %>%
@@ -202,8 +233,9 @@ eflalo_gbw%>%
 ## Following this analysis we have found out that these trips are duplicated 
 ## The three overlapping trips have the  same reported species and details
 
-eflalo_gbw%>%filter( FT_REF %in% c( '10343392884', '10343392891' ))
+eflalo_gbw%>%filter( FT_REF %in% c(  10343392884 ,  10343392891  ))
 
+eflalo_gbw %>% filter( FT_REF %in% c( 10343375989,10343377193  ) ) 
 
 
 
@@ -229,14 +261,15 @@ setwd('.\\analysis_toolbox\\1_data_preprocessing') ##set up the new location of 
 getwd()
 
 welsh_marine_area = st_read ( dsn = '.\\spatial_layers\\wales_plan_area.geojson' )
-port_3km  = st_read( dsn = '.\\spatial_layers\\mmo_landing_ports_3km_buffer.geojson')
+port_500m  = st_read( dsn = '.\\spatial_layers\\welsh_ports_ammended_0_005.geojson')
+port_welsh_0_005 = st_read( dsn = '.\\spatial_layers\\welsh_ports_ammended_0_005.geojson')
 land = st_read ( dsn = '.\\spatial_layers\\Europe_coastline_poly.shp')
 europe_aoi = st_read ( dsn = '.\\spatial_layers\\europe_aoi.geojson')  ###load the layer with crop are of interest 
 
 ## explore connection to WFS/WMS services ( Welsh Portal ,  OSGB )
 
 welsh_marine_area %>% st_crs()  ## WGS 84 EPSG: 4326
-port_3km %>% st_crs()   ## WGS 84
+port_500m %>% st_crs()   ## WGS 84
 land  %>% st_crs() 
 
 land_4326 = land %>% st_transform( 4326 )   ## reproject the sf object ( spatial layer ) into a new coordiante system 
@@ -268,6 +301,8 @@ head(tacsat_gbw)
 
 trips_in_clean_eflalo = eflalo_gbw %>% distinct(FT_REF)%>%pull() 
 
+ 
+
 tacsat_gbw = tacsat_gbw %>% filter( SI_FT %in%  trips_in_clean_eflalo  ) 
 
 
@@ -281,9 +316,28 @@ eflalo_gbw %>%distinct(FT_REF)%>% mutate(inboth = FT_REF %in% ( tacsat_gbw%>%dis
 
   ## Why are so many trips with not iVMS information
 
+    ## Analyse the trips with not TACSAT related
 
+ft_ref_not_in_tacsat = eflalo_gbw %>%distinct(FT_REF)%>% mutate(inboth = FT_REF %in% ( tacsat_gbw%>%distinct(SI_FT)%>%pull())  )%>%
+  filter ( inboth == FALSE)
 
+res1 = eflalo_gbw %>% filter( FT_REF %in% (ft_ref_not_in_tacsat %>% select (FT_REF) %>% pull() ) ) %>% 
+        filter( FT_DDAT > '2022-02-15')
 
+res1 %>%distinct(FT_DDAT)%>%pull()
+res1 %>%distinct(VE_REF, FT_REF ) %>% group_by(VE_REF)%>%tally() %>%arrange(desc(n))
+eflalo_gbw %>%distinct(VE_REF)
+res1  %>% distinct(VE_REF)
+res1%>% summarise(min = min (FT_DDAT), max = max( FT_DDAT))
+
+eflalo_gbw %>% filter( VE_REF == 'C18971') %>% distinct(FT_REF)
+tacsat_gbw %>% filter( VE_REF == 'C18971') %>% distinct(SI_FT)
+
+tacsat_gbw %>% filter( VE_REF == 'C18971')%>%dim()
+
+tacsat_gbw%>% summarise(min = min (SI_DATE), max = max( SI_DATE))
+
+    ## trips with not TACSAT are from dates when iVMS have not been implemented(16-02-2022 )
 
 
 dim(tacsat_gbw)
@@ -322,7 +376,7 @@ tacsat_gbw%>%
 overlaps_analysis %>% filter(FT_REF %in% c( '10343378465', '10343379282') ) 
 
 ##  This confirms that these trips overlaps and therefore the VMS location is duplicated and assigned to the both trips
-## To fix this error will require correct overlaping trips and reasign the trip identifiers to VMS locations 
+## To fix this error will require correct overlapping trips and reassign the trip identifiers to VMS locations 
 
 
 
@@ -338,13 +392,13 @@ tacsat_gbw%>%filter(SI_SP > 30 )
 
 
 
-# 2.2.4 Remove points which are pseudo duplicates as they have an interval rate < x minutes ------------------
+# 2.2.4 Remove points which are pseudo duplicates as they have an interval rate < x minutes/second  ------------------
 
 ## Convert the TACSAT into a spatial object (SF package)
 
-tacsat_gbw_geom = tacsat_gbw %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
+tacsat_gbw_geom = tacsat_gbw %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 , remove = FALSE)
 
-st_write( tacsat_gbw_geom, dsn = ".\\..\\data\\tacsat_gbw.geojson", layer = "tacsat_gbw.geojson")
+st_write( tacsat_gbw_geom, dsn = ".\\..\\..\\data\\tacsat_gbw.geojson", layer = "tacsat_gbw.geojson")
 
 ## Q1: What is the minimum expected time interval between iVMS positions
 
@@ -368,6 +422,9 @@ str(tacsat_gbw_geom)
 ##Q3: Calculate the minimum , maximum  and mean intervals in our data 
 
 tacsat_gbw_geom%>%filter(!is.na(INTV))%>%summarise(minIntv = min(INTV), maxIntv = max (INTV), meanIntv = mean(INTV))#*60
+
+
+tacsat_gbw_geom%>%filter(!is.na(INTV))%>%group_by(INTV)%>%tally()%>%arrange(desc(n))
 
 ##Q4: Explore the intervals with a histogram. Outliers are detected? Can you fix or remove the wrong records?
 
@@ -401,21 +458,21 @@ tacsat_gbw_geom%>%filter ( VE_REF == 'C17265' &  SI_FT == '10343379282'  )%>%
 ## The spatial relatioship is the intersection between a iVMS poitn and a polygon representing the area buffered 3Km around the port location
 
 tacsat_gbw_ports = tacsat_gbw_geom %>%
-  st_join ( port_3km, join = st_intersects, left = T) %>%
-  mutate  ( SI_HARB  = ifelse ( is.na ( port ), FALSE , TRUE))%>%
-  select ( - names( port_3km))
+  st_join ( port_welsh_0_005 %>% select ( Name, District_N) , join = st_intersects, left = T) %>%
+  mutate  ( SI_HARB  = ifelse ( is.na ( Name  ), FALSE , TRUE))  %>%
+  select ( - names(port_welsh_0_005%>% select ( Name, District_N)))
 
 
 
 
-
-st_write( tacsat_gbw_ports, dsn = ".\\..\\data\\tacsat_gbw_port.geojson", layer = "tacsat_gbw_port.geojson")      
+getwd()
+st_write( tacsat_gbw_ports, dsn = ".\\..\\..\\data\\tacsat_gbw_port_welsh.geojson", layer = "tacsat_gbw_port_welsh.geojson")      
 
 ##Q2: Plot the ports and iVMS locations when in port
 
 ggplot() + 
   geom_sf ( data = welsh_marine_area) + 
-  geom_sf(data = port_3km %>% filter (port %in% c( 'Milford Haven', 'Cardigan') )) +
+  geom_sf(data = port_500m %>% filter (Name %in% c( 'Milford Haven', 'Cardigan') )) +
   geom_sf ( data = tacsat_gbw_ports %>% slice(1:50000), aes( color  = SI_HARB ) )+ 
   theme_minimal() + 
   coord_sf( xlim = c(- 5.5, -4), ylim = c(51.6, 52.2) )
@@ -434,7 +491,7 @@ tacsat_gbw_land = tacsat_gbw_ports %>%
   mutate  ( SI_LAND  = ifelse ( is.na ( Id ), FALSE ,TRUE))%>%
   select ( - names(europe_aoi) )  
 
-st_write( tacsat_gbw_land, dsn = ".\\..\\data\\tacsat_gbw_land.geojson", layer = "tacsat_gbw_land.geojson")      
+st_write( tacsat_gbw_land, dsn = ".\\..\\..\\data\\tacsat_gbw_land.geojson", layer = "tacsat_gbw_land.geojson", append=FALSE )      
 
 
 ##Q1: How many points are detected on land? 
@@ -457,28 +514,71 @@ ggplot() +
 tacsat_gbw_land = tacsat_gbw_land %>% mutate ( SI_STATE = ifelse  (  SI_SP  >= 1 & SI_SP <= 6 , 'f', 's'  ))
 
 
-tacsat_gbw_df = tacsat_gbw_land %>% filter(SI_LAND == FALSE & SI_HARB == FALSE & SI_STATE  == 'f' )
+tacsat_gbw_df = tacsat_gbw_land %>% filter(SI_LAND == FALSE & SI_HARB == FALSE )
 
 
-st_write( tacsat_gbw_df, dsn = ".\\..\\data\\tacsat_gbw_df.geojson", layer = "tacsat_gbw_df.geojson")      
+st_write( tacsat_gbw_df, dsn = ".\\..\\..\\data\\tacsat_gbw_df.geojson", layer = "tacsat_gbw_df.geojson")      
+
+
+
+
+
 
 
 
 #   Save the cleaned EFLALO file 
 
 
-
-save(
-  eflalo_gbw, file = '.\\..\\data\\eflalo_gbw_qc.RData'
-)
+  save(
+    eflalo_gbw, file = '.\\..\\data\\eflalo_gbw_qc.RData'
+  )
 
 
 #   Save the cleaned TACSAT file 
 
 
-tacsat_gbw = tacsat_gbw_df
+  tacsat_gbw = tacsat_gbw_df
+  
+  save(
+    tacsat_gbw_df, file = '.\\..\\..\\data\\tacsat_gbw_qc.RData'
+  )
 
-save(
-  tacsat_gbw_df, file = '.\\..\\data\\tacsat_gbw_qc.RData'
-)
+
+
+
+
+
+
+## Check how match the reported LE_RECT in EFLALO and the actual rectangle the  VMS location is located
+
+tac_geom = tacsat_gbw_df %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
+
+
+eflalo_gbw %>%  filter ( VE_REF == 'A16337') %>% distinct(LE_CDAT) %>% arrange(LE_CDAT)
+ggplot(tac_geom) + geom_sf(aes( color = SI_DATE))
+
+
+tacsat_gbw_df_geom = tac_geom %>%
+  st_join ( ices_rect_welsh%>% select ( icesname ) , join = st_intersects, left = T) %>%
+  mutate  ( SI_RECT =  icesname) 
+
+
+
+
+
+tacsat_gbw_df_geom = tacsat_gbw_df_geom %>% mutate ( RECT_MATCH = ifelse ( LE_RECT == SI_RECT, TRUE , FALSE ))%>%st_drop_geometry() 
+
+
+sum_stat %>%st_drop_geometry() %>% group_by(RECT_MATCH) %>% tally()
+
+
+tac_geom_rect %>% group_by(SI_DATE)%>%distinct(LE_RECT, SI_RECT)
+
+
+st_write( tac_geom_rect, dsn = ".\\..\\..\\data\\example_trip_3_days_1_LE.geojson", layer = "example_trip_3_days_1_LE.geojson")
+
+
+
+
+
 
