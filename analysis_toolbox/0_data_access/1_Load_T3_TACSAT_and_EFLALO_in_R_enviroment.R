@@ -15,9 +15,22 @@ library(dplyr)      ## R Package to use pipelines (%>%) analysis language
 library(sf)         ## R Package for spatial analysis in R ( Simple Features )
 library(ggplot2)    ## R Package for plotitng and graphs
 
+ ## SELECT THE ANALYSIS OPTION:
+
+###  1. WELSH FLEET ACTIVITY ANALYSIS 
+
+folder_t3 = 'uk_u10m_tacsat_eflalo'
+folder_geofish_welsh = 'welsh_o10m_tacsat_eflalo'
 
 
-## 1. Load EFLALO data set blocks and merge them into one R data frame. 
+
+## 2. WELSH WATERS ACTIVITY ANALYSIS 
+
+
+folder_t3 = 'uk_u10m_tacsat_eflalo'
+folder_geofish_uk_ww = 'uk_u10m_tacsat_eflalo'
+
+## 1. Load EFLALO data set blocks and merge them into one R data frame. #####
 
 
 ## list.files(path = '.\\..\\data') # check the files in your directory 
@@ -26,20 +39,6 @@ getwd()
 setwd('C:/Users/RM12/OneDrive - CEFAS/Roi/projects/Welsh_Government_Fishing/welsh_gov_fishing_analysis_capacity/welsh_gov_fisheries_toolbox_git')
 
 
-## SELECT THE DATA TO BE LOADED 
-
-###  1. WELSH FLEET ACTIVITY ANALYSIS 
-
-folder_t3 = 'uk_u10m_tacsat_eflalo'
-folder_geofish = 'welsh_fleet_o10m_tacsat_eflalo'
-
-
-  
-## 2. WELSH WATER ACTIVITY ANALYSIS 
-
-
-folder_t3 = 'uk_u10m_tacsat_eflalo'
-folder_geofish = 'uk_u10m_tacsat_eflalo'
 
 
 eflalo_ft = read.csv(file = paste0('.\\..\\data\\', folder , '\\eflalo_ft.csv') , header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
@@ -107,7 +106,7 @@ eflalo$source  = 'T3'
 
 
 
-## 2. Load TACSAT data    
+## 2. Load TACSAT data    ####
 
 tacsat = read.csv(file = '.\\..\\data\\uk_u10m_tacsat_eflalo\\tacsat.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(tacsat)  = c ( "VE_REF", "SI_LATI", "SI_LONG", "SI_DATE", "SI_TIME", "SI_DATIM", "SI_SP", "SI_HE", "SI_HARB", "SI_STATE", "SI_FT", "INTV", "SI_YEAR" )
