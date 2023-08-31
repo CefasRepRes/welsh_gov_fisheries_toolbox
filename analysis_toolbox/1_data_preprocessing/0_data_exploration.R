@@ -1,7 +1,13 @@
 ########### DATA EXPLORATION, QUALITY CONTROL AND CLEANING ##########################
 
 
-### Define the data to explore and merge it if necessary
+### Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section.
+
+## Fleet segment: 
+    ## - Over 12 m vessels ( source GeoFISH)
+    ## - Under 12 m vessels ( source T3)
+    ## - Combined O12m and U12m fleets
+
 
 ## Welsh OVER 10 meters
 

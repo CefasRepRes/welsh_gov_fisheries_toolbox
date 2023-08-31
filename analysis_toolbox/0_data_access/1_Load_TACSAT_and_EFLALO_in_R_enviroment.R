@@ -172,6 +172,3 @@ tacsat$SI_HE = as.numeric(tacsat$SI_HE)
 tacsat%>%filter(is.na(SI_SP))%>%dim()
 
 ### The EFLALO and TACSAT have been formatted and ready for analysis!!
-
-tacsat_uk_u10m = tacsat
-eflalo_uk_u10m = eflalo
