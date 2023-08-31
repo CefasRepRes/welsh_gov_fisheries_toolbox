@@ -15,36 +15,53 @@ library(dplyr)      ## R Package to use pipelines (%>%) analysis language
 library(sf)         ## R Package for spatial analysis in R ( Simple Features )
 library(ggplot2)    ## R Package for plotitng and graphs
 
+## SET YOUR R WORKING DIRECTORY
+
+  ##check WD is in the desired data folder location
+  getwd() 
+  
+  ## otherwise change to desired data folder location
+  setwd('C:/Users/RM12/OneDrive - CEFAS/Roi/projects/Welsh_Government_Fishing/welsh_gov_fishing_analysis_capacity/data')
+
+
+
  ## SELECT THE ANALYSIS OPTION:
+  
+  analysis_type = 'welsh_fleet' ## replace for 'welsh_waters'  if needed
+  
+  if ( analysis_type == 'welsh_fleet')  { 
 
-###  1. WELSH FLEET ACTIVITY ANALYSIS 
+    ###  1. WELSH FLEET ACTIVITY ANALYSIS 
+    
+    data_folder_t3 = file.path( paste0 ( getwd() , '/welsh_fleet_data/t3' )  )
+    data_folder_geofish = file.path( paste0 ( getwd() , '/welsh_fleet_data/geofish' ) ) 
 
-folder_t3 = 'uk_u10m_tacsat_eflalo'
-folder_geofish_welsh = 'welsh_o10m_tacsat_eflalo'
-
-
-
-## 2. WELSH WATERS ACTIVITY ANALYSIS 
+  } else if  (analysis_type == 'welsh_waters' ) { 
 
 
-folder_t3 = 'uk_u10m_tacsat_eflalo'
-folder_geofish_uk_ww = 'uk_u10m_tacsat_eflalo'
+  ## 2. WELSH WATERS ACTIVITY ANALYSIS 
+  
+  
+  data_folder_t3 = file.path( paste0 ( getwd() , '/welsh_waters_data/t3' )  )
+  data_folder_geofish = file.path( paste0 ( getwd() , '/welsh_waters_data/geofish' ))
+  
+  } 
+  
+  
 
-## 1. Load EFLALO data set blocks and merge them into one R data frame. #####
+
+## 1. Load T3/GeoFISH  EFLALO data set blocks and merge them into one R data frame. #####
 
 
 ## list.files(path = '.\\..\\data') # check the files in your directory 
 
-getwd()
-setwd('C:/Users/RM12/OneDrive - CEFAS/Roi/projects/Welsh_Government_Fishing/welsh_gov_fishing_analysis_capacity/welsh_gov_fisheries_toolbox_git')
 
 
+eflalo_ft_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+eflalo_ft_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+names(eflalo_ft_gf) = toupper( names(eflalo_ft_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
 
-
-eflalo_ft = read.csv(file = paste0('.\\..\\data\\', folder , '\\eflalo_ft.csv') , header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
-names(eflalo_ft)  = c ( "FT_REF", "FT_DCOU", "FT_DHAR", "FT_DDAT", "FT_DTIME", "FT_DDATIM", "FT_LCOU", "FT_LHAR", "FT_LDAT", "FT_LTIME", "FT_LDATIM", "VE_REF", "VE_FLT", "VE_COU","VE_FA", "VE_LEN", "VE_KW", "VE_TON", "FT_YEAR")
-
-
+ 
  
 
   head (eflalo_ft)
@@ -55,8 +72,9 @@ names(eflalo_ft)  = c ( "FT_REF", "FT_DCOU", "FT_DHAR", "FT_DDAT", "FT_DTIME", "
 
  
 
-eflalo_le = read.csv(file = '.\\..\\data\\uk_u10m_tacsat_eflalo\\eflalo_le.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
-names(eflalo_le)  = c ( "LE_ID", "LE_CDAT", "LE_STIME", "LE_ETIME", "LE_SLAT", "LE_SLON", "LE_ELAT", "LE_ELON", "LE_GEAR", "LE_MSZ", "LE_RECT", "LE_DIV", "LE_MET", "EFLALO_FT_FT_REF")
+eflalo_le_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM') 
+eflalo_le_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM') 
+names(eflalo_le_gf) = toupper( names(eflalo_le_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
 
 
   head (eflalo_le)
@@ -64,8 +82,12 @@ names(eflalo_le)  = c ( "LE_ID", "LE_CDAT", "LE_STIME", "LE_ETIME", "LE_SLAT", "
   dim(eflalo_le)
 
 
-eflalo_spe = read.csv(file = '.\\..\\data\\uk_u10m_tacsat_eflalo\\eflalo_spe.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
-names(eflalo_spe)  = c ( "EFLALO_LE_LE_ID", "EFLALO_FT_FT_REF","LE_SPE", "LE_KG", "LE_VALUE"  )
+eflalo_spe_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_spe.csv' ), header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+eflalo_spe_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_spe.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+names(eflalo_spe_gf) = toupper( names(eflalo_spe_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+
+
+
 
 
   head (eflalo_spe)
@@ -75,18 +97,33 @@ names(eflalo_spe)  = c ( "EFLALO_LE_LE_ID", "EFLALO_FT_FT_REF","LE_SPE", "LE_KG"
  
 ## Merge  EFLALO data blocks into one using common fields 
 
-eflalo  =   eflalo_ft %>%
-            inner_join (eflalo_le , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
-            inner_join(eflalo_spe, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
+eflalo_t3  =    eflalo_ft_t3 %>%
+                inner_join (eflalo_le_t3 , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
+                inner_join(eflalo_spe_t3, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
 
-head (eflalo)
-str(eflalo)
+
+eflalo_t3 = eflalo_t3 %>% mutate ( VE_COU = 'GBW', LE_VALUE = -9999, FLEET_SEG = 'welsh_fleet', SOURCE = 't3') %>% select  ( - VE_FA)
+
+eflalo_gf =     eflalo_ft_gf %>%
+                inner_join (eflalo_le_gf , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
+                inner_join(eflalo_spe_gf, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
+
+eflalo_gf = eflalo_gf %>% rename ( LE_VALUE = LE_EURO )  %>%  mutate ( VE_COU = 'GBW',  FLEET_SEG = 'welsh_fleet', SOURCE = 'geofish') 
+
+
+eflalo = rbind(eflalo_t3, eflalo_gf)
+
+ 
+ 
 
 # Convert the fields in required formats 
 
 eflalo$FT_DDAT =  ymd( eflalo$FT_DDAT   )  ## ymd lubridate function to CAST date into Year Mond Day date format
 eflalo$FT_LDAT =   ymd(eflalo$FT_LDAT  ) 
-eflalo$LE_CDAT =   ymd_hms(eflalo$LE_CDAT  ) 
+
+eflalo = eflalo %>% mutate ( LE_CDAT  = substr ( eflalo$LE_CDAT, 1, 10) )  ## To convert Log Event date just in Year- month - day. Time is not provided an is by default 00:00:00 
+eflalo$LE_CDAT =   ymd (eflalo$LE_CDAT  ) 
+
 eflalo$FT_DDATIM = ymd_hms( eflalo$FT_DDATIM   ) 
 eflalo$FT_LDATIM = ymd_hms( eflalo$FT_LDATIM  ) 
 
@@ -99,34 +136,39 @@ eflalo$LE_VALUE = as.numeric(eflalo$LE_VALUE )
 
 eflalo$Year = year(eflalo$FT_DDATIM )
 eflalo$Month = month(eflalo$FT_LDATIM)
-eflalo$fleet = 'uk_u10m'
-eflalo$source  = 'T3'
-
-
-
-
+ 
+ 
 
 ## 2. Load TACSAT data    ####
 
-tacsat = read.csv(file = '.\\..\\data\\uk_u10m_tacsat_eflalo\\tacsat.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
-names(tacsat)  = c ( "VE_REF", "SI_LATI", "SI_LONG", "SI_DATE", "SI_TIME", "SI_DATIM", "SI_SP", "SI_HE", "SI_HARB", "SI_STATE", "SI_FT", "INTV", "SI_YEAR" )
+ 
+tacsat_t3 = read.csv(file = paste0(data_folder_t3, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+tacsat_t3 = tacsat_t3 %>% mutate ( FLEET_SEG = 'welsh_fleet', SOURCE = 't3') 
 
+
+
+tacsat_gf = read.csv(file = paste0(data_folder_geofish, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+names(tacsat_gf) = toupper( names(tacsat_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+
+tacsat_gf = tacsat_gf %>% mutate ( FLEET_SEG = 'welsh_fleet', SOURCE = 'geofish') 
+
+ 
+
+tacsat = rbind(tacsat_t3, tacsat_gf)
+
+                     
+ 
 dim(tacsat)
 head (tacsat)
 str(tacsat) ##List of fields and field type
 
-
- 
-
-tacsat_bk = tacsat  ##create a backup of the data.frame 
 
 
 tacsat$SI_DATE  =    ymd( tacsat$SI_DATE   )  ### reformatting the data in required format . Change to dmy if your system date format is different
 tacsat$SI_DATIM  =   ymd_hms(tacsat$SI_DATIM  ) 
 tacsat$SI_SP = as.numeric(tacsat$SI_SP)
 tacsat$SI_HE = as.numeric(tacsat$SI_HE)
-tacsat$fleet = 'uk_u10m'
-tacsat$source  = 'T3'
+ 
 
 tacsat%>%filter(is.na(SI_SP))%>%dim()
 

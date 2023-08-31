@@ -6,6 +6,7 @@ from DM.DimFishingTrip ft with(nolock)
 left join DM.DimVesselRegistration v with(nolock) on ft.RegisteredFishingVesselDmk = v.RegisteredFishingVesselDmk
 where YEAR(CAST(StartDatetime AS DATE)) = @Year
 and TripIdentifier like 'GBR-TRP-SDS-%'
+and VE_FA = 'Wales'
 
 
 select FishingTripDmk, ft.TripIdentifier, ft.StartDatetime, ft.EndDatetime, ft.DeparturePortDmk, ft.ArrivalPortDmk, ft.RegisteredFishingVesselDmk, v.RSSNumber
@@ -14,6 +15,7 @@ from DM.DimFishingTrip ft with(nolock)
 left join DM.DimVesselRegistration v with(nolock) on ft.RegisteredFishingVesselDmk = v.RegisteredFishingVesselDmk
 where YEAR(CAST(StartDatetime AS DATE)) = @Year
 and TripIdentifier not like 'GBR-TRP-SDS-%'
+and VE_FA = 'Wales'
 
 select *
 into #TripsToExtract
