@@ -1,7 +1,7 @@
 options(dplyr.width = Inf, dplyr.print_min = 500)
 library(vmstools)
 
-## Save the inermediate EFLALO and TACSAT datasets
+## Save the intermediate EFLALO and TACSAT datasets
 
 getwd()
 

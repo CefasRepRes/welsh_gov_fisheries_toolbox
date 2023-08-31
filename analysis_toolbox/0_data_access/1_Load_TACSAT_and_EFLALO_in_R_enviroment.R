@@ -13,7 +13,7 @@
 library(lubridate)  ## this package helps with manage date fields 
 library(dplyr)      ## R Package to use pipelines (%>%) analysis language 
 library(sf)         ## R Package for spatial analysis in R ( Simple Features )
-library(ggplot2)    ## R Package for plotitng and graphs
+library(ggplot2)    ## R Package for plotting and graphs
 
 ## SET YOUR R WORKING DIRECTORY
 
@@ -109,14 +109,14 @@ eflalo = rbind(eflalo_t3, eflalo_gf)
 
 # Convert the fields in required formats 
 
-eflalo$FT_DDAT =  ymd( eflalo$FT_DDAT   )  ## ymd lubridate function to CAST date into Year Mond Day date format
-eflalo$FT_LDAT =   ymd(eflalo$FT_LDAT  ) 
+eflalo$FT_DDAT =  ymd(eflalo$FT_DDAT)  ## ymd lubridate function to CAST date into Year Mond Day date format
+eflalo$FT_LDAT =  ymd(eflalo$FT_LDAT) 
 
-eflalo = eflalo %>% mutate ( LE_CDAT  = substr ( eflalo$LE_CDAT, 1, 10) )  ## To convert Log Event date just in Year- month - day. Time is not provided an is by default 00:00:00 
-eflalo$LE_CDAT =   ymd (eflalo$LE_CDAT  ) 
+eflalo = eflalo %>% mutate (LE_CDAT  = substr (eflalo$LE_CDAT, 1, 10) )  ## To convert Log Event date just in Year- month - day. Time is not provided an is by default 00:00:00 
+eflalo$LE_CDAT = ymd(eflalo$LE_CDAT) 
 
-eflalo$FT_DDATIM = ymd_hms( eflalo$FT_DDATIM   ) 
-eflalo$FT_LDATIM = ymd_hms( eflalo$FT_LDATIM  ) 
+eflalo$FT_DDATIM = ymd_hms(eflalo$FT_DDATIM) 
+eflalo$FT_LDATIM = ymd_hms(eflalo$FT_LDATIM) 
 
 eflalo$VE_LEN = as.numeric(eflalo$VE_LEN)
 eflalo$VE_KW = as.numeric(eflalo$VE_KW)

@@ -1,5 +1,8 @@
 ########### DATA EXPLORATION, QUALITY CONTROL AND CLEANING ##########################
 
+library(dplyr)
+library(ggplot2)
+
 setwd('./../../data')
 
 load("./workflow_outputs/eflalo.RData")
@@ -18,25 +21,25 @@ fleet_segment = 'over12' ## replace for 'welsh_waters'  if needed
 
 if ( fleet_segment == 'over12')  { 
   
-  ###  1. Over 10m vessels analysis
+  ###  1. Over 12m vessels analysis
   
   eflalo_fs = eflalo %>% filter(VE_LEN >= 12)
-  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo$VE_REF)
+  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
   #tacsat = tacsat %>% filter(SI_FT %in% eflalo$FT_REF)
   
   
 } else if  (fleet_segment == 'under12' ) { 
   
   
-  ### 2. Under 10m vessels analysis 
+  ### 2. Under 12m vessels analysis 
   
   eflalo_fs = eflalo %>% filter(VE_LEN < 12)
-  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo$VE_REF)
+  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
   
 } else if  (fleet_segment == 'all' ) { 
   
   
-  ### 2. Under 10m vessels analysis 
+  ### 3. All vessels 
   
   eflalo_fs = eflalo 
   tacsat_fs = tacsat  
@@ -44,104 +47,52 @@ if ( fleet_segment == 'over12')  {
 } 
 
 
-setdiff(eflalo$VE_REF, tacsat$VE_REF)
-setdiff(eflalo$FT_REF, tacsat$SI_FT)
-
-
-eflalo_fs%>%distinct(FT_REF, SOURCE ) %>% group_by(SOURCE)%>%select(SOURCE)%>%tally()
-
-eflalo_fs %>% filter( SOURCE == 'geofish')%>% distinct( FT_REF , VE_LEN ) %>% group_by(VE_LEN) %>% tally() %>% arrange(desc(VE_LEN)) 
-
-
-
-
-
-
-
- 
-
-
-## Welsh OVER 10 meters
-
-eflalo_w_o10m_gbw  = eflalo_w_o10m %>% filter ( VE_LEN >= 10 )
-tacsat_w_o10m_gbw = tacsat_w_o10m %>% filter( SI_FT %in% ( eflalo_w_o10m_f%>%distinct(FT_REF )%>%pull() ) )
-
-
-## Welsh UNDER 10 meters
-
-eflalo_uk_u10m_gbw = eflalo_uk_u10m %>% filter( VE_FA == 'Wales')  ##Vessel Fishing authority 
-ft_eflalo_gbw = eflalo_uk_u10m_gbw %>% select(FT_REF) %>% pull()  ## get the unique FT id's in the eflalo with welsh fleet records
-tacsat_uk_u10m_gbw = tacsat_uk_u10m %>% filter( SI_FT %in%   ft_eflalo_gbw )  ## filter TACSAT (ivms) for welsh fleet trips in eflalo
-
-
-### THERE IS UNDER 10 METERS VESSELS IN IFISH . This explore these data  and how appears both in IFISH and T3 differently. 
-
-eflalo_w_o10m %>% filter ( VE_LEN < 10 ) %>% inner_join( eflalo_uk_u10m , by = c("VE_REF" = "VE_REF", "FT_DDAT" = "FT_DDAT" , "LE_CDAT" = "LE_CDAT", "LE_SPE" = "LE_SPE" )  )  %>% select (FT_REF.x , FT_REF.y ,   FT_DDAT , FT_LDAT.x ,FT_LDAT.y , LE_KG.x, LE_KG.y)
-
-
-##merge both datasets into a unique one
-
-
-eflalo_gbw = eflalo_uk_u10m_gbw
-tacsat_gbw = tacsat_uk_u10m_gbw
-eflalo_gbw= eflalo_w_o10m_f %>% bind_rows(eflalo_uk_u10m_f %>%select(-VE_FA)  )
-
-
-eflalo_gbw%>%filter(source == 'T3')
 
 #### EXPLORATION:  Initial EFLALO and TACSAT exploration ########
 
-## Explore the stats from EFLALO to get fleet statistics and fleet characterization
+## Explore the stats from EFLALO to get fleet statistics and fleet characterisation
 
 
   ## Explore vessels nationality in the EFLALO records 
+
+  eflalo_fs %>% distinct(VE_COU)
+  eflalo_fs %>% distinct(FT_DCOU)
+  eflalo_fs %>% distinct(VE_REF)
   
-  eflalo %>% distinct(VE_COU)
-  eflalo%>%distinct(VE_FA)
-  eflalo%>%distinct(FT_DCOU)
-  eflalo%>%distinct(VE_REF)
-  
-  ## Filter (if necessary) the vessels from nationality required using the Fishing Authority field (VE_FA)
-  
- 
-  
-  eflalo_wz = eflalo %>%    ## Spatial filter , any fishign trip in eflalo with a ICES rect within Welsh Zone 
-  
-  ## Compare the size change in dimensions of the filtered and non-filtered dataset
-  
-  eflalo %>% distinct( FT_REF) %>% dim() 
-  eflalo_gbw %>% distinct(FT_REF)%>%dim() 
+  ## Filter (if necessary) the vessels from nationality required using the Vessel Country field (VE_COU)
+  # The country code can be changed to your requirements, this is not editing the data, just exploring it
+  eflalo_fs %>% filter(VE_COU == 'GBE')
   
   
+  ## Check the size change in dimensions of the dataset you chose
+  
+  eflalo_fs %>% distinct(FT_REF) %>% dim()
  
   
   ## Check vessel length categories
   
-  eflalo_gbw %>% select(VE_LEN)%>%mutate( VE_LEN = as.numeric(VE_LEN)) %>% summary()
-  eflalo_gbw %>% distinct(VE_REF, VE_LEN) %>% mutate( VE_LEN = round(VE_LEN, 0 )) %>% group_by(VE_LEN) %>% tally() %>% ggplot(., aes(VE_LEN, n)) + geom_bar(stat = "identity") +scale_x_continuous( breaks = seq(1:32) )
-  eflalo_gbw %>% ggplot( . , aes( VE_LEN)) + geom_histogram()
+  eflalo_fs %>% select(VE_LEN)%>%mutate( VE_LEN = as.numeric(VE_LEN)) %>% summary()
+  eflalo_fs %>% distinct(VE_REF, VE_LEN) %>% mutate( VE_LEN = round(VE_LEN, 0 )) %>% group_by(VE_LEN) %>% tally() %>% ggplot(., aes(VE_LEN, n)) + geom_bar(stat = "identity") +scale_x_continuous( breaks = seq(1:32) )
+  eflalo_fs %>% ggplot( . , aes( VE_LEN)) + geom_histogram()
   
   
   
   
   ## Create the VESSEL LENGTH CAGTEGORY to explore data by vessel length classes
   
-  eflalo_gbw$VE_LEN_CAT = cut( eflalo_gbw$VE_LEN , include.lowest = T,
-                          breaks=c(-Inf, 4.5, 5 , 6, 7, 8, 9, 10 , Inf), 
-                          labels=c("<4.5 m","4.5 - 5 m", "5- 6 m","6 - 7 m", "7 - 8 m", "8 - 9 m", "9 - 10 m", "=> 10  m"))
-  
-  eflalo_gbw$VE_LEN_CAT = cut( eflalo_gbw$VE_LEN , include.lowest = T,
-                               breaks=c(-Inf, 4.5, 5 , 7, 9, 10 , Inf), 
-                               labels=c("<4.5 m","4.5 - 5 m", "5 - 7 m", "7 - 9 m", "9 - 10 m", "=> 10  m"))
+  eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
+                               breaks=c(-Inf, 4.5, 4.999 , 6.999, 8.999, 11.999 , Inf), 
+                               labels=c("<4.5m","4.5-5m", "5-7m", "7-9m", "9-12m", "=>12m"))
   
 
-  eflalo_gbw %>% select ( FT_REF , VE_REF, VE_LEN, VE_LEN_CAT)
+  eflalo_fs %>% select ( FT_REF , VE_REF, VE_LEN, VE_LEN_CAT)
+  
   
   ## Create the field "trip_days" with duration of each trips as   number of days  
-  
-  eflalo_gbw$trip_days  =  as.numeric( eflalo_gbw$FT_LDATIM -  eflalo_gbw$FT_DDATIM )
-  
-  head( eflalo_gbw )
+
+  eflalo_fs$trip_days = as.numeric(eflalo_fs$FT_LDATIM - eflalo_fs$FT_DDATIM)
+  head(eflalo_fs$trip_days)
+  head(eflalo_fs)
   
     
    
@@ -150,35 +101,32 @@ eflalo_gbw%>%filter(source == 'T3')
   
     ## PLOT 1: Number of trips by vessel length category 
     
-    ggplot( data = eflalo_gbw %>% distinct(FT_REF, VE_LEN_CAT) ,   aes( VE_LEN_CAT )   ) +
+    ggplot(data = eflalo_fs %>% distinct(FT_REF, VE_LEN_CAT), aes(VE_LEN_CAT)) +
     geom_bar()
     
     ## PLOT 2: Number of trips by gear category 
     
-    ggplot( data = eflalo_gbw%>%distinct(FT_REF, LE_GEAR)  , aes( LE_GEAR ) ) +
+    ggplot(data = eflalo_fs%>%distinct(FT_REF, LE_GEAR), aes(LE_GEAR)) +
     geom_bar()
     
-    ## PLOT 2: Number of trips by gear category 
+    ## PLOT 2: Number of trips by gear category, using facet wrap for each length category
     
-
-    ggplot(data = eflalo_gbw%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR), aes(LE_GEAR)  ) +
+    ggplot(data = eflalo_fs%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR), aes(LE_GEAR)  ) +
       geom_bar() + 
       facet_wrap( ~ VE_LEN_CAT)
     
-    ggplot(data = eflalo_gbw%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR) , aes(VE_LEN_CAT)  ) +
+    ## Now for each geat type
+    
+    ggplot(data = eflalo_fs%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR) , aes(VE_LEN_CAT)  ) +
       geom_bar() + 
       facet_wrap( ~ LE_GEAR)
-
-    ggplot(eflalo_gbw%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR), aes(LE_GEAR)) + 
-      geom_bar() + 
-      facet_wrap( ~ VE_LEN_CAT)
 
     
     ## PLOT 3: Main species captured
     
       ## Rank the main species captured by gear type
     
-    res1 = eflalo_gbw %>%
+    res1 = eflalo_fs %>%
     group_by(  LE_GEAR, LE_SPE) %>%
     summarise(le_kg_total = sum( LE_KG) )  %>%
     mutate ( rank = dense_rank( desc(le_kg_total) )) %>%
@@ -197,19 +145,19 @@ eflalo_gbw%>%filter(source == 'T3')
       #Q1: Do we expect longer trips from larger vessels?
       #Q2: Is there any trips duration identified as outliers? 
     
-    ggplot(data = eflalo_gbw %>% filter( trip_days < 500 ) ) +
+    ggplot(data = eflalo_fs %>% filter( trip_days < 500 ) ) +
     geom_histogram( aes( trip_days ) )
     
-    ggplot(data = eflalo_gbw%>%filter(trip_days < 50) , aes ( x = trip_days, y = VE_LEN )) + 
+    ggplot(data = eflalo_fs %>% filter(trip_days < 50) , aes ( x = trip_days, y = VE_LEN )) + 
     geom_point(  )
     
     
-    write.csv( x = res1, file =  ".\\..\\data\\data_output\\species_kg_ranked_by_gear.csv", row.names=FALSE)
+    write.csv( x = res1, file =  ".\\workflow_outputs\\species_kg_ranked_by_gear.csv", row.names=FALSE)
     
     
-    ## Save the inermediate EFLALO and TACSAT datasets
+    ## Save the intermediate EFLALO and TACSAT datasets
     
-    save ( eflalo_gbw , file = '.\\..\\data\\eflalo_gbw.RData' )
-    save ( tacsat_gbw , file = '.\\..\\data\\tacsat_gbw.RData' )
+    save ( eflalo_fs , file = paste0('.\\workflow_outputs\\eflalo_fs_', fleet_segment, '.RData' ))
+    save ( tacsat_fs , file = paste0('.\\workflow_outputs\\tacsat_fs_', fleet_segment, '.RData' ))
     
     
