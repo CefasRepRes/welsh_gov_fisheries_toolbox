@@ -1,5 +1,57 @@
 ########### DATA EXPLORATION, QUALITY CONTROL AND CLEANING ##########################
 
+setwd('./../../data')
+
+load("./workflow_outputs/eflalo.RData")
+load("./workflow_outputs/tacsat.RData")
+
+### Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section.
+
+## Fleet segment: 
+## - Over 12 m vessels ( source GeoFISH)
+## - Under 12 m vessels ( source T3)
+## - Combined O12m and U12m fleets
+
+### If you want to analyse a specific section of the data, apply the following if statement
+
+fleet_segment = 'over12' ## replace for 'welsh_waters'  if needed
+
+if ( fleet_segment == 'over12')  { 
+  
+  ###  1. Over 10m vessels analysis
+  
+  eflalo = eflalo %>% filter(VE_LEN >= 12)
+  tacsat = tacsat %>% filter(VE_REF %in% eflalo$VE_REF)
+  #tacsat = tacsat %>% filter(SI_FT %in% eflalo$FT_REF)
+  
+  
+} else if  (fleet_segment == 'under12' ) { 
+  
+  
+  ### 2. Under 10m vessels analysis 
+  
+  eflalo = eflalo %>% filter(VE_LEN < 12)
+  tacsat = tacsat %>% filter(VE_REF %in% eflalo$VE_REF)
+  
+} 
+
+
+setdiff(eflalo$VE_REF, tacsat$VE_REF)
+setdiff(eflalo$FT_REF, tacsat$SI_FT)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section.
 
