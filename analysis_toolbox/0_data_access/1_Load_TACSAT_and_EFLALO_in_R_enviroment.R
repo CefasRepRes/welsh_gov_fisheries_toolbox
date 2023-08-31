@@ -71,15 +71,14 @@ names(eflalo_ft_gf) = toupper( names(eflalo_ft_gf ) )  ## Column names are lower
 
 
  
-
-eflalo_le_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM') 
-eflalo_le_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM') 
+eflalo_le_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM', colClasses = c ( rep(NA, 10) , "character") )  
+eflalo_le_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM' , colClasses = c ( rep(NA, 10) , "character")  ) 
 names(eflalo_le_gf) = toupper( names(eflalo_le_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
 
 
-  head (eflalo_le)
-  str(eflalo_le)
-  dim(eflalo_le)
+  head (eflalo_le_t3)
+  str(eflalo_le_t3)
+  dim(eflalo_le_t3)
 
 
 eflalo_spe_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_spe.csv' ), header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
@@ -102,13 +101,13 @@ eflalo_t3  =    eflalo_ft_t3 %>%
                 inner_join(eflalo_spe_t3, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
 
 
-eflalo_t3 = eflalo_t3 %>% mutate ( VE_COU = 'GBW', LE_VALUE = -9999, FLEET_SEG = 'welsh_fleet', SOURCE = 't3') %>% select  ( - VE_FA)
+eflalo_t3 = eflalo_t3 %>% mutate ( VE_COU = 'GBW', LE_VALUE = -9999, FLEET_SEG = analysis_type, SOURCE = 't3') %>% select  ( - VE_FA)
 
 eflalo_gf =     eflalo_ft_gf %>%
                 inner_join (eflalo_le_gf , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
                 inner_join(eflalo_spe_gf, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
 
-eflalo_gf = eflalo_gf %>% rename ( LE_VALUE = LE_EURO )  %>%  mutate ( VE_COU = 'GBW',  FLEET_SEG = 'welsh_fleet', SOURCE = 'geofish') 
+eflalo_gf = eflalo_gf %>% rename ( LE_VALUE = LE_EURO )  %>%  mutate ( VE_COU = 'GBW',  FLEET_SEG = analysis_type, SOURCE = 'geofish') 
 
 
 eflalo = rbind(eflalo_t3, eflalo_gf)
@@ -143,14 +142,14 @@ eflalo$Month = month(eflalo$FT_LDATIM)
 
  
 tacsat_t3 = read.csv(file = paste0(data_folder_t3, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
-tacsat_t3 = tacsat_t3 %>% mutate ( FLEET_SEG = 'welsh_fleet', SOURCE = 't3') 
+tacsat_t3 = tacsat_t3 %>% mutate ( FLEET_SEG = analysis_type, SOURCE = 't3') 
 
 
 
 tacsat_gf = read.csv(file = paste0(data_folder_geofish, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(tacsat_gf) = toupper( names(tacsat_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
 
-tacsat_gf = tacsat_gf %>% mutate ( FLEET_SEG = 'welsh_fleet', SOURCE = 'geofish') 
+tacsat_gf = tacsat_gf %>% mutate ( FLEET_SEG = analysis_type, SOURCE = 'geofish') 
 
  
 
