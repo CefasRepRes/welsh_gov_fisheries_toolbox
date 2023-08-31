@@ -20,8 +20,8 @@ if ( fleet_segment == 'over12')  {
   
   ###  1. Over 10m vessels analysis
   
-  eflalo = eflalo %>% filter(VE_LEN >= 12)
-  tacsat = tacsat %>% filter(VE_REF %in% eflalo$VE_REF)
+  eflalo_fs = eflalo %>% filter(VE_LEN >= 12)
+  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo$VE_REF)
   #tacsat = tacsat %>% filter(SI_FT %in% eflalo$FT_REF)
   
   
@@ -30,8 +30,16 @@ if ( fleet_segment == 'over12')  {
   
   ### 2. Under 10m vessels analysis 
   
-  eflalo = eflalo %>% filter(VE_LEN < 12)
-  tacsat = tacsat %>% filter(VE_REF %in% eflalo$VE_REF)
+  eflalo_fs = eflalo %>% filter(VE_LEN < 12)
+  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo$VE_REF)
+  
+} else if  (fleet_segment == 'all' ) { 
+  
+  
+  ### 2. Under 10m vessels analysis 
+  
+  eflalo_fs = eflalo 
+  tacsat_fs = tacsat  
   
 } 
 
@@ -40,6 +48,9 @@ setdiff(eflalo$VE_REF, tacsat$VE_REF)
 setdiff(eflalo$FT_REF, tacsat$SI_FT)
 
 
+eflalo_fs%>%distinct(FT_REF, SOURCE ) %>% group_by(SOURCE)%>%select(SOURCE)%>%tally()
+
+eflalo_fs %>% filter( SOURCE == 'geofish')%>% distinct( FT_REF , VE_LEN ) %>% group_by(VE_LEN) %>% tally() %>% arrange(desc(VE_LEN)) 
 
 
 
@@ -47,18 +58,7 @@ setdiff(eflalo$FT_REF, tacsat$SI_FT)
 
 
 
-
-
-
-
-
-
-### Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section.
-
-## Fleet segment: 
-    ## - Over 12 m vessels ( source GeoFISH)
-    ## - Under 12 m vessels ( source T3)
-    ## - Combined O12m and U12m fleets
+ 
 
 
 ## Welsh OVER 10 meters
