@@ -21,13 +21,13 @@ library(ggplot2)    ## R Package for plotitng and graphs
   getwd() 
   
   ## otherwise change to desired data folder location
-  setwd('C:/Users/RM12/OneDrive - CEFAS/Roi/projects/Welsh_Government_Fishing/welsh_gov_fishing_analysis_capacity/data')
+  setwd('./../../data')
 
 
 
  ## SELECT THE ANALYSIS OPTION:
   
-  analysis_type = 'welsh_fleet' ## replace for 'welsh_waters'  if needed
+  analysis_type = 'welsh_waters' ## replace for 'welsh_waters'  if needed
   
   if ( analysis_type == 'welsh_fleet')  { 
 
@@ -50,7 +50,7 @@ library(ggplot2)    ## R Package for plotitng and graphs
   
 
 
-## 1. Load T3/GeoFISH  EFLALO data set blocks and merge them into one R data frame. #####
+## 1. Load T3/GeoFISH  EFLALO data set blocks and merge them into one R data frame. ----
 
 
 ## list.files(path = '.\\..\\data') # check the files in your directory 
@@ -63,7 +63,13 @@ names(eflalo_ft_gf) = toupper( names(eflalo_ft_gf ) )  ## Column names are lower
 
  
  
+# explore the loaded data, can change to gf data to check
+  head (eflalo_ft_t3)
+  str(eflalo_ft_t3)
+  dim(eflalo_ft_t3)
+  summary(eflalo_ft_t3)
 
+<<<<<<< Updated upstream
   head (eflalo_ft)
   str(eflalo_ft)
   dim(eflalo_ft)
@@ -79,22 +85,23 @@ names(eflalo_le_gf) = toupper( names(eflalo_le_gf ) )  ## Column names are lower
   head (eflalo_le_t3)
   str(eflalo_le_t3)
   dim(eflalo_le_t3)
+=======
+# load eflalo_le from both sources ----
+  eflalo_le_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM', colClasses = c ( rep(NA, 10) , "character") )  
+  eflalo_le_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM' , colClasses = c ( rep(NA, 10) , "character") )
+  names(eflalo_le_gf) = toupper( names(eflalo_le_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+>>>>>>> Stashed changes
 
+  head (eflalo_le_t3)
+  str (eflalo_le_t3)
 
+# load eflalo_spe from both sources ----
 eflalo_spe_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_spe.csv' ), header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
 eflalo_spe_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_spe.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(eflalo_spe_gf) = toupper( names(eflalo_spe_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
 
 
-
-
-
-  head (eflalo_spe)
-  str(eflalo_spe)
-  dim(eflalo_spe)
- 
- 
-## Merge  EFLALO data blocks into one using common fields 
+## Merge  EFLALO data blocks into one using common fields ----
 
 eflalo_t3  =    eflalo_ft_t3 %>%
                 inner_join (eflalo_le_t3 , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
@@ -143,12 +150,18 @@ eflalo$Month = month(eflalo$FT_LDATIM)
  
 tacsat_t3 = read.csv(file = paste0(data_folder_t3, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
 tacsat_t3 = tacsat_t3 %>% mutate ( FLEET_SEG = analysis_type, SOURCE = 't3') 
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 
 
 tacsat_gf = read.csv(file = paste0(data_folder_geofish, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(tacsat_gf) = toupper( names(tacsat_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 tacsat_gf = tacsat_gf %>% mutate ( FLEET_SEG = analysis_type, SOURCE = 'geofish') 
 
  
@@ -163,8 +176,8 @@ str(tacsat) ##List of fields and field type
 
 
 
-tacsat$SI_DATE  =    ymd( tacsat$SI_DATE   )  ### reformatting the data in required format . Change to dmy if your system date format is different
-tacsat$SI_DATIM  =   ymd_hms(tacsat$SI_DATIM  ) 
+tacsat$SI_DATE  =  ymd( tacsat$SI_DATE   )  ### reformatting the data in required format . Change to dmy if your system date format is different
+tacsat$SI_DATIM  = ymd_hms(tacsat$SI_DATIM  ) 
 tacsat$SI_SP = as.numeric(tacsat$SI_SP)
 tacsat$SI_HE = as.numeric(tacsat$SI_HE)
  
@@ -175,3 +188,7 @@ tacsat%>%filter(is.na(SI_SP))%>%dim()
 
 tacsat_uk_u10m = tacsat
 eflalo_uk_u10m = eflalo
+
+save(eflalo, file = "./workflow_outputs/eflalo.RData")
+save(tacsat, file = "./workflow_outputs/tacsat.RData")
+
