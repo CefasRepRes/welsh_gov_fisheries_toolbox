@@ -80,9 +80,36 @@ if ( fleet_segment == 'over12')  {
   
   ## Create the VESSEL LENGTH CAGTEGORY to explore data by vessel length classes
   
-  eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
-                               breaks=c(-Inf, 4.5, 4.999 , 6.999, 8.999, 11.999 , Inf), 
-                               labels=c("<4.5m","4.5-5m", "5-7m", "7-9m", "9-12m", "=>12m"))
+    if ( fleet_segment == 'over12')  {  
+    
+      eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
+                                 breaks=c(-Inf, 12, 15, 18, 24, 40,  Inf), 
+                                 labels=c("<12m",  "12-15m","15-18m", "18-24m", "24-40m" ,"=>40m"))
+      
+      
+      
+    
+    
+    }   else if  (fleet_segment == 'under12' ) { 
+    
+    
+      eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
+                                 breaks=c(-Inf, 4.5, 4.999 , 6.999, 8.999, 11.999 , Inf), 
+                                 labels=c("<4.5m","4.5-5m", "5-7m", "7-9m", "9-12m", "=>12m"))
+    
+    } else if ( fleet_segment == 'all') { 
+      
+      
+      eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
+                                 breaks=c(-Inf, 6, 8, 10, 12, 15, 18, 24, 40,  Inf), 
+                                 labels=c("<6m","6-8m", "8-10m", "10-12m", "12-15m","15-18m", "18-24m", "24-40m" ,"=>40m"))
+      
+      
+      
+      
+      }
+  
+
   
 
   eflalo_fs %>% select ( FT_REF , VE_REF, VE_LEN, VE_LEN_CAT)
@@ -90,9 +117,11 @@ if ( fleet_segment == 'over12')  {
   
   ## Create the field "trip_days" with duration of each trips as   number of days  
 
-  eflalo_fs$trip_days = as.numeric(eflalo_fs$FT_LDATIM - eflalo_fs$FT_DDATIM)
+  eflalo_fs$trip_days = as.numeric(eflalo_fs$FT_LDATIM - eflalo_fs$FT_DDATIM) /24
   head(eflalo_fs$trip_days)
   head(eflalo_fs)
+  eflalo_fs %>% ggplot( . , aes( trip_days)) + geom_histogram()
+  
   
     
    
@@ -115,7 +144,7 @@ if ( fleet_segment == 'over12')  {
       geom_bar() + 
       facet_wrap( ~ VE_LEN_CAT)
     
-    ## Now for each geat type
+    ## Now for each gear type
     
     ggplot(data = eflalo_fs%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR) , aes(VE_LEN_CAT)  ) +
       geom_bar() + 
