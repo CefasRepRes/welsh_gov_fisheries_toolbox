@@ -54,15 +54,26 @@ library(ggplot2)    ## R Package for plotting and graphs
 
 
 ## list.files(path = '.\\..\\data') # check the files in your directory 
-
-
+           
 
 eflalo_ft_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
 eflalo_ft_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
 names(eflalo_ft_gf) = toupper( names(eflalo_ft_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
 
  
+## Convert the field VE_COU in a standard country acronym 
+countries_id = data.frame( ve_fa =   c('Wales', 'England', 'Isle of Man', 'NULL', 'Scotland', 'North Ireland') , ve_cou_gb = c( 'GBW', 'GBE', 'GBI','NULL', 'GBS', 'GBN' ) ) 
+eflalo_ft_t3 = eflalo_ft_t3 %>% left_join(countries_id, by =  c ( 'VE_FA' = 've_fa')) %>% mutate(VE_COU = ve_cou_gb) %>% select ( - ve_cou_gb)
  
+## Filter GeoFISH data for Over 10 meter vessesl. Logbook info from <10 m in GeoFISH it comes from Sales Notes and is less reliable.
+
+eflalo_ft_gf = eflalo_ft_gf %>% filter ( VE_LEN >= 10 )
+eflalo_ft_t3 = eflalo_ft_t3 %>% filter ( as.numeric( VE_LEN)  < 10 )
+
+
+eflalo_ft_t3 %>% mutate ( VE_LEN= as.numeric ( VE_LEN) ) %>% select ( VE_LEN) %>% summary()
+ 
+
 # explore the loaded data, can change to gf data to check
   head (eflalo_ft_t3)
   str(eflalo_ft_t3)
@@ -93,13 +104,13 @@ eflalo_t3  =    eflalo_ft_t3 %>%
                 inner_join(eflalo_spe_t3, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
 
 
-eflalo_t3 = eflalo_t3 %>% mutate ( VE_COU = 'GBW', LE_VALUE = -9999, FLEET_SEG = analysis_type, SOURCE = 't3') %>% select  ( - VE_FA)
+eflalo_t3 = eflalo_t3 %>% mutate ( LE_VALUE = -9999, FLEET_SEG = analysis_type, SOURCE = 't3') %>% select  ( - VE_FA)
 
 eflalo_gf =     eflalo_ft_gf %>%
                 inner_join (eflalo_le_gf , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
                 inner_join(eflalo_spe_gf, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
 
-eflalo_gf = eflalo_gf %>% rename ( LE_VALUE = LE_EURO )  %>%  mutate ( VE_COU = 'GBW',  FLEET_SEG = analysis_type, SOURCE = 'geofish') 
+eflalo_gf = eflalo_gf %>% rename ( LE_VALUE = LE_EURO )  %>%  mutate (   FLEET_SEG = analysis_type, SOURCE = 'geofish') 
 
 
 eflalo = rbind(eflalo_t3, eflalo_gf)
@@ -142,7 +153,6 @@ names(tacsat_gf) = toupper( names(tacsat_gf ) )  ## Column names are lower case 
 tacsat_gf = tacsat_gf %>% mutate ( FLEET_SEG = analysis_type, SOURCE = 'geofish') 
 
  
-
 tacsat = rbind(tacsat_t3, tacsat_gf)
 
                      
@@ -161,8 +171,38 @@ tacsat$SI_HE = as.numeric(tacsat$SI_HE)
 
 tacsat%>%filter(is.na(SI_SP))%>%dim()
 
+
+
+## To be run only when "Welsh waters" analysis is processed. 
+## This will limit the analysis to fishign that occurs within the Welsh Waters boundaries
+
+if ( analysis_type == 'welsh_waters' ) { 
+  
+  welsh_marine_area = st_read ( dsn = '.\\spatial_layers\\wales_plan_area.geojson' )
+  welsh_marine_area_geom = st_make_valid(st_union(welsh_marine_area  ))
+  
+  
+  tacsat_geom = tacsat %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 , remove = FALSE)
+  tacsat_geom_ww =  tacsat_geom  %>%  filter(  st_intersects( .,  welsh_marine_area_geom , sparse = FALSE)  )
+  
+  
+  trips_in_welsh_waters = tacsat_geom_ww %>% st_drop_geometry() %>%  distinct(SI_FT ) %>% pull()
+  
+  eflalo = eflalo %>% filter ( FT_REF  %in%  trips_in_welsh_waters) 
+  tacsat = tacsat  %>% filter ( SI_FT  %in% trips_in_welsh_waters ) 
+  
+  
+  st_write( tacsat_geom_ww, dsn = ".\\workflow_outputs\\spatial\\tacsat_welsh_waters.geojson", layer = "tacsat_welsh_waters.geojson")
+  
+  
+}
+
 ### The EFLALO and TACSAT have been formatted and ready for analysis!!
 
 save(eflalo, file = "./workflow_outputs/eflalo.RData")
 save(tacsat, file = "./workflow_outputs/tacsat.RData")
+
+## To visualize in a GIS software save the TACSAT  as point geometry 
+
+
 
