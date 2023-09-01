@@ -90,7 +90,7 @@ if ( fleet_segment == 'over12')  {
       
     
     
-    }   else if  (fleet_segment == 'under12' ) { 
+    } else if  (fleet_segment == 'under12' ) { 
     
     
       eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
@@ -117,15 +117,13 @@ if ( fleet_segment == 'over12')  {
   
   ## Create the field "trip_days" with duration of each trips as   number of days  
 
-  eflalo_fs$trip_days = as.numeric(eflalo_fs$FT_LDATIM - eflalo_fs$FT_DDATIM) /24
+  eflalo_fs$trip_days = as.numeric(difftime(eflalo_fs$FT_LDATIM, eflalo_fs$FT_DDATIM), units = "days")
+  
   head(eflalo_fs$trip_days)
   str(eflalo_fs)
   
   head(eflalo_fs)
   eflalo_fs %>% ggplot( . , aes( trip_days)) + geom_histogram()
-  
-  
-    
    
 
   ## Plot the categories to understand your fleet composition

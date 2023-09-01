@@ -8,6 +8,7 @@ library(sf)
 
 getwd()
 
+# if you opened from the file explorer, you will likele need this, may have to edit, needs to be pointed to data folder
 setwd('./../../data')
 
 load (  file = "./workflow_outputs/eflalo_fs_over12.RData" )
@@ -64,7 +65,7 @@ ggplot(res21, aes( n )) + geom_histogram()
 
 ## Select a trip with more record associated and explore the data 
 
-eflalo_fs %>% filter(FT_REF == 10343309346)
+eflalo_fs %>% filter(FT_REF == 610696950)
 
 
 
@@ -127,10 +128,10 @@ eflalo_fs %>% filter(LE_GEAR == 'OTB' & LE_SPE == 'BSS') %>% select ( LE_KG)%>%a
 ## Explore specific fishing trip information for outliers values
 
 eflalo_fs %>% filter( LE_GEAR == 'GTR' & LE_SPE == 'SOL' & LE_KG  > 1000)  
-eflalo_fs %>% filter( FT_REF == 10343326193     )
+eflalo_fs %>% filter( FT_REF == 610699215 )
 ## Filter values no required out 
 
-eflalo_fs = eflalo_fs %>% filter (! FT_REF %in% c( 10343326193))  
+###################eflalo_fs = eflalo_fs %>% filter (! FT_REF %in% c( 10343326193))  
 
 
 
@@ -221,20 +222,20 @@ overlaps_analysis%>%
 ## Filter the trips details for the vessel during the overlapping dates 
 
 overlaps_analysis %>%
-  filter( VE_REF == 'C16095' & FT_DDATIM > '2022-09-01' & FT_DDATIM < '2022-09-25'  ) %>%
+  filter( VE_REF == 'C17466' & FT_DDATIM > '2022-10-01' & FT_DDATIM < '2022-10-04'  ) %>%
   arrange( VE_REF, FT_DDATIM)
 
 eflalo_fs%>%
-  filter( VE_REF == 'A15264' & FT_DDATIM > '2022-10-20' & FT_DDATIM < '2022-11-20'  ) %>%
+  filter( VE_REF == 'C17466' & FT_DDATIM > '2022-10-01' & FT_DDATIM < '2022-10-04'  ) %>%
   group_by(FT_REF)%>%
   summarise(numb = n())
 
 ## Following this analysis we have found out that these trips are duplicated 
-## The three overlapping trips have the  same reported species and details
+## The three overlapping trips have the same reported species and details
 
-eflalo_fs %>% filter( FT_REF %in% c(  10343392884 ,  10343392891  ))
+eflalo_fs %>% filter( FT_REF %in% c(610787207, 610791817))
 
-eflalo_fs %>% filter( FT_REF %in% c( 10343375989,10343377193  ) ) 
+eflalo_fs %>% filter( FT_REF %in% c(610738857, 610735265)) 
 
 
 
@@ -264,7 +265,7 @@ ICESareas = st_read(dsn = '.\\spatial_layers\\ICES_Statistical_Rectangles.shp')
 ## explore connection to WFS/WMS services ( Welsh Portal ,  OSGB )
 
 welsh_marine_area %>% st_crs()  ## WGS 84 EPSG: 4326
-port_500m %>% st_crs()   ## WGS 84
+port_3km %>% st_crs()   ## WGS 84
 land  %>% st_crs() 
 
 land_4326 = land %>% st_transform( 4326 )   ## reproject the sf object ( spatial layer ) into a new coordiante system 
@@ -368,7 +369,7 @@ tacsat_fs%>%
 
 ## From the overlap trip analysis done with EFLALO we can identify if the duplicated VMS locations correspond to those overlapping trips 
 
-overlaps_analysis %>% filter(FT_REF %in% c( '10343378465', '10343379282') ) 
+overlaps_analysis %>% filter(FT_REF %in% c( '610736051', '610738638') ) 
 
 ##  This confirms that these trips overlaps and therefore the VMS location is duplicated and assigned to the both trips
 ## To fix this error will require correct overlapping trips and reassign the trip identifiers to VMS locations 
