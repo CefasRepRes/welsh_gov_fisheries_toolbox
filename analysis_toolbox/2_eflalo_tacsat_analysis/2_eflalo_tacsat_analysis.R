@@ -1,9 +1,13 @@
-
+library(vmstools)
+library(dplyr)
+library(ggplot2)
+library(sf)
+library(tidyr)
   
-  load(file = '.\\..\\data\\eflalo_gbw_qc.RData' )
-  load(file = '.\\..\\data\\tacsat_gbw_qc.RData' )
+  load(file = '.\\..\\data\\eflalo_fs_qc.RData' )
+  load(file = '.\\..\\data\\tacsat_fs_qc.RData' )
   
-  tacsat_gbw = tacsat_gbw_df
+  tacsat_fs = tacsat_gbw_df
   
   ## define the year for the  analysed data 
   
@@ -15,26 +19,26 @@
   # Merge eflalo and tacsat =================================
   
    
-  str(tacsat_gbw)
-  str(eflalo_gbw)
+  str(tacsat_fs)
+  str(eflalo_fs)
  
-  dim( eflalo_gbw)
+  dim(eflalo_fs)
   
   ## Convert EFLALO from LARGE format into WIDE format. This complies with the format required by VMSTOOL 'splitamongpings' function
     ## Depending the format selected we have to choose Option 1 or Option 2 in step '2.3 Dispatch landings/catches among VMS pings'
     ## As a general approach , if we want to analyse all species together choose large format if we want to anlyse a number of species choose wide format
   
-  eflalo_gbw = eflalo_gbw%>%
+  eflalo_fs = eflalo_fs%>%
     pivot_wider(id_cols = c( FT_REF, FT_DCOU, FT_DHAR, FT_DDAT, FT_DTIME, FT_DDATIM,
                              FT_LCOU, FT_LHAR, FT_LDAT, FT_LTIME, FT_LDATIM, VE_REF,
-                             VE_FLT, VE_COU, VE_FA, VE_LEN, VE_KW, VE_TON, FT_YEAR,
+                             VE_FLT, VE_COU, VE_LEN, VE_KW, VE_TON, FT_YEAR,
                              LE_ID, LE_CDAT, LE_STIME, LE_ETIME, LE_SLAT, LE_GEAR,
                              LE_MSZ, LE_RECT, LE_DIV, LE_MET, EFLALO_FT_FT_REF, Year,
                              Month, VE_LEN_CAT ),
-                names_from = c( LE_SPE), values_from = c( LE_KG, LE_VALUE))
+                names_from = c(LE_SPE), values_from = c(LE_KG, LE_VALUE))
  
  
-  dim( eflalo_gbw)
+  dim(eflalo_fs)
   
   # Assign gear and length to tacsat =================================
     # Consider that one fishing trip can use more than one geear, 
@@ -44,13 +48,13 @@
   
     ## Select the fields required from EFLALO to be transferred into TACSAT
   
-    eflalo_sel =  eflalo_gbw %>% 
+    eflalo_sel =  eflalo_fs %>% 
                   select(FT_REF, LE_CDAT, LE_GEAR,LE_MSZ, LE_RECT, LE_MET, VE_LEN, VE_KW, VE_COU) %>%
                   distinct()
   
   
   
-    tacsatp =  tacsat_gbw%>%  left_join( eflalo_sel  , by = c("SI_FT" = "FT_REF" ) )    # , "SI_DATE" = "LE_CDAT"  )   )
+    tacsatp =  tacsat_fs%>%  left_join( eflalo_sel  , by = c("SI_FT" = "FT_REF"       , "SI_DATE" = "LE_CDAT"  )   )
   
     tacsatp%>%filter ( is.na(LE_GEAR)) ## must be 0 , that means all iVMS records have an associated EFLALO records 
   
@@ -59,7 +63,7 @@
   ## Get the first most used gear by fishing trip to fill VMS records with  not associated Log Event .
     ## As a result some VMS records have not gear associated
   
-  ft =    eflalo_sel%>% filter(FT_REF == 10343375608)  %>%arrange( FT_REF , LE_CDAT) %>% 
+  ft =    eflalo_sel%>% filter(FT_REF == 610693911)  %>%arrange( FT_REF , LE_CDAT) %>% 
           select (FT_REF, LE_GEAR)%>% rename( LE_GEAR2 = LE_GEAR)%>%
           group_by(FT_REF)%>%slice(1)
    
@@ -265,6 +269,7 @@
   
   metiers = unique(nonsubTacsat$LE_GEAR)
   nonsubTacsat$SI_STATE <- NA
+  
   for (mm in metiers) {
     
     sp_gear =  speedarr %>%filter(LE_GEAR == mm) 

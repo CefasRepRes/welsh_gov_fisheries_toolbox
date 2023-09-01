@@ -92,6 +92,8 @@ if ( fleet_segment == 'over12')  {
 
   eflalo_fs$trip_days = as.numeric(eflalo_fs$FT_LDATIM - eflalo_fs$FT_DDATIM)
   head(eflalo_fs$trip_days)
+  str(eflalo_fs)
+  
   head(eflalo_fs)
   
     
