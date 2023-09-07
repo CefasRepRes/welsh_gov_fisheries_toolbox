@@ -5,8 +5,11 @@ library(ggplot2)
 
 setwd('./../../data')
 
-load("./workflow_outputs/eflalo.RData")
-load("./workflow_outputs/tacsat.RData")
+# reinitialise analysis type if starting from this point and object does not exist
+analysis_type = 'welsh_waters' # welsh_waters or welsh_fleet
+
+load(paste0("./workflow_outputs/", analysis_type, "/eflalo.RData"))
+load(paste0("./workflow_outputs/", analysis_type, "/tacsat.RData"))
 
 ### Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section.
 
@@ -17,7 +20,7 @@ load("./workflow_outputs/tacsat.RData")
 
 ### If you want to analyse a specific section of the data, apply the following if statement
 
-fleet_segment = 'under12' ## replace for 'welsh_waters'  if needed
+fleet_segment = 'under12' ## replace for 'under12/over12' if needed
 
 if ( fleet_segment == 'over12')  { 
   
@@ -185,12 +188,12 @@ if ( fleet_segment == 'over12')  {
     geom_point(  )
     
     
-    write.csv( x = res1, file =  ".\\workflow_outputs\\species_kg_ranked_by_gear.csv", row.names=FALSE)
+    write.csv( x = res1, file =  paste0(".\\workflow_outputs\\", analysis_type, "\\", fleet_segment, "_", "species_kg_ranked_by_gear.csv"), row.names=FALSE)
     
     
     ## Save the intermediate EFLALO and TACSAT datasets
     
-    save ( eflalo_fs , file = paste0('.\\workflow_outputs\\eflalo_fs_', fleet_segment, '.RData' ))
-    save ( tacsat_fs , file = paste0('.\\workflow_outputs\\tacsat_fs_', fleet_segment, '.RData' ))
+    save ( eflalo_fs , file = paste0('.\\workflow_outputs\\', analysis_type, '\\eflalo_fs_', fleet_segment, '.RData' ))
+    save ( tacsat_fs , file = paste0('.\\workflow_outputs\\', analysis_type, '\\tacsat_fs_', fleet_segment, '.RData' ))
     
     
