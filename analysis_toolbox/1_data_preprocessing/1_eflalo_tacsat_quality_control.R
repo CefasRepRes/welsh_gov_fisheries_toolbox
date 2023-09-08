@@ -11,8 +11,9 @@ getwd()
 # if you opened from the file explorer, you will likele need this, may have to edit, needs to be pointed to data folder
 setwd('./../../data')
 
-load (  file = "./workflow_outputs/eflalo_fs_over12.RData" )
-load (  file = "./workflow_outputs/tacsat_fs_over12.RData" )
+
+load(".\\workflow_outputs\\eflalo_fs.RData")
+load(".\\workflow_outputs\\tacsat_fs.RData")
 
 
 #### QUALITY CONTROL:  Clean data with potential  outlines ########
@@ -298,18 +299,20 @@ eflalo_fs %>% filter( FT_REF %in% c(610738857, 610735265))
 
 ## LIBRARY SF required for spatial analysis 
 
- 
+
 welsh_marine_area = st_read ( dsn = '.\\spatial_layers\\wales_plan_area.geojson' )
 port_500m = st_read( dsn = '.\\spatial_layers\\welsh_ports_ammended_0_005.geojson')
 land = st_read ( dsn = '.\\spatial_layers\\Europe_coastline_poly.shp')
 europe_aoi = st_read ( dsn = '.\\spatial_layers\\europe_aoi.geojson')  ###load the layer with crop are of interest 
-ICESareas = st_read(dsn = '.\\spatial_layers\\ICES_Statistical_Rectangles.shp')
+ICESareas = st_read(dsn = '.\\spatial_layers\\ICES_rectangles.geojson')
+ices_rect_welsh = st_read(dsn = '.\\spatial_layers\\ICES_rectangle_welsh.geojson')
 
 ## explore connection to WFS/WMS services ( Welsh Portal ,  OSGB )
 
 welsh_marine_area %>% st_crs()  ## WGS 84 EPSG: 4326
 port_500m %>% st_crs()   ## WGS 84
 land  %>% st_crs() 
+ICESareas = ICESareas %>% st_transform(4326)
 
 land_4326 = land %>% st_transform( 4326 )   ## reproject the sf object ( spatial layer ) into a new coordiante system 
 
@@ -420,7 +423,7 @@ overlaps_analysis %>% filter(FT_REF %in% c( '610736051', '610738638') )
 # 2.2.3 Remove points that cannot be possible -----------------------------------------------------------
 
 tacsat_bk = tacsat_fs
-tacsat_fs = tacsat_bk
+#tacsat_fs = tacsat_bk
 
 tacsat_fs = tacsat_fs %>% filter(abs(SI_LATI) < 90 | abs(SI_LONG) < 180)
 tacsat_fs = tacsat_fs %>% filter(SI_HE >= 0 | SI_HE <= 360)
@@ -434,7 +437,7 @@ tacsat_fs %>% filter(SI_SP > 30 )
 
 tacsat_fs_geom = tacsat_fs %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 , remove = FALSE)
 
-st_write( tacsat_fs_geom, dsn = ".\\..\\..\\data\\tacsat_fs.geojson", layer = "tacsat_fs.geojson")
+st_write( tacsat_fs_geom, dsn = ".\\workflow_outputs\\tacsat_fs.geojson", layer = "tacsat_fs.geojson")
 
 ## Q1: What is the minimum expected time interval between iVMS positions
 
@@ -480,7 +483,7 @@ tacsat_fs_geom%>%filter ( VE_REF == 'C20757' &  SI_FT == '610808700'  ) %>%arran
 tacsat_fs_geom%>%filter ( VE_REF == 'C20757' &  SI_FT == '610808700'  )%>%
   mutate(largeIntv   = ifelse(INTV > 1 , TRUE , FALSE)) %>%
   ggplot( ) + geom_sf(aes(color = largeIntv)) + 
-  geom_sf_label ( aes(label = ifelse ( INTV > 30, round(INTV, 1), NA )),  nudge_x = 0.05  ) + theme_minimal()+
+  geom_sf_label ( aes(label = ifelse ( INTV > 30, round(INTV, 1), NA )),  nudge_x = 0.05  ) + theme_minimal()
   
   
   
@@ -503,7 +506,7 @@ tacsat_fs_ports = tacsat_fs_geom %>%
 
 
 getwd()
-st_write( tacsat_fs_ports, dsn = ".\\workflow_outputs\\spatial\\tacsat_gbw_port_welsh.geojson", layer = "tacsat_gbw_port_welsh.geojson")      
+st_write( tacsat_fs_ports, dsn = paste0(".\\workflow_outputs\\spatial\\tacsat_port_welsh.geojson"), layer = "tacsat_port_welsh.geojson")      
 
 ##Q2: Plot the ports and iVMS locations when in port
 
@@ -516,7 +519,7 @@ ggplot() +
 
 ggplot() + 
   geom_sf ( data = welsh_marine_area) + 
-  geom_sf(data = port_500m %>% filter (port %in% c( 'Milford Haven', 'Cardigan') )) +
+  geom_sf(data = port_500m %>% filter (Name %in% c( 'Milford Haven', 'Cardigan') )) +
   geom_sf ( data = tacsat_fs_ports %>% slice(1:50000), aes( color  = SI_HARB ) )+ 
   theme_minimal() + 
   coord_sf( xlim = c(- 5.5, -4), ylim = c(51.6, 52.2) )
@@ -535,7 +538,7 @@ tacsat_fs_land = tacsat_fs_ports %>%
   mutate  ( SI_LAND  = ifelse ( is.na ( Id ), FALSE ,TRUE))%>%
   select ( - names(europe_aoi) )  
 
-st_write( tacsat_fs_land, dsn = ".\\..\\..\\data\\tacsat_fs_land.geojson", layer = "tacsat_fs_land.geojson", append=FALSE )      
+st_write( tacsat_fs_land, dsn = ".\\workflow_outputs\\spatial\\tacsat_fs_land.geojson", layer = "tacsat_fs_land.geojson", append=FALSE )      
 
 
 ##Q1: How many points are detected on land? 
@@ -561,7 +564,7 @@ tacsat_fs_land = tacsat_fs_land %>% mutate ( SI_STATE = ifelse  (  SI_SP  >= 1 &
 tacsat_fs_df = tacsat_fs_land %>% filter(SI_LAND == FALSE & SI_HARB == FALSE )
 
 
-st_write( tacsat_fs_df, dsn = ".\\..\\..\\data\\tacsat_fs_df.geojson", layer = "tacsat_fs_df.geojson")      
+st_write( tacsat_fs_df, dsn = ".\\workflow_outputs\\tacsat_fs_df.geojson", layer = "tacsat_fs_df.geojson")
 
 
 
@@ -572,8 +575,7 @@ st_write( tacsat_fs_df, dsn = ".\\..\\..\\data\\tacsat_fs_df.geojson", layer = "
 
 #   Save the cleaned EFLALO file 
 
-
-  save( eflalo_fs, file = '.\\..\\..\\data\\eflalo_fs_qc.RData' )
+  save(eflalo_fs, file = '.\\workflow_outputs\\eflalo_fs_qc.RData')
 
 
 #   Save the cleaned TACSAT file 
@@ -581,8 +583,7 @@ st_write( tacsat_fs_df, dsn = ".\\..\\..\\data\\tacsat_fs_df.geojson", layer = "
 
   tacsat_fs = tacsat_fs_df
   
-  save ( tacsat_fs, file = '.\\..\\..\\data\\tacsat_fs_qc.RData'   )
-
+  save(tacsat_fs, file = '.\\workflow_outputs\\tacsat_fs_qc.RData')
 
 
 
@@ -591,31 +592,33 @@ st_write( tacsat_fs_df, dsn = ".\\..\\..\\data\\tacsat_fs_df.geojson", layer = "
 
 ## Check how match the reported LE_RECT in EFLALO and the actual rectangle the  VMS location is located
 
-tac_geom = tacsat_gbw_df %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
+tac_geom = tacsat_fs_df %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
 
 
-eflalo_gbw %>%  filter ( VE_REF == 'A16337') %>% distinct(LE_CDAT) %>% arrange(LE_CDAT)
+eflalo_fs %>%  filter ( VE_REF == 'A16337') %>% distinct(LE_CDAT) %>% arrange(LE_CDAT)
 ggplot(tac_geom) + geom_sf(aes( color = SI_DATE))
 
 
-tacsat_gbw_df_geom = tac_geom %>%
+
+tacsat_fs_df_geom = tac_geom %>%
   st_join ( ices_rect_welsh%>% select ( icesname ) , join = st_intersects, left = T) %>%
-  mutate  ( SI_RECT =  icesname) 
+  mutate  ( SI_RECT = icesname) 
 
 
 
 
 
-tacsat_gbw_df_geom = tacsat_gbw_df_geom %>% mutate ( RECT_MATCH = ifelse ( LE_RECT == SI_RECT, TRUE , FALSE ))%>%st_drop_geometry() 
+#tacsat_fs_df_geom = tacsat_fs_df_geom %>% mutate ( RECT_MATCH = ifelse ( LE_RECT == SI_RECT, TRUE , FALSE ))%>%st_drop_geometry() 
+#tacsat_fs_df_geom = tacsat_fs_df_geom %>%st_drop_geometry()
 
 
-sum_stat %>%st_drop_geometry() %>% group_by(RECT_MATCH) %>% tally()
+#sum_stat %>%st_drop_geometry() %>% group_by(RECT_MATCH) %>% tally()
 
 
-tac_geom_rect %>% group_by(SI_DATE)%>%distinct(LE_RECT, SI_RECT)
+#tac_geom_rect = tac_geom %>% group_by(SI_DATE)%>%distinct(icesname, SI_RECT)
 
 
-st_write( tac_geom_rect, dsn = ".\\..\\..\\data\\example_trip_3_days_1_LE.geojson", layer = "example_trip_3_days_1_LE.geojson")
+#st_write( tac_geom_rect, dsn = ".\\..\\..\\data\\example_trip_3_days_1_LE.geojson", layer = "example_trip_3_days_1_LE.geojson")
 
 
 

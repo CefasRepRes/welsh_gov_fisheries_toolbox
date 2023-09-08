@@ -191,9 +191,13 @@ if ( analysis_type == 'welsh_waters' ) {
   eflalo = eflalo %>% filter ( FT_REF  %in%  trips_in_welsh_waters) 
   tacsat = tacsat  %>% filter ( SI_FT  %in% trips_in_welsh_waters ) 
   
+<<<<<<< HEAD
   ## To visualize in a GIS software save the TACSAT  as point geometry 
   
   
+=======
+  dir.create(".\\workflow_outputs\\spatial")
+>>>>>>> 032832712aca887dd4fb88edce213b6c2885e459
   st_write( tacsat_geom_ww, dsn = ".\\workflow_outputs\\spatial\\tacsat_welsh_waters.geojson", layer = "tacsat_welsh_waters.geojson")
   
   
@@ -201,8 +205,8 @@ if ( analysis_type == 'welsh_waters' ) {
 
 ### The EFLALO and TACSAT have been formatted and ready for analysis!!
 
-save(eflalo, file = "./workflow_outputs/eflalo.RData")
-save(tacsat, file = "./workflow_outputs/tacsat.RData")
+save(eflalo, file = ".\\workflow_outputs\\eflalo.RData")
+save(tacsat, file = ".\\workflow_outputs\\tacsat.RData")
 
 
 
