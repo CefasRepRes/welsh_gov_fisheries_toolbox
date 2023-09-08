@@ -335,10 +335,9 @@ st_write(csquares_0_01_split_centroids, paste0(gjPath, "csquares_0_01_split_cent
 ## Plot the tables 
 
 # read in the world shapefile, or use the ne_countries function from the natural earth package if available
-<<<<<<< HEAD
+
 #world = read_sf("C:\\Users\\md09\\OneDrive - CEFAS\\data\\europe_coastline_shp", "Europe_coastline") %>% st_transform(., crs = 4326)
-=======
->>>>>>> 2921d36e8e25cd950fd5f6510fe2cf5862eac23f
+
 world <- ne_countries(scale = "large", returnclass = "sf")
 
 
