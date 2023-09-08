@@ -7,6 +7,9 @@ library(tidyverse)
 library(sf)         ## R Package for spatial analysis in R ( Simple Features )
 library(ggplot2)    ## R Package for plotting and graphs
 library( rnaturalearth ) ## Package with earth, country, etc. maps to use for plotting or analysis
+library(vmstools)
+library(devtools)
+
 
 
 # library(vmstools) use when it works (http://nielshintzen.github.io/vmstools/) . Otherwise use code below alternative: 

@@ -27,32 +27,15 @@ plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2
 }
 
 
-# plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2 = NULL  ) {
-#   
-#   gg1 =  ggplot() + geom_sf( data =   world     ) +
-#     geom_sf (data = data_plot , aes(color = get( col_plot),  fill = get(col_plot)) ) +
-#     theme_bw() +
-#     coord_sf(xlim = lons, ylim = lats, expand = FALSE) +
-#     labs(fill = "Effort") # +
-#   # facet_wrap( ~ get( col_facet1) + get( col_facet2)  )
-#   if ( is.null( col_facet2 )  )  {
-#     gg1 =  gg1 +
-#       facet_wrap( ~ get( col_facet1)  )
-#   } else  {
-#     gg1 =  gg1 +
-#       facet_wrap( ~ get( col_facet1) +get( col_facet2)   )
-#   }
-#   return(gg1)
-# }
 
 # create folders for outputs if they do not exist 
 
 # input folder
-inPath = "C:\\Users\\RM12\\OneDrive - CEFAS\\Roi\\projects\\Welsh_Government_Fishing\\welsh_gov_fishing_analysis_capacity\\data\\data_output"
+inPath = ".\\workflow_outputs"
 
 # data products folder
-dir.create("C:\\Users\\md09\\Documents\\git\\welsh_gov_fisheries_toolbox\\analysis_toolbox\\3_fisheries_data_products\\data-products")
-outPath = "C:\\Users\\md09\\Documents\\git\\welsh_gov_fisheries_toolbox\\analysis_toolbox\\3_fisheries_data_products\\data-products\\"
+dir.create(".\\workflow_outputs\\data-products")
+outPath = ".\\workflow_outputs\\data-products\\"
 
 # geojson output folder
 dir.create(paste0(outPath, "geojson"))
