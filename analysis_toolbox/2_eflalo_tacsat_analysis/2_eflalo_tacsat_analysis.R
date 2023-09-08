@@ -3,11 +3,12 @@ library(dplyr)
 library(ggplot2)
 library(sf)
 library(tidyr)
+
+setwd('./../../data')
+
+  load(file = '.\\workflow_outputs\\eflalo_fs_qc.RData' )
+  load(file = '.\\workflow_outputs\\tacsat_fs_qc.RData' )
   
-  load(file = '.\\..\\data\\eflalo_fs_qc.RData' )
-  load(file = '.\\..\\data\\tacsat_fs_qc.RData' )
-  
-  tacsat_fs = tacsat_gbw_df
   
   ## define the year for the  analysed data 
   
@@ -34,7 +35,7 @@ library(tidyr)
                              VE_FLT, VE_COU, VE_LEN, VE_KW, VE_TON, FT_YEAR,
                              LE_ID, LE_CDAT, LE_STIME, LE_ETIME, LE_SLAT, LE_GEAR,
                              LE_MSZ, LE_RECT, LE_DIV, LE_MET, EFLALO_FT_FT_REF, Year,
-                             Month, VE_LEN_CAT ),
+                             Month, VE_LEN_CAT, SOURCE, FLEET_SEG ),
                 names_from = c(LE_SPE), values_from = c(LE_KG, LE_VALUE))
  
  
@@ -63,7 +64,7 @@ library(tidyr)
   ## Get the first most used gear by fishing trip to fill VMS records with  not associated Log Event .
     ## As a result some VMS records have not gear associated
   
-  ft =    eflalo_sel%>% filter(FT_REF == 610693911)  %>%arrange( FT_REF , LE_CDAT) %>% 
+  ft =    eflalo_sel %>%arrange( FT_REF , LE_CDAT) %>% 
           select (FT_REF, LE_GEAR)%>% rename( LE_GEAR2 = LE_GEAR)%>%
           group_by(FT_REF)%>%slice(1)
    
@@ -157,7 +158,7 @@ library(tidyr)
   # Create speed threshold object # 
   
   speedarr = as.data.frame( cbind( LE_GEAR = sort(unique(tacsatp$LE_GEAR)), min = NA, max = NA), stringsAsFactors = FALSE)
-  
+  if (!'MIS' %in%  unique (speedarr$LE_GEAR ) ) {  speedarr =  speedarr %>% rbind(c('MIS', NA, NA))  } 
   
   ##  Fill the speed array with expert knowledge on fishign threshold speeds by gear/metier
   
@@ -173,7 +174,7 @@ library(tidyr)
   # Analyse activity automated for common gears only. Use the speedarr for the other gears =============== 
   
   autoDetectionGears = c('OTB',  'DRB')
-   
+ 
   
   subTacsat    = subset(tacsatp, LE_GEAR %in% autoDetectionGears)%>%as.data.frame()
   nonsubTacsat = subset(tacsatp, !LE_GEAR %in% autoDetectionGears)%>%as.data.frame()
@@ -266,7 +267,6 @@ library(tidyr)
       ## This will apply the values in speed array data frame created at the begginign of the process
   
   
-  
   metiers = unique(nonsubTacsat$LE_GEAR)
   nonsubTacsat$SI_STATE <- NA
   
@@ -285,6 +285,7 @@ library(tidyr)
   
   nonsubTacsat =  nonsubTacsat %>% 
                   mutate ( SI_STATE = if_else  ( is.na(LE_GEAR)  & SI_SP >= sp_gear$min & SI_SP <= sp_gear$max, 'f','s' ))
+
   
   
   nonsubTacsat =  nonsubTacsat%>% mutate (SI_STATE = if_else ( is.na(SI_STATE), 's', SI_STATE)  )  
@@ -311,7 +312,7 @@ library(tidyr)
   
   
   
-  save( tacsatp, file = file.path(outPath, paste0("tacsatActivity", year, ".RData")) )
+  save( tacsatp, file = paste0(".\\workflow_outputs\\tacsatActivity", year, ".RData")) 
   
   message("Defining activity completed")
   
@@ -319,49 +320,64 @@ library(tidyr)
   
   # 2.3 Dispatch landings/catches of merged eflalo at the VMS/iVMS ping scale  -------------------------------------------------
   
+  eflalo_format = 'wide' ## defautl format following toolbox workflow 
+  species_analysis_type = 'all_species_sum' # options: ( all_species_sum,  selected_species_sum, selected_species_separated )
+  
+  if ( eflalo_format == 'wide' ) { 
   
   ## For all the species together 
   
   
   ## Option 1: Names in wide format . Each species catch value has its own column 
  
-  idxkg  =  grep("KG", colnames(eflalo_gbw ) )  
-  idxval =  grep("VALUE", colnames(eflalo_gbw )  ) 
-  
-  eflalo_gbw_tot = eflalo_gbw %>% mutate(LE_KG_TOT = select(.,idxkg) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% mutate(LE_EURO_TOT = NA ) %>% as.data.frame()       
-  
-  
-  ## by species totals
-  
-  eflalo_gbw_tot = eflalo_gbw %>%   mutate(LE_KG_TOT = select(.,contains(c('KG_SOL', 'KG_MAC')) ) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% as.data.frame()       
-  
-  
-  ## keep just the species wanted to be analysed
-  
-  eflalo_gbw_tot = eflalo_gbw %>% select(., -idxkg , -idxval, contains(c('SOL', 'MAC') ) ) %>% filter_at ( vars (contains( c('SOL', 'MAC') ) ) , any_vars(!is.na(.)) ) %>%  as.data.frame()       
-  
-  dim( eflalo_gbw_tot)
+  idxkg  =  grep("KG", colnames(eflalo_fs ) )  
+  idxval =  grep("VALUE", colnames(eflalo_fs )  ) 
   
   
   
-  ## Option 2: Species names in large format . All  species in LE_SPE and  catch value in LE_KG columns
+  ## Option 1.1 : all landings for all species sum together 
+  if (species_analysis_type == 'all_species_sum') {
+  
+  eflalo_fs_tot = eflalo_fs %>% mutate(LE_KG_TOT = select(.,idxkg) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% mutate(LE_EURO_TOT = NA ) %>% as.data.frame()       
+  
+  } else if (species_analysis_type == 'selected_species_sum') {
+    
+  ## Option 1.2 : by selected species totals
+  eflalo_fs_tot = eflalo_fs %>%   mutate(LE_KG_TOT = select(.,contains(c('KG_SOL', 'KG_MAC')) ) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% as.data.frame()       
+  
+  } else if (species_analysis_type == 'selected_species_separated') {
+  
+  ## Option 1.3 : Analysis by species separately 
+  eflalo_fs_tot = eflalo_fs %>% select(., -idxkg , -idxval, contains(c('SOL', 'MAC') ) ) %>% filter_at ( vars (contains( c('SOL', 'MAC') ) ) , any_vars(!is.na(.)) ) %>%  as.data.frame()
+  
+  }
+  
+  dim( eflalo_fs_tot)
+  
+  }  else if   (eflalo_format == 'long'  ) { 
+    
+  
+  ## Option 2: Species names in long format. All  species in LE_SPE and  catch value in LE_KG columns
   
   
-  captures_total = eflalo_gbw %>% group_by(FT_REF, LE_ID) %>% summarise(LE_KG_TOT = sum( LE_KG), LE_EURO_TOT = 0 ) # LE_KG_TOT = sum( LE_KG) if VALUE data is available
+  captures_total = eflalo_fs %>% group_by(FT_REF, LE_ID) %>% summarise(LE_KG_TOT = sum( LE_KG), LE_EURO_TOT = 0 ) # LE_KG_TOT = sum( LE_KG) if VALUE data is available
  
 
-  eflalo_gbw_tot = eflalo_gbw %>% select(-c (LE_SPE, LE_KG, LE_VALUE)) %>% distinct() %>% inner_join(captures_total , by = c("FT_REF", "LE_ID" ))
+  eflalo_fs_tot = eflalo_fs %>% select(-c (LE_SPE, LE_KG, LE_VALUE)) %>% distinct() %>% inner_join(captures_total , by = c("FT_REF", "LE_ID" ))
+  
+  } 
+  
   
   
   ## Save the eflalo with total landings before merge with TACSAT 
   
-  save( eflalo_gbw_tot, file = file.path(outPath, paste0("eflaloTotals", year, ".RData")) )
+  save( eflalo_fs_tot, file = paste0(".\\workflow_outputs\\eflaloTotals", year, ".RData")) 
   
  
   tacsatp = tacsatp %>% mutate( FT_REF = SI_FT )
   
-  eflaloM =  subset(eflalo_gbw_tot,FT_REF %in% unique(tacsatp$FT_REF))
-  eflaloNM = subset(eflalo_gbw_tot,!FT_REF %in% unique(tacsatp$FT_REF))
+  eflaloM =  subset(eflalo_fs_tot,FT_REF %in% unique(tacsatp$FT_REF))
+  eflaloNM = subset(eflalo_fs_tot,!FT_REF %in% unique(tacsatp$FT_REF))
   
   dim(eflaloM)
   dim(eflaloNM)
@@ -406,23 +422,23 @@ library(tidyr)
   
   save(
     tacsatEflalo,
-    file = file.path(outPath, paste0("tacsatEflalo", year, ".RData"))
+    file = paste0("workflow_outputs\\tacsatEflalo", year, ".RData")
   )
   
   
-  load ( file.path(outPath, paste0("tacsatEflalo", year, ".RData") ) ) 
+  load (paste0("workflow_outputs\\tacsatEflalo", year, ".RData"))
   print("Dispatching landings completed")
   
-  tacsatp%>% filter(SI_STATE == 1 & SI_FT == 10343375608)%>% dim()
-  eflaloM %>% filter(FT_REF == 10343375608)
-  tacsatEflalo%>% filter(FT_REF == 10343375608) %>% summarise(tot = sum ( LE_KG_TOT))
+  tacsatp%>% filter(SI_STATE == 1 & SI_FT == 610736051)%>% dim()
+  eflaloM %>% filter(FT_REF == 610736051)
+  tacsatEflalo%>% filter(FT_REF == 610736051) %>% summarise(tot = sum ( LE_KG_TOT))
   
   ##Vessel level 
   
      
   
-  eflaloM %>% filter(VE_REF == 'A16337')%>% summarise(tot = sum ( LE_KG_TOT))
-  tacsatEflalo%>% filter(VE_REF == 'A16337') %>% summarise(tot = sum ( LE_KG_TOT))
+  eflaloM %>% filter(VE_REF == 'A10207')%>% summarise(tot = sum ( LE_KG_TOT))
+  tacsatEflalo%>% filter(VE_REF == 'A10207') %>% summarise(tot = sum ( LE_KG_TOT))
   
   # 2.4 Assign c-square, year, month, quarter, area and create table 1 ----------------------------------------
   
@@ -436,10 +452,7 @@ library(tidyr)
   
   
   
-  save(
-    tacsatEflalo,
-    file = file.path(outPath, paste0("tacsatEflalo_output_", year, ".RData"))
-  )
+  save(tacsatEflalo, file = paste0("workflow_outputs\\tacsatEflalo_output_", year, ".RData"))
   
   
   
@@ -451,7 +464,7 @@ library(tidyr)
   
   
   
-  eflalo_output = eflalo_gbw_tot
+  eflalo_output = eflalo_fs_tot
   
   eflalo_output$Year      = year(eflalo_output$FT_LDATIM)
   eflalo_output$Month     = month(eflalo_output$FT_LDATIM)
@@ -471,11 +484,7 @@ library(tidyr)
    
   
   
-  save(
-    eflalo_output,
-    file = file.path(outPath, paste0("eflalo_output_", year, ".RData"))
-  )
-  
+  save(eflalo_output,file = paste0("workflow_outputs\\eflalo_output_", year, ".RData"))
   
   
  

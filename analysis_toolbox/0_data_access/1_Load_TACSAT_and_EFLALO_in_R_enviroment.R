@@ -199,14 +199,8 @@ if ( analysis_type == 'welsh_waters' ) {
 
 ### The EFLALO and TACSAT have been formatted and ready for analysis!!
 
-# make directories for all possible outputs
-dir.create(".\\workflow_outputs\\welsh_fleet")
-dir.create(".\\workflow_outputs\\welsh_waters")
-dir.create(".\\workflow_outputs\\all")
-
-
-save(eflalo, file = paste0("./workflow_outputs/", analysis_type, "/eflalo.RData"))
-save(tacsat, file = paste0("./workflow_outputs/", analysis_type, "/tacsat.RData"))
+save(eflalo, file = ".\\workflow_outputs\\eflalo.RData")
+save(tacsat, file = ".\\workflow_outputs\\tacsat.RData")
 
 ## To visualize in a GIS software save the TACSAT  as point geometry 
 
