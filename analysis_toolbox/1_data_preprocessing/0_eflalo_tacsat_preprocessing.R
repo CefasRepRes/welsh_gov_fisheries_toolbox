@@ -17,13 +17,13 @@ load("./workflow_outputs/tacsat.RData")
 
 ### If you want to analyse a specific section of the data, apply the following if statement
 
-fleet_segment = 'under12' ## replace for 'welsh_waters'  if needed
+fleet_segment = 'under12' ## Options: ( 'over12', 'under12', 'all' )
 
 if ( fleet_segment == 'over12')  { 
   
   ###  1. Over 12m vessels analysis
   
-  eflalo_fs = eflalo %>% filter(VE_LEN >= 12)
+  eflalo_fs = eflalo %>% filter(VE_LEN >= 12) %>% mutate  ( FLEET_SEG = paste0 ( FLEET_SEG, '_', fleet_segment))
   tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
   #tacsat = tacsat %>% filter(SI_FT %in% eflalo$FT_REF)
   
@@ -33,7 +33,7 @@ if ( fleet_segment == 'over12')  {
   
   ### 2. Under 12m vessels analysis 
   
-  eflalo_fs = eflalo %>% filter(VE_LEN < 12)
+  eflalo_fs = eflalo %>% filter(VE_LEN < 12) %>% mutate  ( FLEET_SEG = paste0 ( FLEET_SEG, '_', fleet_segment))
   tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
   
 } else if  (fleet_segment == 'all' ) { 
@@ -121,13 +121,11 @@ if ( fleet_segment == 'over12')  {
   
   ## Create the field "trip_days" with duration of each trips as   number of days  
 
-  eflalo_fs$trip_days = as.numeric(difftime(eflalo_fs$FT_LDATIM, eflalo_fs$FT_DDATIM), units = "days")
-  
-  head(eflalo_fs$trip_days)
-  str(eflalo_fs)
+  eflalo_fs  = eflalo_fs %>% mutate ( trip_days = as.numeric(difftime(eflalo_fs$FT_LDATIM, eflalo_fs$FT_DDATIM), units = "days") ) 
   
   head(eflalo_fs)
- 
+  str(eflalo_fs)
+  
    
 
   ## Plot the categories to understand your fleet composition

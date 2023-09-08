@@ -27,7 +27,7 @@ library(ggplot2)    ## R Package for plotting and graphs
 
  ## SELECT THE ANALYSIS OPTION:
   
-  analysis_type = 'welsh_waters' ## replace for 'welsh_waters'  if needed
+  analysis_type = 'welsh_waters' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
   
   if ( analysis_type == 'welsh_fleet')  { 
 
@@ -71,7 +71,7 @@ eflalo_ft_gf = eflalo_ft_gf %>% filter ( VE_LEN >= 10 )
 eflalo_ft_t3 = eflalo_ft_t3 %>% filter ( as.numeric( VE_LEN)  < 10 )
 
 
-eflalo_ft_t3 %>% mutate ( VE_LEN= as.numeric ( VE_LEN) ) %>% select ( VE_LEN) %>% summary()
+ 
  
 
 # explore the loaded data, can change to gf data to check
@@ -174,7 +174,7 @@ tacsat%>%filter(is.na(SI_SP))%>%dim()
 
 
 ## To be run only when "Welsh waters" analysis is processed. 
-## This will limit the analysis to fishign that occurs within the Welsh Waters boundaries
+## This code will limit the analysis to fishing locations occurring within the Welsh Waters boundaries
 
 if ( analysis_type == 'welsh_waters' ) { 
   
@@ -191,6 +191,8 @@ if ( analysis_type == 'welsh_waters' ) {
   eflalo = eflalo %>% filter ( FT_REF  %in%  trips_in_welsh_waters) 
   tacsat = tacsat  %>% filter ( SI_FT  %in% trips_in_welsh_waters ) 
   
+  ## To visualize in a GIS software save the TACSAT  as point geometry 
+  
   
   st_write( tacsat_geom_ww, dsn = ".\\workflow_outputs\\spatial\\tacsat_welsh_waters.geojson", layer = "tacsat_welsh_waters.geojson")
   
@@ -202,7 +204,6 @@ if ( analysis_type == 'welsh_waters' ) {
 save(eflalo, file = "./workflow_outputs/eflalo.RData")
 save(tacsat, file = "./workflow_outputs/tacsat.RData")
 
-## To visualize in a GIS software save the TACSAT  as point geometry 
 
 
 

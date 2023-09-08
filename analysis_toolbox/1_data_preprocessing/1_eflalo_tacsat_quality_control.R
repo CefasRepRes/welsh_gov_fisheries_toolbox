@@ -30,29 +30,64 @@ res2 = eflalo_fs%>%group_by(FT_REF) %>% summarise(n = n()) %>% arrange(desc(n))
 ggplot(res2, aes( n )) + geom_histogram()
 
 
-## Q1.2: How many log events are by  trip?  ( LOG EVENTS ONLY EXIST IN E-LOGBOOKS from GEOFISH SOURCE / CR does not get LOG EVENTS)
+## Q1.2: How many log events are by  trip?  ( LOG EVENTS ONLY EXIST IN E-LOGBOOKS from GEOFISH SOURCE / CR does not collect LOG EVENTS)
 
 
 res21= eflalo_fs%>%distinct (FT_REF, LE_ID , trip_days) %>%group_by(FT_REF, trip_days)%>%summarise(n = n())%>%arrange(desc(n))
 ggplot(res21, aes( n )) + geom_histogram()
 
  
-# Q1.2.1 . How we assign GEAR and ICES RECTANGLE to iVMS records . Example of different cases: 
+# Q1.2.1 . How we assign GEAR and ICES RECTANGLE to iVMS/VMS TACSAT records . Example of different cases: 
 
 
-      ### EXAMPLE OF A TRIP WITH 1 DAY DURATION AND > 1 GEARS REPORTED 
+      ###  1st: FISHING TRIP WITH > 1 GEARS REPORTED 
+
+        ## Identify trips with more than 1 trip 
 
          trips_with_more_than_1_gear = eflalo_fs %>% distinct(FT_REF, LE_GEAR )%>% group_by(FT_REF ) %>% mutate ( rn = row_number ( ) ) %>% filter ( rn > 1) 
-         eflalo_fs %>% filter( FT_REF %in%  ( trips_with_more_than_1_gear %>%select (FT_REF ) %>%  pull() )   ) %>% distinct (FT_REF , LE_GEAR) %>%  arrange ( FT_REF )
+         trips_with_more_than_1_gear%>% arrange( rn , FT_REF , LE_GEAR)
+         
+         eflalo_fs %>% filter( FT_REF %in%  ( trips_with_more_than_1_gear %>%select (FT_REF ) %>%  pull() ) ) %>% distinct (FT_REF , LE_GEAR) %>%  arrange ( FT_REF )
       
+         
+         
+         ## Catch Recording can collect multiple gears used during a fishing trip and the related Statistical Rectangle and species captured with these gears.
+         ## This is what define the LOG EVENT in CR and would be the most equivalent to Electronic  Log Book Log Events. 
 
-      ## 3 GEARS
-      eflalo_sel = eflalo_fs %>% filter(FT_REF == 610691287) %>% as.data.frame()
+      ## Look at more detail to a specific trip . Replace the FT_REF number with results list from previous line of code. 
+         
+         eflalo_fs %>% filter(FT_REF == 610715898 )%>%mutate ( tt = FT_DDATIM   + ( ( FT_LDATIM - FT_DDATIM )   / 2))
+         
+         
+         ## SOLUTION: The best solution for those fishing trips using more than 1 Gear is to unify them into a unique combined gear 
+            ## So these trips will have a merged gear and metier defined: e.g. a trip using GN and FPO would have a gear defined as : GN_FPO
+         
+         eflalo_fs_mult_gears = eflalo_fs %>% filter(FT_REF %in% trips_with_more_than_1_gear$FT_REF )
+         
+         trips_mult_gears_comb = eflalo_fs_mult_gears %>% 
+                                 distinct(FT_REF, LE_GEAR, LE_MET ) %>% arrange( FT_REF , LE_GEAR, LE_MET) %>%
+                                 group_by( FT_REF  )  %>% 
+                                 mutate ( LE_GEAR_C = paste0  ( LE_GEAR, collapse =  "_"), LE_MET_C =  ifelse( LE_MET != 'NULL',  paste0  ( LE_MET, collapse =  "_"), LE_MET  ) ) %>%
+                                 select (FT_REF, LE_GEAR_C, LE_MET_C )
+         
+         eflalo_fs_mult_gears %>% inner_join(trips_mult_gears_comb, by  = 'FT_REF')
+         
+         
+         eflalo_fs %>% filter(FT_REF %in% trips_with_more_than_1_gear$FT_REF ) %>%  group_by( FT_REF  ) %>%mutate (LE_KG_TOT  = sum ( LE_KG)) %>%
+           group_by( FT_REF, LE_GEAR ) %>% reframe ( LE_KG_TOT = LE_KG_TOT, LE_KG_TOT_GEAR =  sum ( LE_KG )) %>%
+           distinct ( FT_REF , LE_GEAR, LE_KG_TOT, LE_KG_TOT_GEAR) %>% 
+           mutate (LE_KT_PROP = LE_KG_TOT_GEAR / LE_KG_TOT  ) %>% print(n = 110 )
+         
+      eflalo_fs %>% filter(FT_REF == 610715898 )%>%mutate ( tt = FT_DDATIM   + ( ( FT_LDATIM - FT_DDATIM )   / 2))
+         
+      eflalo_sel = eflalo_fs %>% filter(FT_REF == 610715898 ) %>% as.data.frame()
       
-      tacsat_fs %>% filter(SI_FT == 610691287 & SI_SP >=0 & SI_SP <= 6) %>% arrange( SI_DATIM) %>% left_join( eflalo_sel %>% filter(FT_REF == 610691287), by = c("SI_FT" = "FT_REF", "SI_DATE" = "LE_CDAT"))
+      tacsat_sel = tacsat_fs %>% filter(SI_FT == 610715898 & SI_SP >=0 & SI_SP <= 5) %>% arrange( SI_DATIM) %>% left_join( eflalo_sel %>% filter(FT_REF == 610715898), by = c("SI_FT" = "FT_REF", "SI_DATE" = "LE_CDAT"))
+      
+      tacsat_plot(tacsat_fs %>% filter(SI_FT == 610809285  & SI_SP >=2 & SI_SP <= 4) %>% arrange( SI_DATIM) )
       
       ### 2 GEARS WITH VMS 
-      eflalo_fs %>% filter(FT_REF == 610691287) %>% as.data.frame()
+      eflalo_fs %>% filter(FT_REF == 610715898) %>% as.data.frame()
 
 
       ##NOT iVMS record associated to trips with more than 1 log event records( use of multiple gears) 
@@ -226,18 +261,22 @@ overlaps_analysis%>%
 
 
 ## Filter the trips details for the vessel during the overlapping dates 
+  ## Replace VE_REF and DATES based on previous code line results. 
 
 overlaps_analysis %>%
-  filter( VE_REF == 'C17466' & FT_DDATIM > '2022-10-01' & FT_DDATIM < '2022-10-04'  ) %>%
+  filter( VE_REF == 'A17444' & FT_DDATIM > '2022-03-19' & FT_DDATIM < '2022-04-22'  ) %>%
   arrange( VE_REF, FT_DDATIM)
 
 eflalo_fs%>%
-  filter( VE_REF == 'C17466' & FT_DDATIM > '2022-10-01' & FT_DDATIM < '2022-10-04'  ) %>%
+  filter( VE_REF == 'A17444' & FT_DDATIM > '2022-03-19' & FT_DDATIM < '2022-04-22'  ) %>%
   group_by(FT_REF)%>%
   summarise(numb = n())
 
 ## Following this analysis we have found out that these trips are duplicated 
 ## The three overlapping trips have the same reported species and details
+
+eflalo_fs %>% filter( FT_REF %in% c(10343311296 , 10343333399  ))
+
 
 eflalo_fs %>% filter( FT_REF %in% c(610787207, 610791817))
 
