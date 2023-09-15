@@ -85,7 +85,7 @@ ggplot(res21, aes( n )) + geom_histogram()
       
       tacsat_sel = tacsat_fs %>% filter(SI_FT == 610715898 & SI_SP >=0 & SI_SP <= 5) %>% arrange( SI_DATIM) %>% left_join( eflalo_sel %>% filter(FT_REF == 610715898), by = c("SI_FT" = "FT_REF", "SI_DATE" = "LE_CDAT"))
       
-      tacsat_plot(tacsat_fs %>% filter(SI_FT == 610809285  & SI_SP >=2 & SI_SP <= 4) %>% arrange( SI_DATIM) )
+      tacsat_plot = tacsat_fs %>% filter(SI_FT == 610809285  & SI_SP >=2 & SI_SP <= 4) %>% arrange( SI_DATIM) 
       
       ### 2 GEARS WITH VMS 
       eflalo_fs %>% filter(FT_REF == 610715898) %>% as.data.frame()
@@ -202,9 +202,17 @@ duplicate_analysis = eflalo_fs%>%
 
 ## Explore duplicated trips details
 
+## How many are there?
+eflalo_fs %>% left_join (duplicate_analysis , by = c ( 'VE_REF', 'FT_DDAT', 'FT_LDAT'))%>%
+  filter(duplicated == TRUE) %>% 
+  arrange(VE_REF, FT_REF, LE_SPE) %>% length()
+
+## Explore them 
 eflalo_fs %>% left_join (duplicate_analysis , by = c ( 'VE_REF', 'FT_DDAT', 'FT_LDAT'))%>%
   filter(duplicated == TRUE) %>% 
   arrange(VE_REF, FT_REF, LE_SPE)
+
+
 
 ## Identify the trip id's that are duplicated 
 
@@ -314,7 +322,7 @@ port_500m %>% st_crs()   ## WGS 84
 land  %>% st_crs() 
 ICESareas = ICESareas %>% st_transform(4326)
 
-land_4326 = land %>% st_transform( 4326 )   ## reproject the sf object ( spatial layer ) into a new coordiante system 
+land_4326 = land %>% st_transform( 4326 )   ## reproject the sf object ( spatial layer ) into a new coordinate system 
 
 plot( land_4326)
 
@@ -340,7 +348,7 @@ head(eflalo_fs)
 trips_in_clean_eflalo = eflalo_fs %>% distinct(FT_REF)%>%pull() 
 
  
-
+tacsat_fs -> bk
 tacsat_fs = tacsat_fs %>% filter( SI_FT %in%  trips_in_clean_eflalo  ) 
 
 
@@ -608,7 +616,7 @@ tacsat_fs_df_geom = tac_geom %>%
 
 
 
-#tacsat_fs_df_geom = tacsat_fs_df_geom %>% mutate ( RECT_MATCH = ifelse ( LE_RECT == SI_RECT, TRUE , FALSE ))%>%st_drop_geometry() 
+#tacsat_fs_df_geom = tacsat_fs_df_geom %>% mutate ( RECT_MATCH = ifelse ( LE_RECT == SI_RECT, TRUE , FALSE ))%>%st_drop_geometry()
 #tacsat_fs_df_geom = tacsat_fs_df_geom %>%st_drop_geometry()
 
 

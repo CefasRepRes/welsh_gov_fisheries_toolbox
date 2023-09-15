@@ -27,7 +27,7 @@ library(ggplot2)    ## R Package for plotting and graphs
 
  ## SELECT THE ANALYSIS OPTION:
   
-  analysis_type = 'welsh_waters' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
+  analysis_type = 'welsh_fleet' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
   
   if ( analysis_type == 'welsh_fleet')  { 
 
