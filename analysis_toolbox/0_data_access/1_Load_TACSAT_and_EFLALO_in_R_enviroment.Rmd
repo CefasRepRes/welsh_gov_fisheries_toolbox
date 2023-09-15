@@ -1,7 +1,7 @@
 ---
 title: "1_Load_TACSAT_and_EFLALO_in_R_environment"
 author: "Roi & Mike"
-date: "08/03/2023"
+date: "2023-09-14"
 output: html_document
 ---
 
@@ -16,66 +16,121 @@ library(sf)         ## R Package for spatial analysis in R ( Simple Features )
 library(ggplot2)    ## R Package for plotting and graphs
 ```
 
-
-
 ## Load eflalo data blocks and merge them into one dataframe
 
-check the working directory, where all paths are based from, by default. Then read in the eflalo_ft data block. Header = F tells R whether or not to expect the first row to be the headers for each column. If this were set to T for TRUE, it would assume the first row of data was the column names. The sep = part of the function is used as the data will be presented in a csv format, so the values in each row are separated by commas, which is chosen here.
+Check the working directory, where all paths are based from, by default.Read in the eflalo_ft data block. Header = F tells R whether or not to expect the first row to be the headers for each column. If this were set to T for TRUE, it would assume the first row of data was the column names. The sep = part of the function is used as the data will be presented in a csv format, so the values in each row are separated by commas, which is chosen here.
 
-```{r eflalo ft, include=FALSE}
-getwd() # see the present working directory
-
-eflalo_ft = read.csv(file = '.\\..\\data\\eflalo_ft.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+```{r set wd, include=FALSE}
+  ##check WD is in the desired data folder location
+  getwd() 
+  
+  ## otherwise change to desired data folder location
+  setwd('./../../data')
 ```
 
-Currently, the columns are not named correctly. This can be rectified with the names() function, which is followed by a list of strings containing the new names for the columns. They will be applied in order, so it is important they are aligned correctly with their respective data.
+Next, select the analysis type. Analysis is separated into trips in Welsh waters, and Welsh vessels. Welsh waters analysis will investigate only the data which intersects with the Welsh zone, regardless of the vessel's nationality. Welsh waters analysis will set the file path leading to the data containing only welsh vessels. If statements have a requirement that, if met, will progress the code in a certain way. The else portion of the statement dictates what will happen if the parameter is not met or if a different parameter is met.
 
-```{r names eflalo ft, include=FALSE}
-names(eflalo_ft)  = c ( "FT_REF", "FT_DCOU", "FT_DHAR", "FT_DDAT", "FT_DTIME", "FT_DDATIM", "FT_LCOU", "FT_LHAR", "FT_LDAT", "FT_LTIME", "FT_LDATIM", "VE_REF", "VE_FLT", "VE_COU","VE_FA", "VE_LEN", "VE_KW", "VE_TON", "FT_YEAR")
+```{r select analysis, include=FALSE}
+ ## SELECT THE ANALYSIS OPTION:
+  
+  analysis_type = 'welsh_fleet' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
+  
+  if ( analysis_type == 'welsh_fleet')  { 
+
+    ###  1. WELSH FLEET ACTIVITY ANALYSIS 
+    
+    data_folder_t3 = file.path( paste0 ( getwd() , '/welsh_fleet_data/t3' )  )
+    data_folder_geofish = file.path( paste0 ( getwd() , '/welsh_fleet_data/geofish' ) ) 
+
+  } else if  (analysis_type == 'welsh_waters' ) { 
+
+
+  ## 2. WELSH WATERS ACTIVITY ANALYSIS 
+  
+  
+  data_folder_t3 = file.path( paste0 ( getwd() , '/welsh_waters_data/t3' )  )
+  data_folder_geofish = file.path( paste0 ( getwd() , '/welsh_waters_data/geofish' ))
+  
+  } 
 ```
 
-Check the data with the following summarisation commands.
+Read in the eflalo_ft data block. Header = T tells R whether or not to expect the first row to be the headers for each column. If this were set to F for FALSE, it would assume the first row of data was data, not the column names. The sep = part of the function is used as the data will be presented in a csv format, so the values in each row are separated by commas, which is chosen here. Finally, set column names to upper case to meet formatting requirements.
 
-```{r eflalo ft summary, include=FALSE}
-head (eflalo_ft)    # calls the first 6 rows
-str(eflalo_ft)      # gives details about each column
-dim(eflalo_ft)      # prints the number of rows and columns in the dataframe
-summary(eflalo_ft)  # additional statistics for numeric columns
+```{r load eflalo_ft, include=FALSE}
+eflalo_ft_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+eflalo_ft_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+names(eflalo_ft_gf) = toupper( names(eflalo_ft_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
 ```
 
-Now repeat for the eflalo_le data block.
+Data is coming from two sources: GeoFISH and Tier3. The column which identifies the vessel's country is named and formatted differently between the two. Here, the Tier3 format is converted to match the GeoFISH format, using three letter codes to identify vessel country of origin.
 
-```{r eflalo le, include=FALSE}
-eflalo_le = read.csv(file = '.\\..\\data\\eflalo_le.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
-
-names(eflalo_le)  = c ( "LE_ID", "LE_CDAT", "LE_STIME", "LE_ETIME", "LE_SLAT", "LE_SLON", "LE_ELAT", "LE_ELON", "LE_GEAR", "LE_MSZ", "LE_RECT", "LE_DIV", "LE_MET", "EFLALO_FT_FT_REF")
-
-head (eflalo_le)
-str(eflalo_le)
-dim(eflalo_le)
+```{r convert ve_cou, include=FALSE}
+## Convert the field VE_COU in a standard country acronym 
+countries_id = data.frame( ve_fa =   c('Wales', 'England', 'Isle of Man', 'NULL', 'Scotland', 'North Ireland') , ve_cou_gb = c( 'GBW', 'GBE', 'GBI','NULL', 'GBS', 'GBN' ) ) 
+eflalo_ft_t3 = eflalo_ft_t3 %>% left_join(countries_id, by =  c ( 'VE_FA' = 've_fa')) %>% mutate(VE_COU = ve_cou_gb) %>% select ( - ve_cou_gb)
 ```
 
-And now for the eflalo_spe data block.
+Filter the data to only include vessels over 10m from GeoFISH and under 10m from Tier3, for the most accurate information.
 
-```{r eflalo spe, include=FALSE}
-eflalo_spe = read.csv(file = '.\\..\\data\\eflalo_spe.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+```{r filter by vessel length, include=FALSE}
+## Filter GeoFISH data for Over 10 meter vessesl. Logbook info from <10 m in GeoFISH it comes from Sales Notes and is less reliable.
 
-names(eflalo_spe)  = c ( "EFLALO_LE_LE_ID", "EFLALO_FT_FT_REF","LE_SPE", "LE_KG", "LE_VALUE"  )
+eflalo_ft_gf = eflalo_ft_gf %>% filter ( VE_LEN >= 10 )
+eflalo_ft_t3 = eflalo_ft_t3 %>% filter ( as.numeric( VE_LEN)  < 10 )
+```
 
-head (eflalo_spe)
-str(eflalo_spe)
-dim(eflalo_spe)
+Explore the data with these summarisation commands.
+
+```{r summarise eflalo ft, include=FALSE}
+  head (eflalo_ft_t3)
+  str(eflalo_ft_t3)
+  dim(eflalo_ft_t3)
+  summary(eflalo_ft_t3)
+```
+
+Now load the eflalo le data and inspect it. The class of the ICES rectangle column is specified as character, to avoid it being numeric and converting to a number.
+
+```{r load eflalo le, include=FALSE}
+# load eflalo_le from both sources ----
+  eflalo_le_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_le.csv' ) , header = T, sep = ',',
+                          fileEncoding = 'UTF-8-BOM', colClasses = c ( rep(NA, 10) , "character"))  
+
+  eflalo_le_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_le.csv' ) , header = T, sep = ',',
+                          fileEncoding = 'UTF-8-BOM' , colClasses = c ( rep(NA, 10) , "character"))
+  
+  names(eflalo_le_gf) = toupper( names(eflalo_le_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+
+  head (eflalo_le_t3)
+  str (eflalo_le_t3)
+```
+
+Load eflalo_spe data.
+
+```{r load eflalo spe, include=FALSE}
+# load eflalo_spe from both sources ----
+eflalo_spe_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_spe.csv' ), header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+eflalo_spe_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_spe.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+names(eflalo_spe_gf) = toupper( names(eflalo_spe_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
 ```
 
 Join the blocks together to make the complete EFLALO dataset. An inner join retains all data rows that have a match in the other columns. Check the results with head() and str().
 
-```{r merge eflalo, include=FALSE}
-eflalo =    eflalo_ft %>%
-            inner_join (eflalo_le , by =  c("FT_REF" = "EFLALO_FT_FT_REF")) %>%
-            inner_join(eflalo_spe, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
+```{r join eflalo, include=FALSE}
+eflalo_t3  =    eflalo_ft_t3 %>%
+                inner_join (eflalo_le_t3 , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
+                inner_join(eflalo_spe_t3, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
 
-head (eflalo)
-str(eflalo)
+
+eflalo_t3 = eflalo_t3 %>% mutate ( LE_VALUE = -9999, FLEET_SEG = analysis_type, SOURCE = 't3') %>% select  ( - VE_FA)
+
+eflalo_gf =     eflalo_ft_gf %>%
+                inner_join (eflalo_le_gf , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
+                inner_join(eflalo_spe_gf, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
+
+eflalo_gf = eflalo_gf %>% rename ( LE_VALUE = LE_EURO )  %>%  mutate (   FLEET_SEG = analysis_type, SOURCE = 'geofish') 
+
+
+eflalo = rbind(eflalo_t3, eflalo_gf)
 ```
 
 Some field require some formatting. the ymd() function orientates the selected columns with dates, into a year-month-day format. Columns with time values associated can be formatted using ymd_hms.
@@ -85,52 +140,94 @@ The vessel length field (VE_LEN) is required to be in numerical format; as.numer
 Finally, the year and month columns are created by pulling the information from the previously formatted columns.
 
 ```{r eflalo column formatting, include=FALSE}
-eflalo$FT_DDAT =  ymd( eflalo$FT_DDAT   )  ## ymd lubridate function to CAST date into Year Mond Day date format
-eflalo$FT_LDAT =   ymd(eflalo$FT_LDAT  ) 
-eflalo$LE_CDAT =   ymd_hms(eflalo$LE_CDAT  ) 
-eflalo$FT_DDATIM = ymd_hms( eflalo$FT_DDATIM   ) 
-eflalo$FT_LDATIM = ymd_hms( eflalo$FT_LDATIM  ) 
+eflalo$FT_DDAT =  ymd(eflalo$FT_DDAT)  ## ymd lubridate function to CAST date into Year Mond Day date format
+eflalo$FT_LDAT =  ymd(eflalo$FT_LDAT) 
+
+eflalo = eflalo %>% mutate (LE_CDAT  = substr (eflalo$LE_CDAT, 1, 10) )  ## To convert Log Event date just in Year- month - day. Time is not provided an is by default 00:00:00 
+eflalo$LE_CDAT = ymd(eflalo$LE_CDAT) 
+
+eflalo$FT_DDATIM = ymd_hms(eflalo$FT_DDATIM) 
+eflalo$FT_LDATIM = ymd_hms(eflalo$FT_LDATIM) 
 
 eflalo$VE_LEN = as.numeric(eflalo$VE_LEN)
+eflalo$VE_KW = as.numeric(eflalo$VE_KW)
+eflalo$VE_TON = as.numeric(eflalo$VE_TON)
+
+eflalo$EFLALO_FT_FT_REF  = as.numeric(eflalo$EFLALO_FT_FT_REF)
+eflalo$LE_VALUE = as.numeric(eflalo$LE_VALUE )
 
 eflalo$Year = year(eflalo$FT_DDATIM )
 eflalo$Month = month(eflalo$FT_LDATIM)
 ```
 
+## Load Tacsat data
 
-## Load the TACSAT dataset
-
-Load in the tacsat dataset and format the names in the same manner as with the previous eflalo data blocks.
+Load data from GeoFISH and Tier3.
 
 ```{r load tacsat, include=FALSE}
-tacsat = read.csv(file = '.\\..\\data\\tacsat.csv', header = F, sep = ','  , fileEncoding = 'UTF-8-BOM')
+tacsat_t3 = read.csv(file = paste0(data_folder_t3, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+tacsat_t3 = tacsat_t3 %>% mutate ( FLEET_SEG = analysis_type, SOURCE = 't3') 
 
-names(tacsat)  = c ( "VE_REF", "SI_LATI", "SI_LONG", "SI_DATE", "SI_TIME", "SI_DATIM", "SI_SP", "SI_HE", "SI_HARB", "SI_STATE", "SI_FT", "INTV", "SI_YEAR" )
+
+tacsat_gf = read.csv(file = paste0(data_folder_geofish, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+names(tacsat_gf) = toupper( names(tacsat_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+tacsat_gf = tacsat_gf %>% mutate ( FLEET_SEG = analysis_type, SOURCE = 'geofish') 
 ```
 
-Check the summaries as with eflalo.
+Bind the tacsat datasets together and investigate them.
 
-```{r tacsat summarisation, include=FALSE}
+```{r bind tacsat, include=FALSE}
+tacsat = rbind(tacsat_t3, tacsat_gf)
+                     
+ 
 dim(tacsat)
 head (tacsat)
-str(tacsat)
-```
-
-Create a backup of the tacsat dataframe. This is done so if some processing does not do correctly or as expected, the data is already loaded in the correct format and can easily be reverted to if necessary. The tacsat dataframe is simply copied into another dataframe under a different name.
-
-```{r tacsat backup, include=FALSE}
-tacsat_bk = tacsat  # create a backup of the data.frame
+str(tacsat) ##List of fields and field type
 ```
 
 Format dates, times and numerical columns for consistency purposes. These will be in the same format as the EFLALO data. Also filter to see how many NAs are present in the speed column (SI_SP). This does not change the data as it is not applying the command to the object. It simply prints the number of rows containing NAs. If there are a large number, this can be investigated.
 
-```{r tacsat column formatting, include=FALSE}
-tacsat$SI_DATE  =  ymd( tacsat$SI_DATE   )  
-tacsat$SI_DATIM  =   ymd_hms(tacsat$SI_DATIM  ) 
+```{r format tacsat columns, include=FALSE}
+tacsat$SI_DATE  =  ymd( tacsat$SI_DATE   )  ### reformatting the data in required format . Change to dmy if your system date format is different
+tacsat$SI_DATIM  = ymd_hms(tacsat$SI_DATIM  ) 
 tacsat$SI_SP = as.numeric(tacsat$SI_SP)
 tacsat$SI_HE = as.numeric(tacsat$SI_HE)
-
-tacsat%>%filter(is.na(SI_SP))%>%dim()
 ```
 
-### The EFLALO and TACSAT datasets have been formatted and are ready for analysis!
+If the analysis being conducted is the Welsh waters analysis, the following code will extract the data intersecting with the Welsh zone. If it is Welsh vessels analysis being conducted, this code will just be passed over. The code block reads the welsh plan area geojson, intersecting the vms data with the boundary. Those inside the boundary are kept.
+
+```{r welsh waters analysis, include=FALSE}
+if ( analysis_type == 'welsh_waters' ) { 
+  
+  welsh_marine_area = st_read ( dsn = '.\\spatial_layers\\wales_plan_area.geojson' )
+  welsh_marine_area_geom = st_make_valid(st_union(welsh_marine_area  ))
+  
+  
+  tacsat_geom = tacsat %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 , remove = FALSE)
+  tacsat_geom_ww =  tacsat_geom  %>%  filter(  st_intersects( .,  welsh_marine_area_geom , sparse = FALSE)  )
+  
+  
+  trips_in_welsh_waters = tacsat_geom_ww %>% st_drop_geometry() %>%  distinct(SI_FT ) %>% pull()
+  
+  eflalo = eflalo %>% filter ( FT_REF  %in%  trips_in_welsh_waters) 
+  tacsat = tacsat  %>% filter ( SI_FT  %in% trips_in_welsh_waters ) 
+  
+
+  ## To visualize in a GIS software save the TACSAT  as point geometry 
+  
+  
+
+  dir.create(".\\workflow_outputs\\spatial")
+
+  st_write( tacsat_geom_ww, dsn = ".\\workflow_outputs\\spatial\\tacsat_welsh_waters.geojson", layer = "tacsat_welsh_waters.geojson")
+  
+  
+}
+```
+
+Save the outputs to the workflow_outputs folder.
+
+```{r save outputs, include=FALSE}
+save(eflalo, file = ".\\workflow_outputs\\eflalo.RData")
+save(tacsat, file = ".\\workflow_outputs\\tacsat.RData")
+```
