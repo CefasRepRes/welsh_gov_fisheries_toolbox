@@ -1,5 +1,5 @@
 ########### DATA EXPLORATION AND PREPROCESSING IN ADVANCE OF  QUALITY CONTROL AND CLEANING ##########################
-
+config::get()
 library(dplyr)
 library(ggplot2)
 
