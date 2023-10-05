@@ -27,7 +27,7 @@ library(ggplot2)    ## R Package for plotting and graphs
 
  ## SELECT THE ANALYSIS OPTION:
   
-  analysis_type = 'welsh_waters' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
+  analysis_type = 'welsh_fleet' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
   
   if ( analysis_type == 'welsh_fleet')  { 
 
@@ -176,7 +176,12 @@ tacsat%>%filter(is.na(SI_SP))%>%dim()
 ## To be run only when "Welsh waters" analysis is processed. 
 ## This code will limit the analysis to fishing locations occurring within the Welsh Waters boundaries
 
-if ( analysis_type == 'welsh_waters' ) { 
+## Do you want to keep logbook records iwth no related VMS/IVMS ( TACSAT) records ? .
+## Otehrwise select 'no' to keep only eflalo records iwth asscociated tacsat ( to ensure trips have a vessel location within Welsh Waters ) 
+
+retain_eflalo_with_no_tacsat = 'yes'
+
+if ( analysis_type == 'welsh_waters'  ) { 
   
   welsh_marine_area = st_read ( dsn = '.\\spatial_layers\\wales_plan_area.geojson' )
   welsh_marine_area_geom = st_make_valid(st_union(welsh_marine_area  ))
@@ -188,13 +193,19 @@ if ( analysis_type == 'welsh_waters' ) {
   
   trips_in_welsh_waters = tacsat_geom_ww %>% st_drop_geometry() %>%  distinct(SI_FT ) %>% pull()
   
+  if ( retain_eflalo_with_no_tacsat == 'no' ) { 
+    
   eflalo = eflalo %>% filter ( FT_REF  %in%  trips_in_welsh_waters) 
+  
+  } 
+  
   tacsat = tacsat  %>% filter ( SI_FT  %in% trips_in_welsh_waters ) 
   
+
  
   ## To visualize in a GIS software save the TACSAT  as point geometry 
   
-
+ 
   st_write( tacsat_geom_ww, dsn = ".\\workflow_outputs\\spatial\\tacsat_welsh_waters.geojson", layer = "tacsat_welsh_waters.geojson")
   
   
