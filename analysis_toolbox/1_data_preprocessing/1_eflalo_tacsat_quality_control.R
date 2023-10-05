@@ -43,7 +43,7 @@ ggplot(res21, aes( n )) + geom_histogram()
 
       ###  1st: FISHING TRIP WITH > 1 GEARS REPORTED 
 
-        ## Identify trips with more than 1 trip 
+        ## Identify trips with more than 1 gear 
 
          trips_with_more_than_1_gear = eflalo_fs %>% distinct(FT_REF, LE_GEAR )%>% group_by(FT_REF ) %>% mutate ( rn = row_number ( ) ) %>% filter ( rn > 1) 
          trips_with_more_than_1_gear%>% arrange( rn , FT_REF , LE_GEAR)
@@ -277,10 +277,7 @@ eflalo_fs%>%
 ## The three overlapping trips have the same reported species and details
 
 eflalo_fs %>% filter( FT_REF %in% c(10343311296 , 10343333399  ))
-
-
 eflalo_fs %>% filter( FT_REF %in% c(610787207, 610791817))
-
 eflalo_fs %>% filter( FT_REF %in% c(610738857, 610735265)) 
 
 
