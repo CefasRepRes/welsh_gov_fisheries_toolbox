@@ -5,7 +5,7 @@ date: "2023-09-15"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=TRUE, eval=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(vmstools)
@@ -17,13 +17,13 @@ library(tidyr)
 
 Set the working directory to the data folder, if it is not already.
 
-```{r set wd, include=FALSE}
+```{r set wd, include=TRUE, eval=FALSE}
 setwd('./../../data')
 ```
 
 Load the data made through the previous scripts.
 
-```{r load data, include=FALSE}
+```{r load data, include=TRUE, eval=FALSE}
   load(file = '.\\workflow_outputs\\eflalo_fs_qc.RData' )
   load(file = '.\\workflow_outputs\\tacsat_fs_qc.RData' )
 ```
@@ -32,7 +32,7 @@ Load the data made through the previous scripts.
 
 Explore the data
 
-```{r explore, include=FALSE}
+```{r explore, include=TRUE, eval=FALSE}
   str(tacsat_fs)
   str(eflalo_fs)
  
@@ -41,7 +41,7 @@ Explore the data
 
 Convert EFLALO from LARGE format into WIDE format. This complies with the format required by VMSTOOL 'splitamongpings' function. Depending on the format selected, we have to choose Option 1 or Option 2 in step '2.3 Dispatch landings/catches among VMS pings'. As a general approach, if we want to analyse all species together choose long format if we want to analyse a number of species choose wide format.
 
-```{r pivot eflalo, include=FALSE}
+```{r pivot eflalo, include=TRUE, eval=FALSE}
   eflalo_fs = eflalo_fs%>%
     pivot_wider(id_cols = c( FT_REF, FT_DCOU, FT_DHAR, FT_DDAT, FT_DTIME, FT_DDATIM,
                              FT_LCOU, FT_LHAR, FT_LDAT, FT_LTIME, FT_LDATIM, VE_REF,
@@ -57,7 +57,7 @@ Convert EFLALO from LARGE format into WIDE format. This complies with the format
 
 Retrieve a selection of columns from eflalo_fs to be joined to tacsat.
 
-```{r eflalo_sel, include=FALSE}
+```{r eflalo_sel, include=TRUE, eval=FALSE}
    eflalo_sel =  eflalo_fs %>% 
                   select(FT_REF, LE_CDAT, LE_GEAR,LE_MSZ, LE_RECT, LE_MET, VE_LEN, VE_KW, VE_COU) %>%
                   distinct()
@@ -65,7 +65,7 @@ Retrieve a selection of columns from eflalo_fs to be joined to tacsat.
 
 Join the data and check all gears transferred correctly. The number of NA values in the LE_GEAR column must be 0.
 
-```{r join tacsat eflalo_sel, include=FALSE}
+```{r join tacsat eflalo_sel, include=TRUE, eval=FALSE}
     tacsatp =  tacsat_fs%>%  left_join( eflalo_sel  , by = c("SI_FT" = "FT_REF", "SI_DATE" = "LE_CDAT"))
   
     tacsatp%>%filter (is.na(LE_GEAR)) ## must be 0 , that means all iVMS records have an associated EFLALO records 
@@ -73,7 +73,7 @@ Join the data and check all gears transferred correctly. The number of NA values
 
 Retrieve the first trip from this list after rearranging the data. 
 
-```{r , include=FALSE}
+```{r , include=TRUE, eval=FALSE}
   ft =    eflalo_sel %>% arrange(FT_REF , LE_CDAT) %>% 
           select (FT_REF, LE_GEAR) %>% rename(LE_GEAR2 = LE_GEAR) %>%
           group_by(FT_REF)%>%slice(1)
@@ -81,7 +81,7 @@ Retrieve the first trip from this list after rearranging the data.
 
 Assign the main gear of each trip to the VMS locations that do not already have a gear assigned.
 
-```{r , include=FALSE}
+```{r , include=TRUE, eval=FALSE}
   tacsatp =  tacsatp %>% left_join ( ft , by = c( "SI_FT" = "FT_REF"))%>%
     mutate ( LE_GEAR = ifelse( is.na (LE_GEAR), LE_GEAR2 , LE_GEAR  ))%>%
     select (-LE_GEAR2)
@@ -89,13 +89,13 @@ Assign the main gear of each trip to the VMS locations that do not already have 
 
 Check there are no NA records in the LE_GEAR column
 
-```{r check gear NAs, include=FALSE}
+```{r check gear NAs, include=TRUE, eval=FALSE}
 tacsatp %>% filter( is.na( LE_GEAR ) )
 ```
 
 Input the information for vessel characteristics for locations that do not have an associated log event.
 
-```{r vessel characteristics, include=FALSE}
+```{r vessel characteristics, include=TRUE, eval=FALSE}
   ve_c = eflalo_sel%>%distinct(FT_REF, VE_LEN, VE_KW, VE_COU)%>%rename(VE_LEN2 = VE_LEN, VE_KW2 = VE_KW, VE_COU2 = VE_COU )
   
   tacsatp =  tacsatp %>% left_join ( ve_c , by = c( "SI_FT" = "FT_REF"))%>%
@@ -114,7 +114,7 @@ Input the information for vessel characteristics for locations that do not have 
 
 #### 2.1 Calculate interval between VMS points. This information can be used to calculate effort.
 
-```{r define activity, include=FALSE}
+```{r define activity, include=TRUE, eval=FALSE}
   minInterval = 1 / 60 ## 1 minute converted in hours (0.01666667 hours)
   
   tacsatp = tacsatp%>%ungroup()%>%
@@ -135,7 +135,7 @@ Input the information for vessel characteristics for locations that do not have 
 
 Plot a histogram. Histograms are a useful way of visualising the data so that abnormalities or patterns can be observed.
 
-```{r speed histogram, include=FALSE}
+```{r speed histogram, include=TRUE, eval=FALSE}
   ggplot(data = tacsatp, aes(SI_SP)) +
     geom_histogram(
       breaks = seq(0, 10, by =0.4), col = 1) +
@@ -156,14 +156,14 @@ Plot a histogram. Histograms are a useful way of visualising the data so that ab
 
 Create a speed threshold for what is to be considered realistic for fishing activity. This can be chosen based on the histogram, which will show outliers which are unrealistic, this threshold can eliminate those.
 
-```{r speed threshold, include=FALSE}
+```{r speed threshold, include=TRUE, eval=FALSE}
   speedarr = as.data.frame( cbind( LE_GEAR = sort(unique(tacsatp$LE_GEAR)), min = NA, max = NA), stringsAsFactors = FALSE)
   if (!'MIS' %in%  unique (speedarr$LE_GEAR ) ) {  speedarr =  speedarr %>% rbind(c('MIS', NA, NA))  } 
 ```
 
 Fill the speed array with min and max values as a general rule of thumb or with specific values per gear.
 
-```{r speedarr, include=FALSE}
+```{r speedarr, include=TRUE, eval=FALSE}
   speedarr$min = rep(1, nrow(speedarr)) # Filled with rule of thumb 1 knot as minimum fishing speed
   speedarr$max = rep(6, nrow(speedarr)) # Filled with rule of thumb 6 knot as maximum fishing speed
   
@@ -175,7 +175,7 @@ Fill the speed array with min and max values as a general rule of thumb or with 
 
 Analyse activity for common gears. The speed array can be used for other gears.
 
-```{r autodetect gears, include=FALSE}
+```{r autodetect gears, include=TRUE, eval=FALSE}
   autoDetectionGears = c('OTB',  'DRB')
  
   subTacsat    = subset(tacsatp, LE_GEAR %in% autoDetectionGears)%>%as.data.frame()
@@ -184,7 +184,7 @@ Analyse activity for common gears. The speed array can be used for other gears.
 
 Create the storeScheme object where the speed profiles will be stored.
 
-```{r storeScheme, include=FALSE}
+```{r storeScheme, include=TRUE, eval=FALSE}
     storeScheme =  expand.grid(  years = 2022, months = 0,  weeks = 0,  analyse.by = unique(subTacsat[, "LE_GEAR"]) )
     
     storeScheme$peaks <- NA
@@ -195,7 +195,7 @@ Create the storeScheme object where the speed profiles will be stored.
 
 Fill the storeScheme with values based on analysis of the graphs produced.
 
-```{r fill storeScheme, include=FALSE}
+```{r fill storeScheme, include=TRUE, eval=FALSE}
     dat = subTacsat %>% filter ( LE_GEAR == 'OTB' )   
     
     datmr = dat %>%mutate (SI_SP = -1 * SI_SP )
@@ -209,7 +209,7 @@ Fill the storeScheme with values based on analysis of the graphs produced.
 
 Define the mean values of the peaks and the number of peaks when they are different from 5.
 
-```{r define means, include=FALSE}
+```{r define means, include=TRUE, eval=FALSE}
     storeScheme$means[which(storeScheme$analyse.by == "DRB")] <- c("-9 -4.5 0 4.5 9")
     storeScheme$peaks[which(storeScheme$analyse.by == "DRB")] <- 5
     storeScheme$means[which(storeScheme$analyse.by == "OTB")] <- c("-9 -4.5 0 4.5 9")
@@ -220,7 +220,7 @@ Define the mean values of the peaks and the number of peaks when they are differ
 
 Generate graph for the above data.
 
-```{r acTa, include=FALSE}
+```{r acTa, include=TRUE, eval=FALSE}
   acTa = activityTacsat( subTacsat ,units = "year",  analyse.by = "LE_GEAR",storeScheme = storeScheme, plot = TRUE, level = "all")
   subTacsat$SI_STATE = acTa
   subTacsat$ID <- 1:nrow(subTacsat)
@@ -231,7 +231,7 @@ Generate graph for the above data.
 
 Check the results of the above, if they are not satisfactory, the analysis can be run again with fixed peaks.
 
-```{r autodetection, include=FALSE}
+```{r autodetection, include=TRUE, eval=FALSE}
   for (iGear in autoDetectionGears) {
     
     subDat <- subset(subTacsat,LE_GEAR == iGear)
@@ -257,7 +257,7 @@ Check the results of the above, if they are not satisfactory, the analysis can b
 
 Assign a speed rule classification for the gears which were visually inspected.
 
-```{r speed rule classification, include=FALSE}
+```{r speed rule classification, include=TRUE, eval=FALSE}
   ## This will apply the values in speed array data frame created at the beginning of the process
   
   metiers = unique(nonsubTacsat$LE_GEAR)
@@ -275,7 +275,7 @@ Assign a speed rule classification for the gears which were visually inspected.
 
 If there are still NAs, MIS must be assigned to rows which are within the fishing threshold.
 
-```{r replace NAs with MIS, include=FALSE}
+```{r replace NAs with MIS, include=TRUE, eval=FALSE}
   sp_gear =  speedarr %>%filter(LE_GEAR == 'MIS')
   
   nonsubTacsat =  nonsubTacsat %>% 
@@ -294,7 +294,7 @@ If there are still NAs, MIS must be assigned to rows which are within the fishin
 
 Set fishing sequences with hauling in the middle of them to 'f'.
 
-```{r hauling sequences, include=FALSE}
+```{r hauling sequences, include=TRUE, eval=FALSE}
   idx =   which(
             tacsatp$SI_STATE[2:(nrow(tacsatp) - 1)] == "h" &
               tacsatp$SI_STATE[1:(nrow(tacsatp) - 2)] == "f" &
@@ -308,7 +308,7 @@ Set fishing sequences with hauling in the middle of them to 'f'.
 
 Save.
 
-```{r save tacsat activity, include=FALSE}
+```{r save tacsat activity, include=TRUE, eval=FALSE}
   save( tacsatp, file = paste0(".\\workflow_outputs\\tacsatActivity", year, ".RData")) 
   
   message("Defining activity completed")
@@ -316,7 +316,7 @@ Save.
 
 Depending on the format of the eflalo data, wide or long, the analysis will need to be different, so select the type being used here. Also, the results from the data and how their weights per species are summarised can be changed.
 
-```{r wide/long, include=FALSE}
+```{r wide/long, include=TRUE, eval=FALSE}
   eflalo_format = 'wide' ## default format following toolbox workflow 
   species_analysis_type = 'all_species_sum' # options: ( all_species_sum,  selected_species_sum, selected_species_separated )
   
@@ -366,13 +366,13 @@ Depending on the format of the eflalo data, wide or long, the analysis will need
 
 Save the newly processed eflalo data.
 
-```{r save, include=FALSE}
+```{r save, include=TRUE, eval=FALSE}
   save( eflalo_fs_tot, file = paste0(".\\workflow_outputs\\eflaloTotals", year, ".RData")) 
 ```
 
 Convert the SI_FT column to FT_REF to meet the requirements of the functions. Also, investigate which trips are not merged. Finally, reassign fishing/non-fishing from 'f' and 's' to 1 and 0.
 
-```{r state to 1 or 0, include=FALSE}
+```{r state to 1 or 0, include=TRUE, eval=FALSE}
   tacsatp = tacsatp %>% mutate( FT_REF = SI_FT )
   
   eflaloM =  subset(eflalo_fs_tot,FT_REF %in% unique(tacsatp$FT_REF))
@@ -388,7 +388,7 @@ Convert the SI_FT column to FT_REF to meet the requirements of the functions. Al
 
 Create tacsatEflalo. Take the records which are considered to be fishing.
 
-```{r create tacsatEflalo, include=FALSE}
+```{r create tacsatEflalo, include=TRUE, eval=FALSE}
   tacsatEflalo = tacsatp[tacsatp$SI_STATE == 1,] 
   
   tacsatEflalo = tacsatEflalo %>% filter ( FT_REF %in%  ( eflaloM%>%distinct(FT_REF)%>%pull())   )
@@ -396,14 +396,14 @@ Create tacsatEflalo. Take the records which are considered to be fishing.
 
 Replace NA values in weight and vlue columns with 0s.
 
-```{r weight/value 0s, include=FALSE}
+```{r weight/value 0s, include=TRUE, eval=FALSE}
   eflaloM = eflaloM %>% mutate ( LE_VALUE_TOT = 0 )
   eflaloM = eflaloM %>% mutate ( LE_EURO_TOT = LE_VALUE_TOT   )
 ```
 
 Run the split among pings function and save the result.
 
-```{r split among pings, include=FALSE}
+```{r split among pings, include=TRUE, eval=FALSE}
   ?splitAmongPings
  
     tacsatEflalo =
@@ -432,7 +432,7 @@ Run the split among pings function and save the result.
 
 Investigate a specific trip in all 3 datasets.
 
-```{r , include=FALSE}
+```{r , include=TRUE, eval=FALSE}
   tacsatp%>% filter(SI_STATE == 1 & SI_FT == 610736051)%>% dim()
   eflaloM %>% filter(FT_REF == 610736051)
   tacsatEflalo%>% filter(FT_REF == 610736051) %>% summarise(tot = sum ( LE_KG_TOT))
@@ -440,14 +440,14 @@ Investigate a specific trip in all 3 datasets.
 
 Investigate the data at vessel level.
 
-```{r , include=FALSE}
+```{r , include=TRUE, eval=FALSE}
   eflaloM %>% filter(VE_REF == 'A10207')%>% summarise(tot = sum ( LE_KG_TOT))
   tacsatEflalo%>% filter(VE_REF == 'A10207') %>% summarise(tot = sum ( LE_KG_TOT))
 ```
 
 Assign c-square, year, month, quarter, area and create tacsatEflalo_output for the year of study. Then, save.
 
-```{r , include=FALSE}
+```{r , include=TRUE, eval=FALSE}
   tacsatEflalo$Csquare   =  CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.05)
   tacsatEflalo$Year      =  year(tacsatEflalo$SI_DATIM)
   tacsatEflalo$Month     =  month(tacsatEflalo$SI_DATIM)
@@ -462,7 +462,7 @@ Assign c-square, year, month, quarter, area and create tacsatEflalo_output for t
 
 Assign  year, month, quarter, area and create eflalo_output for the year of study. Then, save.
 
-```{r , include=FALSE}
+```{r , include=TRUE, eval=FALSE}
   eflalo_output$Year      = year(eflalo_output$FT_LDATIM)
   eflalo_output$Month     = month(eflalo_output$FT_LDATIM)
   eflalo_output$INTV      = 1 # 1 day
