@@ -320,50 +320,57 @@ setwd('./../../data')
   
   # 2.3 Dispatch landings/catches of merged eflalo at the VMS/iVMS ping scale  -------------------------------------------------
   
+  
+  ## 2.3.1 Define the species to be use  to proceed with the analysis: 
+  
+      ### 1. Sum weight /value of all species together : "all_species_sum"
+      ### 2. Sum weight /value of selected species : "selected_species_sum"
+      ### 3. Weight/value separated by species: "selected_species_separated"
+  
   eflalo_format = 'wide' ## defautl format following toolbox workflow 
   species_analysis_type = 'all_species_sum' # options: ( all_species_sum,  selected_species_sum, selected_species_separated )
   
   if ( eflalo_format == 'wide' ) { 
-  
-  ## For all the species together 
-  
-  
-  ## Option 1: Names in wide format . Each species catch value has its own column 
- 
-  idxkg  =  grep("KG", colnames(eflalo_fs ) )  
-  idxval =  grep("VALUE", colnames(eflalo_fs )  ) 
-  
-  
-  
-  ## Option 1.1 : all landings for all species sum together 
-  if (species_analysis_type == 'all_species_sum') {
-  
-  eflalo_fs_tot = eflalo_fs %>% mutate(LE_KG_TOT = select(.,idxkg) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% mutate(LE_EURO_TOT = NA ) %>% as.data.frame()       
-  
-  } else if (species_analysis_type == 'selected_species_sum') {
     
-  ## Option 1.2 : by selected species totals
-  eflalo_fs_tot = eflalo_fs %>%   mutate(LE_KG_TOT = select(.,contains(c('KG_SOL', 'KG_MAC')) ) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% as.data.frame()       
+    ## For all the species together 
+    
+    
+    ## Option 1: Names in wide format . Each species catch value has its own column 
+   
+    idxkg  =  grep("KG", colnames(eflalo_fs ) )  
+    idxval =  grep("VALUE", colnames(eflalo_fs )  ) 
+    
+    
+    
+          ## Option 1.1 : all landings for all species sum together 
+        if (species_analysis_type == 'all_species_sum') {
+          
+          eflalo_fs_tot = eflalo_fs %>% mutate(LE_KG_TOT = select(.,idxkg) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% mutate(LE_EURO_TOT = NA ) %>% as.data.frame()       
+        
+        } else if (species_analysis_type == 'selected_species_sum') {
+          
+           ## Option 1.2 : by selected species totals
+           eflalo_fs_tot = eflalo_fs %>%   mutate(LE_KG_TOT = select(.,contains(c('KG_SOL', 'KG_MAC')) ) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% as.data.frame()       
+        
+        } else if (species_analysis_type == 'selected_species_separated') {
+        
+          ## Option 1.3 : Analysis by species separately 
+          eflalo_fs_tot = eflalo_fs %>% select(., -idxkg , -idxval, contains(c('SOL', 'MAC') ) ) %>% filter_at ( vars (contains( c('SOL', 'MAC') ) ) , any_vars(!is.na(.)) ) %>%  as.data.frame()
+        
+        }
   
-  } else if (species_analysis_type == 'selected_species_separated') {
-  
-  ## Option 1.3 : Analysis by species separately 
-  eflalo_fs_tot = eflalo_fs %>% select(., -idxkg , -idxval, contains(c('SOL', 'MAC') ) ) %>% filter_at ( vars (contains( c('SOL', 'MAC') ) ) , any_vars(!is.na(.)) ) %>%  as.data.frame()
-  
-  }
-  
-  dim( eflalo_fs_tot)
+    dim( eflalo_fs_tot)
   
   }  else if   (eflalo_format == 'long'  ) { 
     
   
-  ## Option 2: Species names in long format. All  species in LE_SPE and  catch value in LE_KG columns
+      ## Option 2: Species names in long format. All  species in LE_SPE and  catch value in LE_KG columns
   
   
-  captures_total = eflalo_fs %>% group_by(FT_REF, LE_ID) %>% summarise(LE_KG_TOT = sum( LE_KG), LE_EURO_TOT = 0 ) # LE_KG_TOT = sum( LE_KG) if VALUE data is available
+       captures_total = eflalo_fs %>% group_by(FT_REF, LE_ID) %>% summarise(LE_KG_TOT = sum( LE_KG), LE_EURO_TOT = 0 ) # LE_KG_TOT = sum( LE_KG) if VALUE data is available
  
 
-  eflalo_fs_tot = eflalo_fs %>% select(-c (LE_SPE, LE_KG, LE_VALUE)) %>% distinct() %>% inner_join(captures_total , by = c("FT_REF", "LE_ID" ))
+       eflalo_fs_tot = eflalo_fs %>% select(-c (LE_SPE, LE_KG, LE_VALUE)) %>% distinct() %>% inner_join(captures_total , by = c("FT_REF", "LE_ID" ))
   
   } 
   

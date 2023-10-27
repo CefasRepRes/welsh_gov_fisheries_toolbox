@@ -5,7 +5,7 @@ date: "2023-09-14"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=TRUE,eval = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 options(dplyr.width = Inf, dplyr.print_min = 500)
@@ -17,13 +17,13 @@ library(sf)
 
 Set the working directory if it is not already set to the data folder.
 
-```{r set wd, include=FALSE}
+```{r set wd, include=TRUE,eval = FALSE}
 setwd('./../../data')
 ```
 
 Load the data created via by the previouis workflow.
 
-```{r load data, include=FALSE}
+```{r load data, include=TRUE,eval = FALSE,eval = FALSE}
 load(".\\workflow_outputs\\eflalo.RData")
 load(".\\workflow_outputs\\tacsat.RData")
 ```
@@ -44,7 +44,7 @@ As can be seen, the output is each trip reference, followed by the n column disp
 
 Following this, the number of log events is calculated and individual trip references can be inspected if they present unrealistic log event or record numbers.
 
-```{r count records & log events, include=FALSE}
+```{r count records & log events, include=TRUE,eval = FALSE,eval = FALSE}
 
 ## Q1.1: How many overall records are by  trip?
 res2 = eflalo_fs%>%group_by(FT_REF) %>% summarise(n = n()) %>% arrange(desc(n))
@@ -60,7 +60,7 @@ ggplot(res21, aes( n )) + geom_histogram()
 
 Identifying trips with more than one assigned gear. 
 
-```{r multi-gear trips, include=FALSE}
+```{r multi-gear trips, include=TRUE,eval = FALSE}
 # Q1.2.1 . How do we assign GEAR and ICES RECTANGLE to iVMS/VMS TACSAT records . Example of different cases: 
 
 
@@ -78,13 +78,13 @@ Identifying trips with more than one assigned gear.
 
 Explore one of these trips in more detail. Change the trip reference number as required.
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
 eflalo_fs %>% filter(FT_REF == 610715898 )%>%mutate ( tt = FT_DDATIM   + ( ( FT_LDATIM - FT_DDATIM )   / 2))
 ```
 
 The best solution to the problem of multiple gears for one trip is to merge the gears into one unique, combined gear. So these trips will have a merged gear and metier defined: e.g. a trip using GN and FPO would have a gear defined as : GN_FPO.
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
          eflalo_fs_mult_gears = eflalo_fs %>% filter(FT_REF %in% trips_with_more_than_1_gear$FT_REF )
          
          trips_mult_gears_comb = eflalo_fs_mult_gears %>% 
@@ -105,7 +105,7 @@ The best solution to the problem of multiple gears for one trip is to merge the 
 
 Further exploration into a trip identified with more than one gear.
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
 eflalo_fs %>% filter(FT_REF == 610715898 )%>%mutate ( tt = FT_DDATIM   + ( ( FT_LDATIM - FT_DDATIM )   / 2))
          
       eflalo_sel = eflalo_fs %>% filter(FT_REF == 610715898 ) %>% as.data.frame()
@@ -118,7 +118,7 @@ eflalo_fs %>% filter(FT_REF == 610715898 )%>%mutate ( tt = FT_DDATIM   + ( ( FT_
 
 
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
       ### 2 GEARS WITH VMS 
       eflalo_fs %>% filter(FT_REF == 610715898) %>% as.data.frame()
 
@@ -138,7 +138,7 @@ Unrealistic trip days suggest human error, so the following code calculates the 
 
 From the code in section 1.2, the number of days is produced, so outliers can be seen. It is evident there are some unrealistic trip times, with one trip supposedly lasting 366 days - likely the wrong year was input. These trips can be filtered out in section 1.1.1, which finds trips which took 10 days or less and assigns them to 'trips_in'. This number cam be edited depending on the dataset. Then, eflalo_gbw is filtered to only include trip references which are present in 'trips_in', successfully removing trips with unrealistic time frames. 
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
 ## Observe the trips with more days duration by data SOURCE . Identify outliers and potential errors in Departure and Landing dates. 
 
 eflalo_fs %>% select(trip_days, SOURCE, FT_REF, FT_DDATIM,FT_LDATIM,  VE_LEN) %>% arrange( SOURCE, desc( trip_days )) %>% filter( SOURCE == 't3')
@@ -170,7 +170,7 @@ dim(eflalo_fs)
 
 Landings can also present unrealistic numbers; by setting a threshold, unreasonably high landings numbers can be identified and removed. Per-species thresholds can be set using log10, where the final value will vary based on the species, so a blanket threshold for all species is not set. The results of the filter can be used in the subsequent code to look into why their landing weights are exceeding expected values.
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
 ## Select a logarithm scale landing weight threshold ( e.g. 1.5)
 
 landingThreshold = 1.5
@@ -205,7 +205,7 @@ eflalo_fs %>% filter( FT_REF == 610699215 ) ## change trip id based in the analy
 
 It is useful to check for NA values in numerical or date columns columns as if calculations are enacted on these, it may produce NA values as the result. Filtering to results with NA values allows them to be investigated and to see if they may cause issues further into the analysis.
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
 eflalo_fs %>% filter(  is.na ( LE_KG ))
 
 eflalo_fs %>% filter( is.na(FT_DDATIM) | is.na(FT_LDATIM) )
@@ -215,7 +215,7 @@ eflalo_fs %>% filter( is.na(FT_DDATIM) | is.na(FT_LDATIM) )
 
 Duplicated trips cause inaccuracies in landings data and therefore should be removed. duplicate analysis is creating a variable which provides a boolean response to if a trip is duplicated or not, by checking the trip and vessel references and the departure/landing times. These trips can be investigated by the code in the third block. Finally, trips IDs that are identified as duplicates can be removed via common FT_REF with the duplicated_trips dataset.
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
 duplicate_analysis = eflalo_fs%>%
   distinct(VE_REF , FT_REF,  FT_DDAT, FT_LDAT)%>%
   group_by(VE_REF, FT_DDAT, FT_LDAT)%>%
@@ -225,7 +225,7 @@ duplicate_analysis = eflalo_fs%>%
 
 Explore the data for duplicated trips
 
-```{r duplicate trips 1, include=FALSE}
+```{r duplicate trips 1, include=TRUE,eval = FALSE}
 ## Explore duplicated trips details
 
 ## How many are there?
@@ -239,7 +239,7 @@ eflalo_fs %>% left_join (duplicate_analysis , by = c ( 'VE_REF', 'FT_DDAT', 'FT_
   arrange(VE_REF, FT_REF, LE_SPE)
 ```
 
-```{r duplicate trips 2, include=FALSE}
+```{r duplicate trips 2, include=TRUE,eval = FALSE}
 ## Identify the trip id's that are duplicated 
 
 duplicate_trips =  eflalo_fs%>%
@@ -267,7 +267,7 @@ eflalo_fs =   eflalo_fs %>%
 
 Another example of human error in input are trips which apparently ended before they began, these can be easily removed thanks to the trip_days column created previously. If the trip days are less than or equal to 0, they are considered impossible.
 
-```{r filter departure arrival overlap, include=FALSE}
+```{r filter departure arrival overlap, include=TRUE,eval = FALSE}
 ## Use the field created with trip duration: trip_days
 ## A value of 0 or negative would means departure and landing dates are same or reversed
 
@@ -278,7 +278,7 @@ eflalo_fs %>% filter(trip_days <= 0 )
 
 Furthermore, a vessel cannot be on two separate trips at once, so trips which overlap one another cannot feasibly occur. The VMS locations of these trips will cause issues as they are technically suggesting a vessel is in two places at once. These trips must be corrected or deleted, this decision can be made on a case by case basis, following the following filtering, which will pull these trips out conveniently.
 
-```{r filter overlaps different trips, include=FALSE}
+```{r filter overlaps different trips, include=TRUE,eval = FALSE}
 overlaps_analysis =  eflalo_fs%>%distinct(VE_REF, FT_REF, FT_DDATIM, FT_LDATIM)%>%
   arrange(VE_REF, FT_DDATIM)%>%
   group_by(VE_REF)%>%
@@ -306,7 +306,7 @@ eflalo_fs%>%
   summarise(numb = n())
 ```
 
-```{r overlapping/duplicated trips exploration, include=FALSE}
+```{r overlapping/duplicated trips exploration, include=TRUE,eval = FALSE}
 ## Following this analysis we have found out that these trips are duplicated 
 ## The three overlapping trips have the same reported species and details
 
@@ -325,7 +325,7 @@ eflalo_fs %>% filter( FT_REF %in% c(610738857, 610735265))
 
 Spatial data is necessary for analysing VMS data. It can be loaded into R as follows.
 
-```{r load spatial data, include=FALSE}
+```{r load spatial data, include=TRUE,eval = FALSE}
 welsh_marine_area = st_read ( dsn = '.\\spatial_layers\\wales_plan_area.geojson' )
 port_500m = st_read( dsn = '.\\spatial_layers\\welsh_ports_ammended_0_005.geojson')
 land = st_read ( dsn = '.\\spatial_layers\\Europe_coastline_poly.shp')
@@ -336,7 +336,7 @@ ices_rect_welsh = st_read(dsn = '.\\spatial_layers\\ICES_rectangle_welsh.geojson
 
 Convert the data to the espg:4326 crs so that all data pieces are in the same crs.
 
-```{r set crs, include=FALSE}
+```{r set crs, include=TRUE,eval = FALSE}
 welsh_marine_area %>% st_crs()  ## WGS 84 EPSG: 4326
 port_500m %>% st_crs()   ## WGS 84
 land  %>% st_crs() 
@@ -349,7 +349,7 @@ plot( land_4326)
 
 Define a bounding box for Europe. This is used to reduce the size of the land data, to reduce the processing power needed for plotting. Additionally, the view frame will be much closer in and therefore more detail will be visible.
 
-```{r europe aoi, include=FALSE}
+```{r europe aoi, include=TRUE,eval = FALSE}
 aoi = st_bbox( c( xmin = -15, xmax = 3, ymax = 60, ymin = 47), crs = st_crs( 4326 )) ## Define our area of intenrest.  4326 is id for WGS1984 unprojected coordinate system 
 
 europe_aoi = st_crop (x = land_4326, y = aoi)  ## clip/crop the whole European layer to our of interest
@@ -361,7 +361,7 @@ head(eflalo_fs)
 
 Filter the tacsat data to limit it to the trips in the eflalo data.
 
-```{r trips in clean eflalo, include=FALSE}
+```{r trips in clean eflalo, include=TRUE,eval = FALSE}
 trips_in_clean_eflalo = eflalo_fs %>% distinct(FT_REF)%>%pull() 
 
  
@@ -371,7 +371,7 @@ tacsat_fs = tacsat_fs %>% filter( SI_FT %in%  trips_in_clean_eflalo  ) # filter 
 
 Explore the tacsat data to investigate the number of trips the number of trips within each respective dataset, which are common?
 
-```{r investigate common trips, include=FALSE}
+```{r investigate common trips, include=TRUE,eval = FALSE}
 # Q1 : Number of trips in tacsat (iVMS) present in eflalo 
 
 tacsat_fs %>% mutate(inboth = SI_FT %in% trips_in_clean_eflalo )%>%select(inboth)%>%table()
@@ -383,7 +383,7 @@ eflalo_fs %>%distinct(FT_REF)%>% mutate(inboth = FT_REF %in% ( tacsat_fs%>%disti
 
 Analyse the trips which do not have related tacsat information due to potential human error, such as forgetting to activate the tacsat box. Or from being prior to 16-02-2022, when iVMS was introduced.
 
-```{r ft_ref not in tacsat, include=FALSE}
+```{r ft_ref not in tacsat, include=TRUE,eval = FALSE}
 ft_ref_not_in_tacsat = eflalo_fs %>%distinct(FT_REF)%>% mutate(inboth = FT_REF %in% ( tacsat_fs%>%distinct(SI_FT)%>%pull())  )%>%
   filter ( inboth == FALSE)
 
@@ -393,7 +393,7 @@ res1 = eflalo_fs %>% filter( FT_REF %in% (ft_ref_not_in_tacsat %>% select (FT_RE
 
 Explore the data.
 
-```{r explore , include=FALSE}
+```{r explore , include=TRUE,eval = FALSE}
 res1 %>%distinct(FT_DDAT)%>%pull()
 res1 %>%distinct(VE_REF, FT_REF ) %>% group_by(VE_REF)%>%tally() %>%arrange(desc(n))
 eflalo_fs %>%distinct(VE_REF)
@@ -403,7 +403,7 @@ res1%>% summarise(min = min (FT_DDAT), max = max( FT_DDAT))
 
 Explore a specific trip.
 
-```{r single trip exploration, include=FALSE}
+```{r single trip exploration, include=TRUE,eval = FALSE}
 eflalo_fs %>% filter( VE_REF == 'C20757') %>% distinct(FT_REF)
 tacsat_fs %>% filter( VE_REF == 'C20757') %>% distinct(SI_FT)
 
@@ -418,7 +418,7 @@ dim(tacsat_fs)
 
 Convert spatial grid references to match so the datasets can be used in conjunction for analysis. Next, remove any VMS pings which do not fall inside ICES areas.
 
-```{r edit spatial grid references, include=FALSE}
+```{r edit spatial grid references, include=TRUE,eval = FALSE}
 ia =  ICESareas%>% 
       sf::st_as_sf() %>% 
       sf::st_make_valid() %>% 
@@ -435,7 +435,7 @@ tacsat_fs = tacsat_fs[lengths(overs) > 0,]
 
 Remove duplicate records.
 
-```{r duplicates removal, include=FALSE}
+```{r duplicates removal, include=TRUE,eval = FALSE}
 tacsat_fs%>%
   group_by(VE_REF, SI_LATI, SI_LONG , SI_DATIM ) %>%
   filter( n() > 1) %>%
@@ -451,7 +451,7 @@ overlaps_analysis %>% filter(FT_REF %in% c( '610736051', '610738638') )
 
 Remove points that cannot be possible. Points which supposedly exist outside the extent of earth's longitude and latitude scales can simply be removed with the following code.
 
-```{r remove impossible points, include=FALSE}
+```{r remove impossible points, include=TRUE,eval = FALSE}
 tacsat_fs = tacsat_fs %>% filter(abs(SI_LATI) < 90 | abs(SI_LONG) < 180)
 tacsat_fs = tacsat_fs %>% filter(SI_HE >= 0 | SI_HE <= 360)
 tacsat_fs %>% filter(SI_SP > 30 ) 
@@ -463,7 +463,7 @@ As VMS systems ping regularly at 2 hour intervals, double points are almost cert
 
 Using the interval between pings on records with the same trip reference, records which have pinged too frequently in short succession can be identified.
 
-```{r remove pseudo-duplicate points, include=FALSE}
+```{r remove pseudo-duplicate points, include=TRUE,eval = FALSE}
 tacsat_fs_geom = tacsat_fs %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 , remove = FALSE)
 
 st_write( tacsat_fs_geom, dsn = ".\\workflow_outputs\\tacsat_fs.geojson", layer = "tacsat_fs.geojson")
@@ -521,7 +521,7 @@ Points within harbours are identified by their spatial intersection with the por
 
 These points can be plotted as shown below, using ggplot, which adds the Welsh marine area, the chosen ports which are selected within the quotation marks and the vms points which are located inside the ports. Finally, the boundary of the plot is specified so the plot is focused on the area of interest.
 
-```{r remove points in harbours, include=FALSE}
+```{r remove points in harbours, include=TRUE,eval = FALSE}
 tacsat_fs_ports = tacsat_fs_geom %>%
   st_join ( port_500m %>% select ( Name, District_N) , join = st_intersects, left = T) %>%
   mutate  ( SI_HARB  = ifelse ( is.na ( Name  ), FALSE , TRUE))  %>%
@@ -530,7 +530,7 @@ tacsat_fs_ports = tacsat_fs_geom %>%
 
 Plot this data.
 
-```{r plot 1, include=FALSE}
+```{r plot 1, include=TRUE,eval = FALSE}
 getwd()
 st_write( tacsat_fs_ports, dsn = paste0(".\\workflow_outputs\\spatial\\tacsat_port_welsh.geojson"), layer = "tacsat_port_welsh.geojson")      
 
@@ -544,7 +544,7 @@ ggplot() +
   coord_sf( xlim = c(- 5.5, -4), ylim = c(51.6, 52.2) )
 ```
 
-```{r plot 2, include=FALSE}
+```{r plot 2, include=TRUE,eval = FALSE}
 ggplot() + 
   geom_sf ( data = welsh_marine_area) + 
   geom_sf(data = port_500m %>% filter (Name %in% c( 'Milford Haven', 'Cardigan') )) +
@@ -555,7 +555,7 @@ ggplot() +
 
 ### 2.7 Remove points on land
 
-```{r remove points on land, include=FALSE}
+```{r remove points on land, include=TRUE,eval = FALSE}
 tacsat_fs_land = tacsat_fs_ports %>% 
   st_join( europe_aoi , join = st_intersects, left = T )%>%
   mutate  ( SI_LAND  = ifelse ( is.na ( Id ), FALSE ,TRUE))%>%
@@ -566,7 +566,7 @@ st_write( tacsat_fs_land, dsn = ".\\workflow_outputs\\spatial\\tacsat_fs_land.ge
 
 Investigate the points on land.
 
-```{r investiagte points on land, include=FALSE}
+```{r investiagte points on land, include=TRUE,eval = FALSE}
 tacsat_fs_land%>%st_drop_geometry()%>%group_by(SI_LAND)%>%count()
 
 
@@ -579,7 +579,7 @@ ggplot() +
   coord_sf(xlim = c(- 5.5, -4), ylim = c(51.6, 52.2))
 ```
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
 tacsat_fs_land = tacsat_fs_land %>% mutate ( SI_STATE = ifelse  (  SI_SP  >= 1 & SI_SP <= 6 , 'f', 's'  ))
 
 
@@ -591,7 +591,7 @@ st_write( tacsat_fs_df, dsn = ".\\workflow_outputs\\tacsat_fs_df.geojson", layer
 
 ### Save outputs
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
 #   Save the cleaned EFLALO file 
 
   save(eflalo_fs, file = '.\\workflow_outputs\\eflalo_fs_qc.RData')
@@ -607,7 +607,7 @@ st_write( tacsat_fs_df, dsn = ".\\workflow_outputs\\tacsat_fs_df.geojson", layer
 
 Finally, check well the reported ICES rectangles and the actual rectangles match.
 
-```{r , include=FALSE}
+```{r , include=TRUE,eval = FALSE}
 tac_geom = tacsat_fs_df %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
 
 
