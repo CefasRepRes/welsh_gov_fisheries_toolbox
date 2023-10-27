@@ -31,11 +31,11 @@ plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2
 # create folders for outputs if they do not exist 
 
 # input folder
-inPath = ".\\workflow_outputs"
+inPath = ".\\..\\..\\data\\workflow_outputs"
 
 # data products folder
-dir.create(".\\workflow_outputs\\data-products")
-outPath = ".\\workflow_outputs\\data-products\\"
+dir.create(".\\..\\..\\data\\workflow_outputs\\data-products")
+outPath = ".\\..\\..\\data\\workflow_outputs\\data-products\\"
 
 # geojson output folder
 dir.create(paste0(outPath, "geojson"))
@@ -345,7 +345,7 @@ st_write(table1.6_geom, paste0(outPath, "table1_6_geom.geojson"), layer = "table
 
 # create and save the plot images
 res1 = plot_function(data_plot = table1.1_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "QUARTER")
-ggsave(plot = res1, filename = paste0("table1_1_plot.png"), path = outPath, width = 16, height = 9, dpi = 300)
+ggsave(plot = res1, filename = paste0("table1_1_plot.png"), path = plotsPath, width = 16, height = 9, dpi = 300)
 
 res2 = plot_function(data_plot = table1.2_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Year")
 ggsave(plot = res2, filename = paste0("table1_2_plot.png"), path = plotsPath, width = 16, height = 9, dpi = 300)
