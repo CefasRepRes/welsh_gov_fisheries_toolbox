@@ -5,7 +5,7 @@ date: "2023-09-14"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=TRUE, eval=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 ## Load required libraries
@@ -18,20 +18,20 @@ library(ggplot2)    ## R Package for plotting and graphs
 
 Set the working directory if it is not already set to the data folder.
 
-```{r set wd, include=FALSE}
+```{r set wd, include=TRUE, eval=FALSE}
 setwd('./../../data')
 ```
 
 Load the data created via by the previouis workflow.
 
-```{r load data, include=FALSE}
+```{r load data, include=TRUE, eval=FALSE}
 load(".\\workflow_outputs\\eflalo.RData")
 load(".\\workflow_outputs\\tacsat.RData")
 ```
 
 Select fleet segment. Similarly to the previous if statement, this section selects which segment of the dataset is being analised. The options are Over 12m vessels, Under 12m vessels and all vessels.
 
-```{r select fleet segment, include=FALSE}
+```{r select fleet segment, include=TRUE, eval=FALSE}
 fleet_segment = 'under12' ## Options: ( 'over12', 'under12', 'all' )
  
 
@@ -67,7 +67,7 @@ if ( fleet_segment == 'over12')  {
 
 Filter the columns to find all of the entries listed only once each, regardless of how many times they occur in the column. Secondly, filter the eflalo_fs. dataset to vessels where the VE_COU column is listed as 'GBE'. These entries are assigned to eflalo_fs, which comes before the =. Using the %>% pipeline from the dplyr package, the object which will have the actions done to it is listed first after the =. Following this, the filter function is applied to eflalo_fs. Usually the format would be filter(eflalo_fs., VE_COU == 'GBE'), but as eflalo_fs. has been specified before the pipe, it is not included in the brackets as R already knows to apply the function to this object. Sometimes, programmers will put a . in place on the object, as a way of signifying the object again, e.g. eflalo_fs. %>% filter(., VE_COU == 'GBE'). But this is not technically necessary.
 
-```{r explore vessels, include=FALSE}
+```{r explore vessels, include=TRUE, eval=FALSE}
 ## Explore the stats from EFLALO to get fleet statistics and fleet characterisation
 
 
@@ -92,7 +92,7 @@ Here, multiple pipes are used, meaning multiple functions are applied to the obj
 
 Here, vessels 10m or greater in length, tht came from GeoFISH are selected, to see the distribution of vessels between sources. Summary statistics are provided for the vessel lengths and graphs are plotted to display these.
 
-```{r check vessel lengths, include=FALSE}
+```{r check vessel lengths, include=TRUE, eval=FALSE}
   ## Check vessel length categories
   
   eflalo_fs %>% filter( VE_LEN >= 10  & SOURCE == 'geofish')
@@ -108,7 +108,7 @@ Here, vessels 10m or greater in length, tht came from GeoFISH are selected, to s
 
 Create vessel length categories based on the fleet segment. The chosen segment dictates the category distribution. This is done via an ifelse statement, as above. VE_LEN_CAT does not yet exist, so it is created here, using what follows the =. Categories are created using breaks, as the categories will reside in between each break value. E.g. the first category is -Inf to 4.5, meaning anything below 4.5 is assigned here. Then anything between 4.5 and 5 is assigned to the next category, and so on. Finally, the labels are assigned in the same order, so it is important they are correctly located in the list. 
 
-```{r vessel length categories, include=FALSE}
+```{r vessel length categories, include=TRUE, eval=FALSE}
   ## Create the VESSEL LENGTH CAGTEGORY to explore data by vessel length classes
   
     if ( fleet_segment == 'over12')  {  
@@ -142,7 +142,7 @@ Create vessel length categories based on the fleet segment. The chosen segment d
 
 Create the trip days field by calculating the difference between departure and landing time.
 
-```{r , include=FALSE}
+```{r , include=TRUE, eval=FALSE}
   ## Create the field "trip_days" with duration of each trips as   number of days  
 
   eflalo_fs  = eflalo_fs %>% mutate ( trip_days = as.numeric(difftime(eflalo_fs$FT_LDATIM, eflalo_fs$FT_DDATIM), units = "days") ) 
@@ -157,7 +157,7 @@ Plot the categories/columns to understand the fleet composition.
 
 Plot 1 is a bar graph which shows the number of trips made per vessel category.
 
-```{r plot 1, include=FALSE}
+```{r plot 1, include=TRUE, eval=FALSE}
   ## Plot the categories to understand your fleet composition
   
     ## PLOT 1: Number of trips by vessel length category 
@@ -168,7 +168,7 @@ Plot 1 is a bar graph which shows the number of trips made per vessel category.
 
 Plot 2 shows the number of trips made per gear type.
 
-```{r plot 2.1, include=FALSE}
+```{r plot 2.1, include=TRUE, eval=FALSE}
     ## PLOT 2.1: Number of trips by gear category 
     
     ggplot(data = eflalo_fs%>%distinct(FT_REF, LE_GEAR), aes(LE_GEAR)) +
@@ -177,7 +177,7 @@ Plot 2 shows the number of trips made per gear type.
 
 Another way of doing this is using facet wrap. This will create individual plots for each element of the chosen category, which in this case is VE_LEN_CAT.
 
-```{r plot 2.2, include=FALSE}
+```{r plot 2.2, include=TRUE, eval=FALSE}
     ## PLOT 2.2: Number of trips by gear category, using facet wrap for each length category
     
     ggplot(data = eflalo_fs%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR), aes(LE_GEAR)  ) +
@@ -185,7 +185,7 @@ Another way of doing this is using facet wrap. This will create individual plots
       facet_wrap( ~ VE_LEN_CAT)
 ```
 
-```{r plot 2.3, include=FALSE}
+```{r plot 2.3, include=TRUE, eval=FALSE}
     ## Now for each gear type
     
     ggplot(data = eflalo_fs%>%distinct(FT_REF,VE_LEN_CAT, LE_GEAR) , aes(VE_LEN_CAT)  ) +
@@ -195,7 +195,7 @@ Another way of doing this is using facet wrap. This will create individual plots
 
 The object res1 is created by summing the total weight of each species caught and each gear type used. These elements are chosen using the group_by function, which tells R to put entries with the same values in these columns together, summing the contents of their LE_KG columns and assigning the output to a new column: le_kg_total. Finally, the rows are sorted in descending order by total weight, but separated by gear type, so the same gear types can be compared easily. 
 
-```{r plot 3, include=FALSE}
+```{r plot 3, include=TRUE, eval=FALSE}
     ## PLOT 3: Main species captured
     
       ## Rank the main species captured by gear type
@@ -216,7 +216,7 @@ The object res1 is created by summing the total weight of each species caught an
 
 Plot 4 filters for trips which are claiming extremely long duration. These are plotted via histogram. Secondly, trips of less than 50 days are plotted.
 
-```{r plot 4, include=FALSE}
+```{r plot 4, include=TRUE, eval=FALSE}
     ## PLOT 4: Fishing trip duration and fish duration by vessel length. 
     
       #Q1: Do we expect longer trips from larger vessels?
@@ -231,7 +231,7 @@ Plot 4 filters for trips which are claiming extremely long duration. These are p
 
 Save outputs.
 
-```{r , include=FALSE}
+```{r , include=TRUE, eval=FALSE}
     write.csv( x = res1, file =  ".\\workflow_outputs\\species_kg_ranked_by_gear.csv", row.names=FALSE)
     
     ## Save the intermediate EFLALO and TACSAT datasets
