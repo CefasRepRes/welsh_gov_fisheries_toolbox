@@ -8,6 +8,10 @@ setwd('./../../data')
 load(".\\workflow_outputs\\eflalo.RData")
 load(".\\workflow_outputs\\tacsat.RData")
 
+
+
+ 
+
 ### 1. Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section ####
 
 ## Fleet segment: 
@@ -18,7 +22,7 @@ load(".\\workflow_outputs\\tacsat.RData")
 ### If you want to analyse a specific section of the data, apply the following if statement
 
 
-fleet_segment = 'under12' ## Options: ( 'over12', 'under12', 'all' )
+fleet_segment = 'all' ## Options: ( 'over12', 'under12', 'all' )
 
 
 if ( fleet_segment == 'over12')  { 
@@ -270,8 +274,8 @@ eflalo_fs  = eflalo_fs %>% mutate ( trip_days = as.numeric(difftime(eflalo_fs$FT
       ## if LE_KG or LE_VALUE is NA , replace by 0s'
       
       
-      eflaloM = eflaloM %>% mutate ( LE_VALUE_TOT = 0 )
-      eflaloM = eflaloM %>% mutate ( LE_EURO_TOT = LE_VALUE_TOT   )
+      #eflaloM = eflaloM %>% mutate ( LE_VALUE_TOT = 0 )
+      #eflaloM = eflaloM %>% mutate ( LE_EURO_TOT = LE_VALUE_TOT   )
       
       tacsatEflalo  = tacsatEflalo %>% as.data.frame()
       eflaloM = eflaloM%>% as.data.frame()

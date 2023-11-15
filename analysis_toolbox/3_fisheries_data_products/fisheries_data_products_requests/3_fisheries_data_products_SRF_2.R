@@ -7,25 +7,6 @@ library(sf)
 library(rnaturalearth)
 library(devtools)
 
-# function for plotting data products - to be used later, it is just common practice to put functions at the top of scripts
-plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2 = NULL  ) {
-  
-  gg1 =  ggplot() + geom_sf( data =   world     ) +
-    geom_sf (data = data_plot , aes(color = sum_intv,  fill = sum_intv) ) +
-    theme_bw() +
-    coord_sf(xlim = lons, ylim = lats, expand = FALSE) #+
-    #labs(fill = "Effort") # +
-  # facet_wrap( ~ get( col_facet1) + get( col_facet2)  )
-  if ( is.null( col_facet2 )  )  {
-    gg1 =  gg1 +
-      facet_wrap( ~ get( col_facet1)  )
-  } else  {
-    gg1 =  gg1 +
-      facet_wrap( ~ get( col_facet1) +get( col_facet2)   )
-  }
-  return(gg1)
-}
-
 
 
 # create folders for outputs if they do not exist 
@@ -49,35 +30,28 @@ plotsPath = paste0(outPath, "plots\\")
 
 year = 2022
 
-load(file = paste0(inPath, "/eflalo_output_", year , ".RData")  )
-load(file = paste0(inPath, "/tacsatEflalo_output_", year , ".RData")  )
+ 
+load(file = paste0(inPath, "/tacsatEflalo_output_", year , "SRF_2_FDP_a.RData")  )
 
 ## 3.2 Welsh Gov Fisheries Data Product ----
 
+### CONVERT WIDE FORMAT INTO LONG 
 
 
-# Create vessel length class: Add the vessel length category using  LENGTHCAT field
-
-len_labels = c("0-5m", "5-7m", "7-10m", ">10m")
-
-tacsatEflalo$LENGTHCAT <- tacsatEflalo$VE_LEN %>% cut(breaks=c(0, 5, 7, 10, 'inf'), 
-                                                      right = FALSE ,include.lowest = TRUE,
-                                                      labels = len_labels
-                                                      )
+#####
 
 
-quar_labels = c("1", "2", "3", "4")
-tacsatEflalo$QUARTER = tacsatEflalo$Month %>% cut(breaks = c(0, 4, 7, 10, 12),
-                                                  right = F, include.lowest = T,
-                                                  labels = quar_labels
-                                                  )
+## ASSGIN C-SQuare label
 
+  
 tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
 
 
 
 # New field added for the 2020 datacall including unique vessels id's  #
 # This vessel id is used to calculate unique vessels in a c-square and  #
+
+
 VE_lut <- data.frame(VE_REF = unique(c(tacsatEflalo$VE_REF, eflalo_output$VE_REF)))
 fmt <- paste0("%0", floor(log10(nrow(VE_lut))) + 1, "d")
 VE_lut$VE_ID <- paste0(tacsatEflalo$VE_COU[1], sprintf(fmt, 1:nrow(VE_lut))) # use relevant country code!
@@ -85,18 +59,18 @@ VE_lut$VE_ID <- paste0(tacsatEflalo$VE_COU[1], sprintf(fmt, 1:nrow(VE_lut))) # u
 
 # join onto data tables
 table1 <- left_join(tacsatEflalo, VE_lut)
-table2 <- left_join(eflalo_output, VE_lut)
+ 
 
 table1$VE_KW = as.numeric(table1$VE_KW)
 
 
-# Table 1
+# SRF FDP a
 
 ### Quarter, 0.05 Csquare, gear
 
 table1.1 = 
   table1 %>%
-  group_by(VE_COU,Year, QUARTER,Csquare,LE_GEAR ) %>%
+  group_by(Year, Month ,Csquare,LE_GEAR, LE_SPE  ) %>%
   summarise(
     mean_si_sp       = mean(SI_SP),
     sum_intv         = sum(INTV, na.rm = TRUE),
@@ -119,8 +93,55 @@ table1.1 =
 write.csv(table1.1, paste0(outPath, year, "_table1_1.csv"))
 
 
+
+####  SRF 2 FDP c
+ 
+
+
+tacsatEflalo_output = tacsatEflalo_output_ %>% fitler ( fleet_segment = ">12m")
+
 ### Year, 0.05 Csquare, gear
-table1.2 = 
+srf2_fdp_b = 
+  tacsatEflalo_output %>%
+  group_by(VE_COU,Year,Csquare,LE_GEAR) %>%
+  summarise(
+    mean_si_sp       = mean(SI_SP),
+    sum_intv         = sum(INTV, na.rm = TRUE),
+    mean_intv        = mean(INTV, na.rm=TRUE),
+    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    sum_kwHour       = sum(kwHour, na.rm=TRUE),
+    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+    vessel_ids       = ifelse (
+      n_distinct(VE_ID) < 3,
+      paste(unique(VE_ID), collapse = ";"),
+      'not_required'
+    )
+  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare) %>%
+  mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+  as.data.frame()
+
+write.csv(table1.2, paste0(outPath, year, "_table1_2.csv"))
+
+
+
+
+
+
+
+
+
+
+
+####  SRF 2 FDP b 
+
+load(file = paste0(inPath, "/tacsatEflalo_output_", year , "SRF_FDP_b.RData")  )
+
+
+### Year, 0.05 Csquare, gear
+srf2_fdp_b = 
   table1 %>%
   group_by(VE_COU,Year,Csquare,LE_GEAR) %>%
   summarise(
@@ -145,11 +166,17 @@ table1.2 =
 write.csv(table1.2, paste0(outPath, year, "_table1_2.csv"))
 
 
-### Month, 0.05 Csquare, gear
 
-table1.3 = 
-  table1 %>%
-  group_by(VE_COU,Month,Csquare,LE_GEAR) %>%
+
+####  SRF 2 FDP d
+
+ 
+tacsatEflalo_output = tacsatEflalo_output_ %>% fitler ( fleet_segment = ">12m")
+
+### Year, 0.05 Csquare, gear
+srf2_fdp_b = 
+  tacsatEflalo_output %>%
+  group_by(VE_COU,Year,Csquare,LE_GEAR) %>%
   summarise(
     mean_si_sp       = mean(SI_SP),
     sum_intv         = sum(INTV, na.rm = TRUE),
@@ -169,92 +196,105 @@ table1.3 =
   mutate(AverageGearWidth = NA %>% as.numeric()) %>%
   as.data.frame()
 
-write.csv(table1.3, paste0(outPath, year, "_table1_3.csv"))
+write.csv(table1.2, paste0(outPath, year, "_table1_2.csv"))
 
 
-### Quarter, 0.01 Csquare, gear, length category
-
-table1.4 = 
-  table1 %>% 
-  group_by(VE_COU,QUARTER,Csquare_01,LE_GEAR,LENGTHCAT) %>%
-  summarise(
-    mean_si_sp       = mean(SI_SP),
-    sum_intv         = sum(INTV, na.rm = TRUE),
-    mean_intv        = mean(INTV, na.rm=TRUE),
-    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
-    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
-    sum_kwHour       = sum(kwHour, na.rm=TRUE),
-    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
-    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
-    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
-    vessel_ids       = ifelse (
-      n_distinct(VE_ID) < 3,
-      paste(unique(VE_ID), collapse = ";"),
-      'not_required'
-    )
-  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare_01) %>%
-  #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
-  as.data.frame()
-
-write.csv(table1.4, paste0(outPath, year, "_table1_4.csv"))
 
 
-### Year, 0.01 Csquare, gear, length category
-
-table1.5 = 
-  table1 %>%
-  group_by(VE_COU,Year,Csquare_01,LE_GEAR,LENGTHCAT) %>%
-  summarise(
-    mean_si_sp       = mean(SI_SP),
-    sum_intv         = sum(INTV, na.rm = TRUE),
-    mean_intv        = mean(INTV, na.rm=TRUE),
-    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
-    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
-    sum_kwHour       = sum(kwHour, na.rm=TRUE),
-    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
-    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
-    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
-    vessel_ids       = ifelse (
-      n_distinct(VE_ID) < 3,
-      paste(unique(VE_ID), collapse = ";"),
-      'not_required'
-    )
-  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare_01) %>%
-  #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
-  as.data.frame()
-
-write.csv(table1.5, paste0(outPath, year, "_table1_5.csv"))
 
 
-### Month, 0.01 Csquare, gear, length category
 
-table1.6 = 
-  table1 %>%
-  group_by(VE_COU,Month,Csquare_01,LE_GEAR,LENGTHCAT) %>%
-  summarise(
-    mean_si_sp       = mean(SI_SP),
-    sum_intv         = sum(INTV, na.rm = TRUE),
-    mean_intv        = mean(INTV, na.rm=TRUE),
-    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
-    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
-    sum_kwHour       = sum(kwHour, na.rm=TRUE),
-    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
-    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
-    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
-    vessel_ids       = ifelse (
-      n_distinct(VE_ID) < 3,
-      paste(unique(VE_ID), collapse = ";"),
-      'not_required'
-    )
-  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare_01) %>%
-  #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
-  as.data.frame()
 
-write.csv(table1.6, paste0(outPath, year, "_table1_6.csv"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 ### DATA PRODUCTS VISUALIZATION ###############
+
+
+
+
+# function for plotting data products - to be used later, it is just common practice to put functions at the top of scripts
+plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2 = NULL  ) {
+  
+  gg1 =  ggplot() + geom_sf( data =   world     ) +
+    geom_sf (data = data_plot , aes(color = sum_intv,  fill = sum_intv) ) +
+    theme_bw() +
+    coord_sf(xlim = lons, ylim = lats, expand = FALSE) #+
+  #labs(fill = "Effort") # +
+  # facet_wrap( ~ get( col_facet1) + get( col_facet2)  )
+  if ( is.null( col_facet2 )  )  {
+    gg1 =  gg1 +
+      facet_wrap( ~ get( col_facet1)  )
+  } else  {
+    gg1 =  gg1 +
+      facet_wrap( ~ get( col_facet1) +get( col_facet2)   )
+  }
+  return(gg1)
+}
+
+
+
 
 ## bounding box area limits definition
 
