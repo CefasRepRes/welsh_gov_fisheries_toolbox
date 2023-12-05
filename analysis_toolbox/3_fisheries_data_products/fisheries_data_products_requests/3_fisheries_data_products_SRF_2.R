@@ -6,17 +6,18 @@ library(vmstools)
 library(sf)
 library(rnaturalearth)
 library(devtools)
+library(data.table)
 
-
+setwd(".\\..\\..\\data")
 
 # create folders for outputs if they do not exist 
 
 # input folder
-inPath = ".\\workflow_outputs"
+inPath = "..\\analysis_toolbox\\3_fisheries_data_products\\fisheries_data_products_requests"
 
 # data products folder
-dir.create(".\\workflow_outputs\\data-products")
-outPath = ".\\workflow_outputs\\data-products\\"
+dir.create(paste0(inPath, "\\data-products"))
+outPath = paste0(inPath, "\\data-products\\")
 
 # geojson output folder
 dir.create(paste0(outPath, "geojson"))
@@ -28,29 +29,23 @@ plotsPath = paste0(outPath, "plots\\")
 
 #######
 
+csq = 'csq005'
+
+#######################
+##### SRF 2 FDP A #####
+#######################
+
 year = 2022
 
- 
-load(file = paste0(inPath, "/tacsatEflalo_output_", year , "SRF_2_FDP_a.RData")  )
+analysis_type = 'welsh_fleet'
 
-## 3.2 Welsh Gov Fisheries Data Product ----
-
-### CONVERT WIDE FORMAT INTO LONG 
-
-
-#####
-
+load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
 
 ## ASSGIN C-SQuare label
 
-  
+
 tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
-
-
-
-# New field added for the 2020 datacall including unique vessels id's  #
-# This vessel id is used to calculate unique vessels in a c-square and  #
-
 
 VE_lut <- data.frame(VE_REF = unique(c(tacsatEflalo$VE_REF, eflalo_output$VE_REF)))
 fmt <- paste0("%0", floor(log10(nrow(VE_lut))) + 1, "d")
@@ -59,18 +54,38 @@ VE_lut$VE_ID <- paste0(tacsatEflalo$VE_COU[1], sprintf(fmt, 1:nrow(VE_lut))) # u
 
 # join onto data tables
 table1 <- left_join(tacsatEflalo, VE_lut)
- 
-
 table1$VE_KW = as.numeric(table1$VE_KW)
 
+# table1_bk <- table1
+# table1 <- table1_bk
 
-# SRF FDP a
 
-### Quarter, 0.05 Csquare, gear
+# table1p = table1 %>%
+#   pivot_longer(cols = starts_with("LE_KG"),
+#                names_to = "LE_SPE",
+#                values_to = "LE_KG")
 
-table1.1 = 
-  table1 %>%
-  group_by(Year, Month ,Csquare,LE_GEAR, LE_SPE  ) %>%
+# table1$LE_SPE <- substr(table1$LE_SPE, start = 7, stop = nchar(table1$LE_SPE))
+
+table1 <- data.table(table1)
+
+table1m <- melt(table1, 
+            measure = patterns("LE_KG" = "LE_KG", "LE_EURO" = "LE_EURO"),
+            value.name = c("LE_KG", "LE_EURO"), 
+            variable.name = "LE_SPE")
+
+table1m[, LE_SPE := factor(LE_SPE, 
+                        labels = unique(gsub("(.*)(_)([A-Z]*)$", "\\3", 
+                                             grep("LE_KG|LE_EURO", colnames(table1), value = TRUE))))]
+
+
+### Year, Month, 0.01 Csquare, gear, species
+
+table1.a_input <- table1m
+
+table1.a =
+  table1.a_input %>%
+  group_by(SI_YEAR, Month, Csquare_05, LE_GEAR, LE_SPE) %>%
   summarise(
     mean_si_sp       = mean(SI_SP),
     sum_intv         = sum(INTV, na.rm = TRUE),
@@ -78,8 +93,10 @@ table1.1 =
     mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
     mean_ve_kw       = mean(VE_KW, na.rm = TRUE),
     sum_kwHour       = sum(kwHour, na.rm=TRUE),
-    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
+    #sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
     #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
+    sum_le_kg_tot    = sum(LE_KG, na.rm = TRUE),
+    sum_le_euro_tot  = sum(LE_EURO, na.rm = TRUE),
     n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
     vessel_ids       = ifelse (
       n_distinct(VE_ID) < 3,
@@ -90,167 +107,340 @@ table1.1 =
   #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
   as.data.frame()
 
-write.csv(table1.1, paste0(outPath, year, "_table1_1.csv"))
+write.csv(table1.a, paste0(outPath, "\\", year, "_table1_a_", csq, "_SRF2.csv"), row.names = FALSE)
 
 
 
-####  SRF 2 FDP c
+#######################
+##### SRF 2 FDP C #####
+#######################
+
+years = 2012:2021
+# year = 2021
+analysis_type = 'welsh_waters' ## welsh_fleet / welsh_waters
+
+
+
+
+for ( year in years ) {
+  
+  load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+  load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+  
+  ## ASSGIN C-SQuare label
+  
+  if (year == 2012) {
+    tacsatEflalo_all <- tacsatEflalo
+    eflalo_all <- eflalo_output
+  } else {
+    tacsatEflalo_all <- tacsatEflalo_all %>% bind_rows(., tacsatEflalo)
+    eflalo_all <- eflalo_all %>% bind_rows(., eflalo_output)
+  }
+} 
+
+  tacsatEflalo <- tacsatEflalo_all
+  eflalo_output <- eflalo_all
+  
+  tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
+  
+  VE_lut <- data.frame(VE_REF = unique(c(tacsatEflalo$VE_REF, eflalo_output$VE_REF)))
+  fmt <- paste0("%0", floor(log10(nrow(VE_lut))) + 1, "d")
+  VE_lut$VE_ID <- paste0(tacsatEflalo$VE_COU[1], sprintf(fmt, 1:nrow(VE_lut))) # use relevant country code!
+  
+  
+  # join onto data tables
+  table1 <- left_join(tacsatEflalo, VE_lut)
+  table1$VE_KW = as.numeric(table1$VE_KW)
+  
+  # table1_bk <- table1
+  # table1 <- table1_bk
+  
+  
+  # table1p = table1 %>%
+  #   pivot_longer(cols = starts_with("LE_KG"),
+  #                names_to = "LE_SPE",
+  #                values_to = "LE_KG")
+  
+  # table1$LE_SPE <- substr(table1$LE_SPE, start = 7, stop = nchar(table1$LE_SPE))
+  
+  table1 <- data.table(table1)
+  
+  table1m <- melt(table1, 
+                  measure = patterns("LE_KG" = "LE_KG", "LE_EURO" = "LE_EURO"),
+                  value.name = c("LE_KG", "LE_EURO"), 
+                  variable.name = "LE_SPE")
+  
+  table1m[, LE_SPE := factor(LE_SPE, 
+                             labels = unique(gsub("(.*)(_)([A-Z]*)$", "\\3", 
+                                                  grep("LE_KG|LE_EURO", colnames(table1), value = TRUE))))]
+
+  table1_input = table1m %>% filter (VE_LEN > 12)
+  
+  ### Year, Month, 0.01 Csquare, gear, species
+  table1.output = 
+    table1_input %>%
+    group_by(SI_YEAR, Month, Csquare_05, LE_GEAR, LE_SPE) %>%
+    summarise(
+      mean_si_sp       = mean(SI_SP),
+      sum_intv         = sum(INTV, na.rm = TRUE),
+      mean_intv        = mean(INTV, na.rm=TRUE),
+      mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+      mean_ve_kw       = mean(VE_KW, na.rm = TRUE),
+      sum_kwHour       = sum(kwHour, na.rm=TRUE),
+      sum_le_kg        = sum(LE_KG, na.rm = TRUE),
+      sum_le_euro      = sum(LE_EURO, na.rm = TRUE),
+      n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+      vessel_ids       = ifelse (
+        n_distinct(VE_ID) < 3,
+        paste(unique(VE_ID), collapse = ";"),
+        'not_required'
+      )
+    ) %>% relocate(n_vessels, vessel_ids, .after = LE_GEAR) %>%
+    #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+    as.data.frame()
+  
+  if (analysis_type == 'welsh_fleet') {
+    write.csv(table1.output, paste0(outPath, "\\table1_c_", csq, "_SRF2.csv"), row.names = FALSE)
+  } else if (analysis_type == 'welsh_waters') {
+    write.csv(table1.output, paste0(outPath, "\\table1_d_", csq, "_SRF2.csv"), row.names = FALSE)
+  }
+
+
+
+
+#######################
+##### SRF 2 FDP B #####
+#######################
+
+year = 2022
+
+analysis_type = 'welsh_waters'
+
+load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+
+## ASSGIN C-SQuare label
+tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
+
+VE_lut <- data.frame(VE_REF = unique(c(tacsatEflalo$VE_REF, eflalo_output$VE_REF)))
+fmt <- paste0("%0", floor(log10(nrow(VE_lut))) + 1, "d")
+VE_lut$VE_ID <- paste0(tacsatEflalo$VE_COU[1], sprintf(fmt, 1:nrow(VE_lut))) # use relevant country code!
+
+# join onto data tables
+table1 <- left_join(tacsatEflalo, VE_lut)
+table1$VE_KW = as.numeric(table1$VE_KW)
+
+# table1_bk <- table1
+# table1 <- table1_bk
+
+# table1p = table1 %>%
+#   pivot_longer(cols = starts_with("LE_KG"),
+#                names_to = "LE_SPE",
+#                values_to = "LE_KG")
+
+# table1$LE_SPE <- substr(table1$LE_SPE, start = 7, stop = nchar(table1$LE_SPE))
+
+table1 <- data.table(table1)
+
+table1m <- melt(table1, 
+                measure = patterns("LE_KG" = "LE_KG", "LE_EURO" = "LE_EURO"),
+                value.name = c("LE_KG", "LE_EURO"), 
+                variable.name = "LE_SPE")
+
+table1m[, LE_SPE := factor(LE_SPE, 
+                           labels = unique(gsub("(.*)(_)([A-Z]*)$", "\\3", 
+                                                grep("LE_KG|LE_EURO", colnames(table1), value = TRUE))))]
+
+table1.b_input <- table1m
+
+### Year, Month, 0.01 Csquare, gear, species
+table1.b = 
+  table1.b_input %>%
+  group_by(SI_YEAR, Month, Csquare_05, LE_GEAR, LE_SPE) %>%
+  summarise(
+    mean_si_sp       = mean(SI_SP),
+    sum_intv         = sum(INTV, na.rm = TRUE),
+    mean_intv        = mean(INTV, na.rm=TRUE),
+    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+    sum_kwHour       = sum(kwHour, na.rm=TRUE),
+    sum_le_kg        = sum(LE_KG, na.rm = TRUE),
+    sum_le_euro      = sum(LE_EURO, na.rm = TRUE),
+    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+    vessel_ids       = ifelse (
+      n_distinct(VE_ID) < 3,
+      paste(unique(VE_ID), collapse = ";"),
+      'not_required'
+    )
+  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare_05) %>%
+  mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+  as.data.frame()
+
+write.csv(table1.b, paste0(outPath, "\\", year, "_table1_b_", csq, "_SRF2.csv"), row.names = FALSE)
+
+
+
+#######################
+##### SRF 2 FDP D #####
+#######################
+
+###### Fishing Activity, >12m vessel (all nationalities) in the Welsh zone for selected years
+
+years = 2012:2021
+
+analysis_type = 'welsh_waters'
+
+for (year in years) {
+  
+  load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+  load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+  
+  ## ASSGIN C-SQuare label
+  
+  
+  tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
+  
+  VE_lut <- data.frame(VE_REF = unique(c(tacsatEflalo$VE_REF, eflalo_output$VE_REF)))
+  fmt <- paste0("%0", floor(log10(nrow(VE_lut))) + 1, "d")
+  VE_lut$VE_ID <- paste0(tacsatEflalo$VE_COU[1], sprintf(fmt, 1:nrow(VE_lut))) # use relevant country code!
+  
+  
+  # join onto data tables
+  table1 <- left_join(tacsatEflalo, VE_lut)
+  table1$VE_KW = as.numeric(table1$VE_KW)
+  
+  # table1_bk <- table1
+  # table1 <- table1_bk
+  
+  
+  # table1p = table1 %>%
+  #   pivot_longer(cols = starts_with("LE_KG"),
+  #                names_to = "LE_SPE",
+  #                values_to = "LE_KG")
+  
+  # table1$LE_SPE <- substr(table1$LE_SPE, start = 7, stop = nchar(table1$LE_SPE))
+  
+  table1 <- data.table(table1)
+  
+  table1m <- melt(table1, 
+                  measure = patterns("LE_KG" = "LE_KG", "LE_EURO" = "LE_EURO"),
+                  value.name = c("LE_KG", "LE_EURO"), 
+                  variable.name = "LE_SPE")
+  
+  table1m[, LE_SPE := factor(LE_SPE, 
+                             labels = unique(gsub("(.*)(_)([A-Z]*)$", "\\3", 
+                                                  grep("LE_KG|LE_EURO", colnames(table1), value = TRUE))))]
  
-
-
-tacsatEflalo_output = tacsatEflalo_output_ %>% fitler ( fleet_segment = ">12m")
-
-### Year, 0.05 Csquare, gear
-srf2_fdp_b = 
-  tacsatEflalo_output %>%
-  group_by(VE_COU,Year,Csquare,LE_GEAR) %>%
-  summarise(
-    mean_si_sp       = mean(SI_SP),
-    sum_intv         = sum(INTV, na.rm = TRUE),
-    mean_intv        = mean(INTV, na.rm=TRUE),
-    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
-    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
-    sum_kwHour       = sum(kwHour, na.rm=TRUE),
-    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
-    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
-    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
-    vessel_ids       = ifelse (
-      n_distinct(VE_ID) < 3,
-      paste(unique(VE_ID), collapse = ";"),
-      'not_required'
-    )
-  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare) %>%
-  mutate(AverageGearWidth = NA %>% as.numeric()) %>%
-  as.data.frame()
-
-write.csv(table1.2, paste0(outPath, year, "_table1_2.csv"))
-
-
-
-
-
-
-
-
-
-
-
-####  SRF 2 FDP b 
-
-load(file = paste0(inPath, "/tacsatEflalo_output_", year , "SRF_FDP_b.RData")  )
-
-
-### Year, 0.05 Csquare, gear
-srf2_fdp_b = 
-  table1 %>%
-  group_by(VE_COU,Year,Csquare,LE_GEAR) %>%
-  summarise(
-    mean_si_sp       = mean(SI_SP),
-    sum_intv         = sum(INTV, na.rm = TRUE),
-    mean_intv        = mean(INTV, na.rm=TRUE),
-    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
-    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
-    sum_kwHour       = sum(kwHour, na.rm=TRUE),
-    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
-    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
-    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
-    vessel_ids       = ifelse (
-      n_distinct(VE_ID) < 3,
-      paste(unique(VE_ID), collapse = ";"),
-      'not_required'
-    )
-  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare) %>%
-  mutate(AverageGearWidth = NA %>% as.numeric()) %>%
-  as.data.frame()
-
-write.csv(table1.2, paste0(outPath, year, "_table1_2.csv"))
-
-
-
-
-####  SRF 2 FDP d
-
- 
-tacsatEflalo_output = tacsatEflalo_output_ %>% fitler ( fleet_segment = ">12m")
-
-### Year, 0.05 Csquare, gear
-srf2_fdp_b = 
-  tacsatEflalo_output %>%
-  group_by(VE_COU,Year,Csquare,LE_GEAR) %>%
-  summarise(
-    mean_si_sp       = mean(SI_SP),
-    sum_intv         = sum(INTV, na.rm = TRUE),
-    mean_intv        = mean(INTV, na.rm=TRUE),
-    mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
-    mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
-    sum_kwHour       = sum(kwHour, na.rm=TRUE),
-    sum_le_kg_tot    = sum(LE_KG_TOT, na.rm = TRUE),
-    #sum_le_euro_tot  = sum(LE_EURO_TOT, na.rm = TRUE),
-    n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
-    vessel_ids       = ifelse (
-      n_distinct(VE_ID) < 3,
-      paste(unique(VE_ID), collapse = ";"),
-      'not_required'
-    )
-  ) %>% relocate(n_vessels, vessel_ids, .before = Csquare) %>%
-  mutate(AverageGearWidth = NA %>% as.numeric()) %>%
-  as.data.frame()
-
-write.csv(table1.2, paste0(outPath, year, "_table1_2.csv"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  table1.d_input = table1m %>% filter(VE_LEN > 12)
+  
+  ### Year, Month, 0.01 Csquare, gear, species
+  table1.d = 
+    table1.d_input %>%
+    group_by(SI_YEAR, Month, Csquare_05, LE_GEAR, LE_SPE) %>%
+    summarise(
+      mean_si_sp       = mean(SI_SP),
+      sum_intv         = sum(INTV, na.rm = TRUE),
+      mean_intv        = mean(INTV, na.rm=TRUE),
+      mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+      mean_ve_kf       = mean(VE_KW, na.rm = TRUE),
+      sum_kwHour       = sum(kwHour, na.rm=TRUE),
+      sum_le_kg        = sum(LE_KG, na.rm = TRUE),
+      sum_le_euro      = sum(LE_EURO, na.rm = TRUE),
+      n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+      vessel_ids       = ifelse (
+        n_distinct(VE_ID) < 3,
+        paste(unique(VE_ID), collapse = ";"),
+        'not_required'
+      )
+    ) %>% relocate(n_vessels, vessel_ids, .before = Csquare_05) %>%
+    mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+    as.data.frame()
+  
+  write.csv(table1.d, paste0(outPath, "\\", year, "_table1_d_", csq, "_SRF2.csv"), row.names = FALSE)
+
+}
+
+
+
+
+
+
+years = 2012:2021
+
+analysis_type = 'welsh_fleet'
+
+for (year in years) {
+  
+  load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+  load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+  
+  ## ASSGIN C-SQuare label
+  
+  
+  tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
+  
+  VE_lut <- data.frame(VE_REF = unique(c(tacsatEflalo$VE_REF, eflalo_output$VE_REF)))
+  fmt <- paste0("%0", floor(log10(nrow(VE_lut))) + 1, "d")
+  VE_lut$VE_ID <- paste0(tacsatEflalo$VE_COU[1], sprintf(fmt, 1:nrow(VE_lut))) # use relevant country code!
+  
+  
+  # join onto data tables
+  table1 <- left_join(tacsatEflalo, VE_lut)
+  table1$VE_KW = as.numeric(table1$VE_KW)
+  
+  # table1_bk <- table1
+  # table1 <- table1_bk
+  
+  
+  # table1p = table1 %>%
+  #   pivot_longer(cols = starts_with("LE_KG"),
+  #                names_to = "LE_SPE",
+  #                values_to = "LE_KG")
+  
+  # table1$LE_SPE <- substr(table1$LE_SPE, start = 7, stop = nchar(table1$LE_SPE))
+  
+  table1 <- data.table(table1)
+  
+  table1m <- melt(table1, 
+                  measure = patterns("LE_KG" = "LE_KG", "LE_EURO" = "LE_EURO"),
+                  value.name = c("LE_KG", "LE_EURO"), 
+                  variable.name = "LE_SPE")
+  
+  table1m[, LE_SPE := factor(LE_SPE, 
+                             labels = unique(gsub("(.*)(_)([A-Z]*)$", "\\3", 
+                                                  grep("LE_KG|LE_EURO", colnames(table1), value = TRUE))))]
+  
+  table1_input = table1m %>% filter (VE_LEN > 12)
+  
+  ### Year, Month, 0.01 Csquare, gear, species
+  table1.output = 
+    table1_input %>%
+    group_by(SI_YEAR, Month, Csquare_05, LE_GEAR, LE_SPE) %>%
+    summarise(
+      mean_si_sp       = mean(SI_SP),
+      sum_intv         = sum(INTV, na.rm = TRUE),
+      mean_intv        = mean(INTV, na.rm=TRUE),
+      mean_ve_len      = mean(VE_LEN, na.rm = TRUE),
+      mean_ve_kw       = mean(VE_KW, na.rm = TRUE),
+      sum_kwHour       = sum(kwHour, na.rm=TRUE),
+      sum_le_kg        = sum(LE_KG, na.rm = TRUE),
+      sum_le_euro      = sum(LE_EURO, na.rm = TRUE),
+      n_vessels        = n_distinct(VE_ID, na.rm = TRUE),
+      vessel_ids       = ifelse (
+        n_distinct(VE_ID) < 3,
+        paste(unique(VE_ID), collapse = ";"),
+        'not_required'
+      )
+    ) %>% relocate(n_vessels, vessel_ids, .after = LE_GEAR) %>%
+    #mutate(AverageGearWidth = NA %>% as.numeric()) %>%
+    as.data.frame()
+  
+  if (analysis_type == 'welsh_fleet') {
+    write.csv(table1.c, paste0(outPath, "\\", year, "_table1_c_", csq, "_SRF2.csv"), row.names = FALSE)
+  } else if (analysis_type == 'welsh_waters') {
+    write.csv(table1.c, paste0(outPath, "\\", year, "_table1_d_", csq, "_SRF2.csv"), row.names = FALSE)
+  }
+}
 
 
 
@@ -366,38 +556,30 @@ world <- ne_countries(scale = "large", returnclass = "sf")
 
 ## Add the spatial grid geometry to the fisheries data products tables: 
 
-table1.1_geom = csquares_0_05_split_centroids %>% inner_join(table1.1, by = c("csquare" = "Csquare"))
-table1.2_geom = csquares_0_05_split_centroids %>% inner_join(table1.2, by = c("csquare" = "Csquare"))
-table1.3_geom = csquares_0_05_split_centroids %>% inner_join(table1.3, by = c("csquare" = "Csquare"))
-table1.4_geom = csquares_0_01_split_centroids %>% inner_join(table1.4, by = c("csquare" = "Csquare_01"))
-table1.5_geom = csquares_0_01_split_centroids %>% inner_join(table1.5, by = c("csquare" = "Csquare_01"))
-table1.6_geom = csquares_0_01_split_centroids %>% inner_join(table1.6, by = c("csquare" = "Csquare_01"))
+table1.a_geom = csquares_0_01_split_centroids %>% inner_join(table1.a, by = c("csquare" = "Csquare_05"))
+table1.c_geom = csquares_0_01_split_centroids %>% inner_join(table1.c, by = c("csquare" = "Csquare_05"))
+table1.b_geom = csquares_0_01_split_centroids %>% inner_join(table1.b, by = c("csquare" = "Csquare_05"))
+table1.d_geom = csquares_0_01_split_centroids %>% inner_join(table1.d, by = c("csquare" = "Csquare_05"))
 
 # write tables to geojson
 
-st_write(table1.1_geom, paste0(outPath, "table1_1_geom.geojson"), layer = "table1_1_geom.geojson") ## save as geojson 
-st_write(table1.2_geom, paste0(outPath, "table1_2_geom.geojson"), layer = "table1_2_geom.geojson")
-st_write(table1.3_geom, paste0(outPath, "table1_3_geom.geojson"), layer = "table1_3_geom.geojson")
-st_write(table1.4_geom, paste0(outPath, "table1_4_geom.geojson"), layer = "table1_4_geom.geojson")
-st_write(table1.5_geom, paste0(outPath, "table1_5_geom.geojson"), layer = "table1_5_geom.geojson")
-st_write(table1.6_geom, paste0(outPath, "table1_6_geom.geojson"), layer = "table1_6_geom.geojson")
+st_write(table1.a_geom, paste0(gjPath, "table1_a_geom_", year, ".geojson"), layer = paste0("table1_a_geom_", year, ".geojson")) ## save as geojson 
+st_write(table1.c_geom, paste0(gjPath, "table1_c_geom_", year, ".geojson"), layer = paste0("table1_c_geom_", year, ".geojson"))
+st_write(table1.b_geom, paste0(gjPath, "table1_b_geom_", year, ".geojson"), layer = paste0("table1_b_geom_", year, ".geojson"))
+st_write(table1.d_geom, paste0(gjPath, "table1_d_geom_", year, ".geojson"), layer = paste0("table1_d_geom_", year, ".geojson"))
 
 
 # create and save the plot images
-res1 = plot_function(data_plot = table1.1_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "QUARTER")
-ggsave(plot = res1, filename = paste0("table1_1_plot.png"), path = outPath, width = 16, height = 9, dpi = 300)
+resa = plot_function(data_plot = table1.a_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Month")
+ggsave(plot = resa, filename = paste0("table1_a_plot_", year, ".png"), path = plotsPath, width = 16, height = 9, dpi = 300)
 
-res2 = plot_function(data_plot = table1.2_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Year")
-ggsave(plot = res2, filename = paste0("table1_2_plot.png"), path = plotsPath, width = 16, height = 9, dpi = 300)
+resc = plot_function(data_plot = table1.c_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Month")
+ggsave(plot = resc, filename = paste0("table1_c_plot_", year, ".png"), path = plotsPath, width = 16, height = 9, dpi = 300)
 
-res3 = plot_function(data_plot = table1.3_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Month")
-ggsave(plot = res3, filename = paste0("table1_3_plot.png"), path = plotsPath, width = 16, height = 9, dpi = 300)
+resb = plot_function(data_plot = table1.b_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Month")
+ggsave(plot = resb, filename = paste0("table1_b_plot_", year, ".png"), path = plotsPath, width = 16, height = 9, dpi = 300)
 
-res4 = plot_function(data_plot = table1.4_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "QUARTER")
-ggsave(plot = res4, filename = paste0("table1_4_plot.png"), path = plotsPath, width = 16, height = 9, dpi = 300)
+resd = plot_function(data_plot = table1.d_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Month")
+ggsave(plot = resd, filename = paste0("table1_d_plot_", year, ".png"), path = plotsPath, width = 16, height = 9, dpi = 300)
 
-res5 = plot_function(data_plot = table1.5_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Year")
-ggsave(plot = res5, filename = paste0("table1_5_plot.png"), path = plotsPath, width = 16, height = 9, dpi = 300)
 
-res6 = plot_function(data_plot = table1.6_geom, col_plot = 'sum_intv', col_facet1 = "LE_GEAR", col_facet2 = "Month")
-ggsave(plot = res6, filename = paste0("table1_6_plot.png"), path = plotsPath, width = 16, height = 9, dpi = 300)
