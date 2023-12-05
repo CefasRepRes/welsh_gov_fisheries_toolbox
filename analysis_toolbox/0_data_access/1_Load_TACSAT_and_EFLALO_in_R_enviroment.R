@@ -27,7 +27,7 @@ library(ggplot2)    ## R Package for plotting and graphs
 
  ## SELECT THE ANALYSIS OPTION:
   
-  analysis_type = 'welsh_fleet' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
+  analysis_type = 'welsh_waters' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
   
   if ( analysis_type == 'welsh_fleet')  { 
 
@@ -213,8 +213,8 @@ if ( analysis_type == 'welsh_waters'  ) {
 
 ### The EFLALO and TACSAT have been formatted and ready for analysis!!
 
-save(eflalo, file = ".\\workflow_outputs\\eflalo.RData")
-save(tacsat, file = ".\\workflow_outputs\\tacsat.RData")
+save(eflalo, file = ".\\workflow_outputs\\eflalo_ww.RData")
+save(tacsat, file = ".\\workflow_outputs\\tacsat_ww.RData")
 
 
 

@@ -134,8 +134,9 @@ setwd('./../../data')
   
   # Investigate speed pattern through visual inspection of histograms # 
   
+  tacsatpgf <- tacsatp %>% filter(SOURCE == 'geofish')
  
-  ggplot(data = tacsatp, aes(SI_SP)) +
+  ggplot(data = tacsatpgf, aes(SI_SP, fill = SI_STATE)) +
     geom_histogram(
       breaks = seq(0, 10, by =0.4), col = 1) +
     facet_wrap( ~ LE_GEAR, ncol = 4, scales = "free_y") +

@@ -12,8 +12,8 @@ getwd()
 setwd('./../../data')
 
 
-load(".\\workflow_outputs\\eflalo_fs.RData")
-load(".\\workflow_outputs\\tacsat_fs.RData")
+load(".\\workflow_outputs\\eflalo_fs_ww.RData")
+load(".\\workflow_outputs\\tacsat_fs_ww.RData")
 
 
 #### QUALITY CONTROL:  Clean data with potential  outlines ########
@@ -427,7 +427,7 @@ overlaps_analysis %>% filter(FT_REF %in% c( '610736051', '610738638') )
 
 # 2.2.3 Remove points that cannot be possible -----------------------------------------------------------
 
-tacsat_bk = tacsat_fs
+#tacsat_bk = tacsat_fs
 #tacsat_fs = tacsat_bk
 
 tacsat_fs = tacsat_fs %>% filter(abs(SI_LATI) < 90 | abs(SI_LONG) < 180)
@@ -580,7 +580,7 @@ st_write( tacsat_fs_df, dsn = ".\\workflow_outputs\\tacsat_fs_df.geojson", layer
 
 #   Save the cleaned EFLALO file 
 
-  save(eflalo_fs, file = '.\\workflow_outputs\\eflalo_fs_qc.RData')
+  save(eflalo_fs, file = '.\\workflow_outputs\\eflalo_fs_qc_ww.RData')
 
 
 #   Save the cleaned TACSAT file 
@@ -588,7 +588,7 @@ st_write( tacsat_fs_df, dsn = ".\\workflow_outputs\\tacsat_fs_df.geojson", layer
 
   tacsat_fs = tacsat_fs_df
   
-  save(tacsat_fs, file = '.\\workflow_outputs\\tacsat_fs_qc.RData')
+  save(tacsat_fs, file = '.\\workflow_outputs\\tacsat_fs_qc_ww.RData')
 
 
 

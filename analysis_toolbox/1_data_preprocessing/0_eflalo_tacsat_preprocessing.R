@@ -5,8 +5,8 @@ library(ggplot2)
 
 setwd('./../../data')
 
-load(".\\workflow_outputs\\eflalo.RData")
-load(".\\workflow_outputs\\tacsat.RData")
+load(".\\workflow_outputs\\eflalo_ww.RData")
+load(".\\workflow_outputs\\tacsat_ww.RData")
 
 ### Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section.
 
@@ -18,7 +18,7 @@ load(".\\workflow_outputs\\tacsat.RData")
 ### If you want to analyse a specific section of the data, apply the following if statement
 
  
-fleet_segment = 'under12' ## Options: ( 'over12', 'under12', 'all' )
+fleet_segment = 'all' ## Options: ( 'over12', 'under12', 'all' )
  
 
 if ( fleet_segment == 'over12')  { 
@@ -190,7 +190,7 @@ if ( fleet_segment == 'over12')  {
     
     ## Save the intermediate EFLALO and TACSAT datasets
     
-    save(eflalo_fs, file = ".\\workflow_outputs\\eflalo_fs.RData")
-    save(tacsat_fs, file = ".\\workflow_outputs\\tacsat_fs.RData")
+    save(eflalo_fs, file = ".\\workflow_outputs\\eflalo_fs_ww.RData")
+    save(tacsat_fs, file = ".\\workflow_outputs\\tacsat_fs_ww.RData")
     
     
