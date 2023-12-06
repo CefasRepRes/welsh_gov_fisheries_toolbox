@@ -70,6 +70,9 @@ table1m[, LE_SPE := factor(LE_SPE,
                         labels = unique(gsub("(.*)(_)([A-Z]*)$", "\\3", 
                                              grep("LE_KG|LE_EURO", colnames(table1), value = TRUE))))]
 
+table1m = table1m %>% filter(LE_KG > 0 & LE_EURO > 0)
+
+table1m %>% filter(!INTV == 0) %>% tally()
 
 ### Year, Month, 0.01 Csquare, gear, species
 
@@ -174,8 +177,6 @@ write.csv(table1.b, paste0(outPath, "\\", year, "_table1_b_", csq, "_SRF2.csv"),
 years = 2012:2021
 # year = 2021
 analysis_type = 'welsh_waters' ## welsh_fleet / welsh_waters
-
-
 
 
 for ( year in years ) {

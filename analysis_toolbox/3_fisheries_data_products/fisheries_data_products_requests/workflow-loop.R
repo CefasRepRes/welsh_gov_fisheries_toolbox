@@ -24,7 +24,7 @@ for (year in years) {
 
 ## SELECT THE ANALYSIS OPTION:
 
-analysis_type = 'welsh_fleet' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
+analysis_type = 'welsh_waters' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
 
 
 if ( analysis_type == 'welsh_fleet')  { 
@@ -232,6 +232,11 @@ if (year == 2022) {
 
 }
 
+
+
+ 
+
+
 dim(tacsat)
 head (tacsat)
 str(tacsat) ##List of fields and field type
@@ -239,7 +244,8 @@ str(tacsat) ##List of fields and field type
 
 
 tacsat$SI_DATE  =  ymd( tacsat$SI_DATE   )  ### reformatting the data in required format . Change to dmy if your system date format is different
-tacsat$SI_DATIM  = ymd_hms(tacsat$SI_DATIM  ) 
+#tacsat$SI_DATIM  = ymd_hms(tacsat$SI_DATIM  ) 
+tacsat$SI_DATIM = ymd_hms(paste ( tacsat$SI_DATE, tacsat$SI_TIME, sep= " "  ) ) 
 tacsat$SI_SP = as.numeric(tacsat$SI_SP)
 tacsat$SI_HE = as.numeric(tacsat$SI_HE)
 
@@ -688,14 +694,16 @@ tacsat_fs_geom = tacsat_fs %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), cr
 
 minInterval = 1 / 60 ## 1 minute converted in hours (0.01666667 hours)
 
+tacsat$SI_DATIM = ymd_hms(paste ( tacsat$SI_DATE, tacsat$SI_TIME, sep= " "  ) ) 
+
+tacsat_fs_geom$SI_DATIM =  ymd_hms(paste ( tacsat_fs_geom$SI_DATE, tacsat_fs_geom$SI_TIME, sep= " "  ) ) 
+
 tacsat_fs_geom = tacsat_fs_geom%>%ungroup()%>%
   group_by(VE_REF, SI_FT)%>% arrange (VE_REF, SI_DATIM)%>%
   mutate (INTV =  difftime(SI_DATIM , lag(SI_DATIM), units = "hours" )  )%>% ## Calcualte the difference between a iVMS loction time stamp and previous location to calcualte a fishign effort in a given location
   mutate(interval_mean = mean(INTV , na.rm = T))%>% ## Calcualte the mean to replace the NA's interval when a VMS location is the 1st of a trip and cannot calculate with a prev. iVMS location
   mutate(INTV = ifelse( is.na(INTV), interval_mean, INTV ))%>%  ## Convert the NA's into a effort represented by the mean of that vessel durign given trip
   select(- interval_mean) %>%ungroup()
-
-
 
 ##Q2: Check the structure of TACSAT . Did the field types changed?
 
