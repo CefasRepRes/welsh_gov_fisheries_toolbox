@@ -14,8 +14,8 @@ getwd()
 ## otherwise change to desired data folder location
 setwd('./../../data')
 
-years <- 2012:2022
-# year <- 2022
+years <- 2022
+year <- 2022
 
 
 ########################## LOAD #######################################################################################################################
@@ -121,41 +121,41 @@ if (year == '2022') {
 
 
 
-## list.files(path = '.\\..\\data') # check the files in your directory 
-
-
-eflalo_ft_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
-names(eflalo_ft_gf) = toupper( names(eflalo_ft_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
-
-
-## Convert the field VE_COU in a standard country acronym 
-countries_id = data.frame( ve_fa =   c('Wales', 'England', 'Isle of Man', 'NULL', 'Scotland', 'North Ireland') , ve_cou_gb = c( 'GBW', 'GBE', 'GBI','NULL', 'GBS', 'GBN' ) ) 
-
-## Filter GeoFISH data for Over 10 meter vessesl. Logbook info from <10 m in GeoFISH it comes from Sales Notes and is less reliable.
-
-eflalo_ft_gf = eflalo_ft_gf %>% filter ( VE_LEN >= 10 )
-
-
-
-# load eflalo_le from both sources ----
-eflalo_le_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM' , colClasses = c ( rep(NA, 10) , "character") )
-names(eflalo_le_gf) = toupper( names(eflalo_le_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
-
-
-# load eflalo_spe from both sources ----
-eflalo_spe_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_spe.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
-names(eflalo_spe_gf) = toupper( names(eflalo_spe_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
-
-
-## Merge  EFLALO data blocks into one using common fields ----
-
-eflalo_gf =     eflalo_ft_gf %>%
-  inner_join (eflalo_le_gf , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
-  inner_join(eflalo_spe_gf, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
-
-eflalo_gf = eflalo_gf %>% rename ( LE_VALUE = LE_EURO )  %>%  mutate (   FLEET_SEG = analysis_type, SOURCE = 'geofish') 
-
-# eflalo_gf <- eflalo_gf[, !names(eflalo_gf) %in% cols2rm]
+  ## list.files(path = '.\\..\\data') # check the files in your directory 
+  
+  
+  eflalo_ft_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  names(eflalo_ft_gf) = toupper( names(eflalo_ft_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  
+  
+  ## Convert the field VE_COU in a standard country acronym 
+  countries_id = data.frame( ve_fa =   c('Wales', 'England', 'Isle of Man', 'NULL', 'Scotland', 'North Ireland') , ve_cou_gb = c( 'GBW', 'GBE', 'GBI','NULL', 'GBS', 'GBN' ) ) 
+  
+  ## Filter GeoFISH data for Over 10 meter vessesl. Logbook info from <10 m in GeoFISH it comes from Sales Notes and is less reliable.
+  
+  eflalo_ft_gf = eflalo_ft_gf %>% filter ( VE_LEN >= 10 )
+  
+  
+  
+  # load eflalo_le from both sources ----
+  eflalo_le_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM' , colClasses = c ( rep(NA, 10) , "character") )
+  names(eflalo_le_gf) = toupper( names(eflalo_le_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  
+  
+  # load eflalo_spe from both sources ----
+  eflalo_spe_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_spe.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  names(eflalo_spe_gf) = toupper( names(eflalo_spe_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  
+  
+  ## Merge  EFLALO data blocks into one using common fields ----
+  
+  eflalo_gf =     eflalo_ft_gf %>%
+    inner_join (eflalo_le_gf , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
+    inner_join(eflalo_spe_gf, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
+  
+  eflalo_gf = eflalo_gf %>% rename ( LE_VALUE = LE_EURO )  %>%  mutate (   FLEET_SEG = analysis_type, SOURCE = 'geofish') 
+  
+  # eflalo_gf <- eflalo_gf[, !names(eflalo_gf) %in% cols2rm]
 
 }
 
@@ -433,7 +433,7 @@ load(paste0(".\\workflow_outputs\\eflalo_fs_", analysis_type, "_", year, ".RData
 load(paste0(".\\workflow_outputs\\tacsat_fs_", analysis_type, "_", year, ".RData"))
 
 
-#### QUALITY CONTROL:  Clean data with potential  outlines ########
+#### QUALITY CONTROL:  Clean data with potential outliers ########
 
 
 
@@ -620,8 +620,6 @@ europe_aoi = st_crop (x = land_4326, y = aoi)  ## clip/crop the whole European l
 
 # 2 Clean the TACSAT and EFLALO data  ----------------------------------------------------------------------------------
 
-
-
 ## Filter TACSAT data with the trips result from cleaning EFLALO data
 
 trips_in_clean_eflalo = eflalo_fs %>% distinct(FT_REF)%>%pull() 
@@ -787,117 +785,114 @@ tacsat_fs_df_geom = tac_geom %>%
 load(paste0(".\\workflow_outputs\\eflalo_fs_qc_", analysis_type, "_", year, ".RData"))
 load(paste0(".\\workflow_outputs\\tacsat_fs_qc_", analysis_type, "_", year, ".RData"))
 
-eflalo = eflalo_fs
-tacsat = tacsat_fs 
-
-### 1. Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section ####
-
-## Fleet segment: 
-## - Over 12 m vessels ( source GeoFISH)
-## - Under 12 m vessels ( source T3)
-## - Combined O12m and U12m fleets
-
-### If you want to analyse a specific section of the data, apply the following if statement
-
-
-fleet_segment = 'all' ## Options: ( 'over12', 'under12', 'all' )
-
-
-if ( fleet_segment == 'over12')  { 
-  
-  ###  1. Over 12m vessels analysis
-  
-  eflalo_fs = eflalo %>% filter(VE_LEN >= 12) %>% mutate  ( FLEET_SEG = paste0 ( FLEET_SEG, '_', fleet_segment))
-  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
-  #tacsat = tacsat %>% filter(SI_FT %in% eflalo$FT_REF)
-  
-  
-} else if  (fleet_segment == 'under12' ) { 
-  
-  
-  ### 2. Under 12m vessels analysis 
-  
-  eflalo_fs = eflalo %>% filter(VE_LEN < 12) %>% mutate  ( FLEET_SEG = paste0 ( FLEET_SEG, '_', fleet_segment))
-  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
-  
-} else if  (fleet_segment == 'all' ) { 
-  
-  
-  ### 3. All vessels 
-  
-  eflalo_fs = eflalo 
-  tacsat_fs = tacsat  
-  
-} 
-
-
-
-
-
-## 2. Create the VESSEL LENGTH CAGTEGORY to explore data by vessel length classes ####
-
-if ( fleet_segment == 'all')  {  
-  
-  eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
-                             breaks=c(-Inf, 12, 15, 18, 24, 40,  Inf), 
-                             labels=c("<12m",  "12-15m","15-18m", "18-24m", "24-40m" ,"=>40m"))
-  
-  
-  
-  
-  
-} else if  (fleet_segment == 'under12' ) { 
-  
-  
-  eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
-                             breaks=c(-Inf, 4.5, 4.999 , 6.999, 8.999, 11.999 , Inf), 
-                             labels=c("<4.5m","4.5-5m", "5-7m", "7-9m", "9-12m", "=>12m"))
-  
-} else if ( fleet_segment == 'all') { 
-  
-  
-  eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
-                             breaks=c(-Inf, 6, 8, 10, 12, 15, 18, 24, 40,  Inf), 
-                             labels=c("<6m","6-8m", "8-10m", "10-12m", "12-15m","15-18m", "18-24m", "24-40m" ,"=>40m"))
-  
-  
-  
-  
-}
-
-
-
-## 3. Create the field "trip_days" with duration of each trips as   number of days  ####
-
-eflalo_fs  = eflalo_fs %>% mutate ( trip_days = as.numeric(difftime(eflalo_fs$FT_LDATIM, eflalo_fs$FT_DDATIM), units = "days") ) 
-
-
-
-
-### 4. DATA QUALITY CONTROL ( Follow the script in '1_data_preprocessing/1_eflalo_tacsat_quality_control.R' )  ############
-
-## Load eflalo and tacsat cleaned data 
-
-##   load(file = '.\\workflow_outputs\\eflalo_fs_qc.RData' )
-##   load(file = '.\\workflow_outputs\\tacsat_fs_qc.RData' )
-
-### 5. ANALYSIS OF EFLAO AND TACSAT COMBINED ( Is assumed the data input is already clean and quality controlled) ####
-
-
-# 5.1 Merge the TACSAT and EFLALO data together --------------------------------------------
-
-# Merge eflalo and tacsat =================================
-
-
-# RENAME LE_VALUE to LE_EURO to proceed with VMSTOOLS format analysis 
-
-
-
-eflalo_fs = rename (eflalo_fs, LE_EURO = LE_VALUE)
-
-eflalo_fs = eflalo_fs %>% mutate(LE_EURO = ifelse(LE_EURO == -9999, 0, LE_EURO))
-
-eflalo_fs %>% filter(LE_EURO < 0) %>% tally()
+# eflalo = eflalo_fs
+# tacsat = tacsat_fs 
+# 
+# ### 1. Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section ####
+# 
+# ## Fleet segment: 
+# ## - Over 12 m vessels ( source GeoFISH)
+# ## - Under 12 m vessels ( source T3)
+# ## - Combined O12m and U12m fleets
+# 
+# ### If you want to analyse a specific section of the data, apply the following if statement
+# 
+# 
+# fleet_segment = 'all' ## Options: ( 'over12', 'under12', 'all' )
+# 
+# 
+# if ( fleet_segment == 'over12')  { 
+#   
+#   ###  1. Over 12m vessels analysis
+#   
+#   eflalo_fs = eflalo %>% filter(VE_LEN >= 12) %>% mutate  ( FLEET_SEG = paste0 ( FLEET_SEG, '_', fleet_segment))
+#   tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
+#   #tacsat = tacsat %>% filter(SI_FT %in% eflalo$FT_REF)
+#   
+#   
+# } else if  (fleet_segment == 'under12' ) { 
+#   
+#   
+#   ### 2. Under 12m vessels analysis 
+#   
+#   eflalo_fs = eflalo %>% filter(VE_LEN < 12) %>% mutate  ( FLEET_SEG = paste0 ( FLEET_SEG, '_', fleet_segment))
+#   tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
+#   
+# } else if  (fleet_segment == 'all' ) { 
+#   
+#   
+#   ### 3. All vessels 
+#   
+#   eflalo_fs = eflalo 
+#   tacsat_fs = tacsat  
+#   
+# } 
+# 
+# 
+# 
+# 
+# 
+# ## 2. Create the VESSEL LENGTH CAGTEGORY to explore data by vessel length classes ####
+# 
+# if ( fleet_segment == 'all')  {  
+#   
+#   eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
+#                              breaks=c(-Inf, 12, 15, 18, 24, 40,  Inf), 
+#                              labels=c("<12m",  "12-15m","15-18m", "18-24m", "24-40m" ,"=>40m"))
+#   
+#   
+#   
+#   
+#   
+# } else if  (fleet_segment == 'under12' ) { 
+#   
+#   
+#   eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
+#                              breaks=c(-Inf, 4.5, 4.999 , 6.999, 8.999, 11.999 , Inf), 
+#                              labels=c("<4.5m","4.5-5m", "5-7m", "7-9m", "9-12m", "=>12m"))
+#   
+# } else if ( fleet_segment == 'all') { 
+#   
+#   
+#   eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
+#                              breaks=c(-Inf, 6, 8, 10, 12, 15, 18, 24, 40,  Inf), 
+#                              labels=c("<6m","6-8m", "8-10m", "10-12m", "12-15m","15-18m", "18-24m", "24-40m" ,"=>40m"))
+#   
+# }
+# 
+# 
+# 
+# ## 3. Create the field "trip_days" with duration of each trips as   number of days  ####
+# 
+# eflalo_fs  = eflalo_fs %>% mutate ( trip_days = as.numeric(difftime(eflalo_fs$FT_LDATIM, eflalo_fs$FT_DDATIM), units = "days") ) 
+# 
+# 
+# 
+# 
+# ### 4. DATA QUALITY CONTROL ( Follow the script in '1_data_preprocessing/1_eflalo_tacsat_quality_control.R' )  ############
+# 
+# ## Load eflalo and tacsat cleaned data 
+# 
+# ##   load(file = '.\\workflow_outputs\\eflalo_fs_qc.RData' )
+# ##   load(file = '.\\workflow_outputs\\tacsat_fs_qc.RData' )
+# 
+# ### 5. ANALYSIS OF EFLAO AND TACSAT COMBINED ( Is assumed the data input is already clean and quality controlled) ####
+# 
+# 
+# # 5.1 Merge the TACSAT and EFLALO data together --------------------------------------------
+# 
+# # Merge eflalo and tacsat =================================
+# 
+# 
+# # RENAME LE_VALUE to LE_EURO to proceed with VMSTOOLS format analysis 
+# 
+# 
+# 
+# eflalo_fs = rename (eflalo_fs, LE_EURO = LE_VALUE)
+# 
+# eflalo_fs = eflalo_fs %>% mutate(LE_EURO = ifelse(LE_EURO == -9999, 0, LE_EURO))
+# 
+# eflalo_fs %>% filter(LE_EURO < 0) %>% tally()
 
 ## Convert EFLALO from LARGE format into WIDE format. This complies with the format required by VMSTOOL 'splitamongpings' function
 ## Depending the format selected we have to choose Option 1 or Option 2 in step '2.3 Dispatch landings/catches among VMS pings'
@@ -910,7 +905,7 @@ eflalo_fs = eflalo_fs%>%
                            LE_ID, LE_CDAT, LE_STIME, LE_ETIME, LE_SLAT, LE_GEAR,
                            LE_MSZ, LE_RECT, LE_DIV, LE_MET, EFLALO_FT_FT_REF, Year,
                            Month, VE_LEN_CAT, SOURCE, FLEET_SEG ),
-              names_from = c(LE_SPE), values_from = c(LE_KG, LE_EURO))
+              names_from = c(LE_SPE), values_from = c(LE_KG, LE_VALUE))
 
 
 
@@ -985,7 +980,8 @@ print(paste0("Finished ", year))
 
 ## 5.2 Define the fishing activity ( This is based on expert criteria and can be defined using the script in 2_eflalo_tacsat_analysis\ 2_eflalo_tacsat_analysis.R from line 14 to 321)  ######
 
-year = 2013
+years = 2012:2022
+# year = 2013
 
 analysis_type = 'welsh_waters' ### welsh_fleet / welsh_waters
 

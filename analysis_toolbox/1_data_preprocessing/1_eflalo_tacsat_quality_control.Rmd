@@ -225,11 +225,8 @@ eflalo_fs %>% filter( FT_REF == 610699215 ) ## change trip id based in the analy
 
 It is useful to check for NA values in numerical or date columns columns as if calculations are enacted on these, it may produce NA values as the result. Filtering to results with NA values allows them to be investigated and to see if they may cause issues further into the analysis.
 
-<<<<<<< HEAD
 ```{r , include=TRUE,eval = FALSE}
-=======
-```{r , include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 eflalo_fs %>% filter(  is.na ( LE_KG ))
 
 eflalo_fs %>% filter( is.na(FT_DDATIM) | is.na(FT_LDATIM) )
@@ -239,11 +236,7 @@ eflalo_fs %>% filter( is.na(FT_DDATIM) | is.na(FT_LDATIM) )
 
 Duplicated trips cause inaccuracies in landings data and therefore should be removed. duplicate analysis is creating a variable which provides a boolean response to if a trip is duplicated or not, by checking the trip and vessel references and the departure/landing times. These trips can be investigated by the code in the third block. Finally, trips IDs that are identified as duplicates can be removed via common FT_REF with the duplicated_trips dataset.
 
-<<<<<<< HEAD
 ```{r , include=TRUE,eval = FALSE}
-=======
-```{r , include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
 duplicate_analysis = eflalo_fs%>%
   distinct(VE_REF , FT_REF,  FT_DDAT, FT_LDAT)%>%
   group_by(VE_REF, FT_DDAT, FT_LDAT)%>%
@@ -253,11 +246,7 @@ duplicate_analysis = eflalo_fs%>%
 
 Explore the data for duplicated trips
 
-<<<<<<< HEAD
 ```{r duplicate trips 1, include=TRUE,eval = FALSE}
-=======
-```{r duplicate trips 1, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
 ## Explore duplicated trips details
 
 ## How many are there?
@@ -271,11 +260,8 @@ eflalo_fs %>% left_join (duplicate_analysis , by = c ( 'VE_REF', 'FT_DDAT', 'FT_
   arrange(VE_REF, FT_REF, LE_SPE)
 ```
 
-<<<<<<< HEAD
 ```{r duplicate trips 2, include=TRUE,eval = FALSE}
-=======
-```{r duplicate trips 2, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 ## Identify the trip id's that are duplicated 
 
 duplicate_trips =  eflalo_fs%>%
@@ -303,11 +289,8 @@ eflalo_fs =   eflalo_fs %>%
 
 Another example of human error in input are trips which apparently ended before they began, these can be easily removed thanks to the trip_days column created previously. If the trip days are less than or equal to 0, they are considered impossible.
 
-<<<<<<< HEAD
+
 ```{r filter departure arrival overlap, include=TRUE,eval = FALSE}
-=======
-```{r filter departure arrival overlap, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
 ## Use the field created with trip duration: trip_days
 ## A value of 0 or negative would means departure and landing dates are same or reversed
 
@@ -318,11 +301,8 @@ eflalo_fs %>% filter(trip_days <= 0 )
 
 Furthermore, a vessel cannot be on two separate trips at once, so trips which overlap one another cannot feasibly occur. The VMS locations of these trips will cause issues as they are technically suggesting a vessel is in two places at once. These trips must be corrected or deleted, this decision can be made on a case by case basis, following the following filtering, which will pull these trips out conveniently.
 
-<<<<<<< HEAD
+
 ```{r filter overlaps different trips, include=TRUE,eval = FALSE}
-=======
-```{r filter overlaps different trips, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
 overlaps_analysis =  eflalo_fs%>%distinct(VE_REF, FT_REF, FT_DDATIM, FT_LDATIM)%>%
   arrange(VE_REF, FT_DDATIM)%>%
   group_by(VE_REF)%>%
@@ -350,11 +330,8 @@ eflalo_fs%>%
   summarise(numb = n())
 ```
 
-<<<<<<< HEAD
+
 ```{r overlapping/duplicated trips exploration, include=TRUE,eval = FALSE}
-=======
-```{r overlapping/duplicated trips exploration, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
 ## Following this analysis we have found out that these trips are duplicated 
 ## The three overlapping trips have the same reported species and details
 
@@ -373,11 +350,9 @@ eflalo_fs %>% filter( FT_REF %in% c(610738857, 610735265))
 
 Spatial data is necessary for analysing VMS data. It can be loaded into R as follows.
 
-<<<<<<< HEAD
+
 ```{r load spatial data, include=TRUE,eval = FALSE}
-=======
-```{r load spatial data, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 welsh_marine_area = st_read ( dsn = '.\\spatial_layers\\wales_plan_area.geojson' )
 port_500m = st_read( dsn = '.\\spatial_layers\\welsh_ports_ammended_0_005.geojson')
 land = st_read ( dsn = '.\\spatial_layers\\Europe_coastline_poly.shp')
@@ -388,11 +363,9 @@ ices_rect_welsh = st_read(dsn = '.\\spatial_layers\\ICES_rectangle_welsh.geojson
 
 Convert the data to the espg:4326 crs so that all data pieces are in the same crs.
 
-<<<<<<< HEAD
+
 ```{r set crs, include=TRUE,eval = FALSE}
-=======
-```{r set crs, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 welsh_marine_area %>% st_crs()  ## WGS 84 EPSG: 4326
 port_500m %>% st_crs()   ## WGS 84
 land  %>% st_crs() 
@@ -405,11 +378,8 @@ plot( land_4326)
 
 Define a bounding box for Europe. This is used to reduce the size of the land data, to reduce the processing power needed for plotting. Additionally, the view frame will be much closer in and therefore more detail will be visible.
 
-<<<<<<< HEAD
 ```{r europe aoi, include=TRUE,eval = FALSE}
-=======
-```{r europe aoi, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 aoi = st_bbox( c( xmin = -15, xmax = 3, ymax = 60, ymin = 47), crs = st_crs( 4326 )) ## Define our area of intenrest.  4326 is id for WGS1984 unprojected coordinate system 
 
 europe_aoi = st_crop (x = land_4326, y = aoi)  ## clip/crop the whole European layer to our of interest
@@ -421,11 +391,8 @@ head(eflalo_fs)
 
 Filter the tacsat data to limit it to the trips in the eflalo data.
 
-<<<<<<< HEAD
 ```{r trips in clean eflalo, include=TRUE,eval = FALSE}
-=======
-```{r trips in clean eflalo, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 trips_in_clean_eflalo = eflalo_fs %>% distinct(FT_REF)%>%pull() 
 
  
@@ -435,11 +402,8 @@ tacsat_fs = tacsat_fs %>% filter( SI_FT %in%  trips_in_clean_eflalo  ) # filter 
 
 Explore the tacsat data to investigate the number of trips the number of trips within each respective dataset, which are common?
 
-<<<<<<< HEAD
 ```{r investigate common trips, include=TRUE,eval = FALSE}
-=======
-```{r investigate common trips, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 # Q1 : Number of trips in tacsat (iVMS) present in eflalo 
 
 tacsat_fs %>% mutate(inboth = SI_FT %in% trips_in_clean_eflalo )%>%select(inboth)%>%table()
@@ -451,11 +415,9 @@ eflalo_fs %>%distinct(FT_REF)%>% mutate(inboth = FT_REF %in% ( tacsat_fs%>%disti
 
 Analyse the trips which do not have related tacsat information due to potential human error, such as forgetting to activate the tacsat box. Or from being prior to 16-02-2022, when iVMS was introduced.
 
-<<<<<<< HEAD
+
 ```{r ft_ref not in tacsat, include=TRUE,eval = FALSE}
-=======
-```{r ft_ref not in tacsat, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 ft_ref_not_in_tacsat = eflalo_fs %>%distinct(FT_REF)%>% mutate(inboth = FT_REF %in% ( tacsat_fs%>%distinct(SI_FT)%>%pull())  )%>%
   filter ( inboth == FALSE)
 
@@ -465,11 +427,9 @@ res1 = eflalo_fs %>% filter( FT_REF %in% (ft_ref_not_in_tacsat %>% select (FT_RE
 
 Explore the data.
 
-<<<<<<< HEAD
+
 ```{r explore , include=TRUE,eval = FALSE}
-=======
-```{r explore , include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 res1 %>%distinct(FT_DDAT)%>%pull()
 res1 %>%distinct(VE_REF, FT_REF ) %>% group_by(VE_REF)%>%tally() %>%arrange(desc(n))
 eflalo_fs %>%distinct(VE_REF)
@@ -479,11 +439,8 @@ res1%>% summarise(min = min (FT_DDAT), max = max( FT_DDAT))
 
 Explore a specific trip.
 
-<<<<<<< HEAD
 ```{r single trip exploration, include=TRUE,eval = FALSE}
-=======
-```{r single trip exploration, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 eflalo_fs %>% filter( VE_REF == 'C20757') %>% distinct(FT_REF)
 tacsat_fs %>% filter( VE_REF == 'C20757') %>% distinct(SI_FT)
 
@@ -498,11 +455,8 @@ dim(tacsat_fs)
 
 Convert spatial grid references to match so the datasets can be used in conjunction for analysis. Next, remove any VMS pings which do not fall inside ICES areas.
 
-<<<<<<< HEAD
 ```{r edit spatial grid references, include=TRUE,eval = FALSE}
-=======
-```{r edit spatial grid references, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 ia =  ICESareas%>% 
       sf::st_as_sf() %>% 
       sf::st_make_valid() %>% 
@@ -519,11 +473,8 @@ tacsat_fs = tacsat_fs[lengths(overs) > 0,]
 
 Remove duplicate records.
 
-<<<<<<< HEAD
 ```{r duplicates removal, include=TRUE,eval = FALSE}
-=======
-```{r duplicates removal, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 tacsat_fs%>%
   group_by(VE_REF, SI_LATI, SI_LONG , SI_DATIM ) %>%
   filter( n() > 1) %>%
@@ -539,11 +490,8 @@ overlaps_analysis %>% filter(FT_REF %in% c( '610736051', '610738638') )
 
 Remove points that cannot be possible. Points which supposedly exist outside the extent of earth's longitude and latitude scales can simply be removed with the following code.
 
-<<<<<<< HEAD
 ```{r remove impossible points, include=TRUE,eval = FALSE}
-=======
-```{r remove impossible points, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 tacsat_fs = tacsat_fs %>% filter(abs(SI_LATI) < 90 | abs(SI_LONG) < 180)
 tacsat_fs = tacsat_fs %>% filter(SI_HE >= 0 | SI_HE <= 360)
 tacsat_fs %>% filter(SI_SP > 30 ) 
@@ -555,11 +503,8 @@ As VMS systems ping regularly at 2 hour intervals, double points are almost cert
 
 Using the interval between pings on records with the same trip reference, records which have pinged too frequently in short succession can be identified.
 
-<<<<<<< HEAD
 ```{r remove pseudo-duplicate points, include=TRUE,eval = FALSE}
-=======
-```{r remove pseudo-duplicate points, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 tacsat_fs_geom = tacsat_fs %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 , remove = FALSE)
 
 st_write( tacsat_fs_geom, dsn = ".\\workflow_outputs\\tacsat_fs.geojson", layer = "tacsat_fs.geojson")
@@ -617,11 +562,8 @@ Points within harbours are identified by their spatial intersection with the por
 
 These points can be plotted as shown below, using ggplot, which adds the Welsh marine area, the chosen ports which are selected within the quotation marks and the vms points which are located inside the ports. Finally, the boundary of the plot is specified so the plot is focused on the area of interest.
 
-<<<<<<< HEAD
 ```{r remove points in harbours, include=TRUE,eval = FALSE}
-=======
-```{r remove points in harbours, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 tacsat_fs_ports = tacsat_fs_geom %>%
   st_join ( port_500m %>% select ( Name, District_N) , join = st_intersects, left = T) %>%
   mutate  ( SI_HARB  = ifelse ( is.na ( Name  ), FALSE , TRUE))  %>%
@@ -630,11 +572,8 @@ tacsat_fs_ports = tacsat_fs_geom %>%
 
 Plot this data.
 
-<<<<<<< HEAD
 ```{r plot 1, include=TRUE,eval = FALSE}
-=======
-```{r plot 1, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 getwd()
 st_write( tacsat_fs_ports, dsn = paste0(".\\workflow_outputs\\spatial\\tacsat_port_welsh.geojson"), layer = "tacsat_port_welsh.geojson")      
 
@@ -648,11 +587,8 @@ ggplot() +
   coord_sf( xlim = c(- 5.5, -4), ylim = c(51.6, 52.2) )
 ```
 
-<<<<<<< HEAD
 ```{r plot 2, include=TRUE,eval = FALSE}
-=======
-```{r plot 2, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 ggplot() + 
   geom_sf ( data = welsh_marine_area) + 
   geom_sf(data = port_500m %>% filter (Name %in% c( 'Milford Haven', 'Cardigan') )) +
@@ -663,11 +599,8 @@ ggplot() +
 
 ### 2.7 Remove points on land
 
-<<<<<<< HEAD
 ```{r remove points on land, include=TRUE,eval = FALSE}
-=======
-```{r remove points on land, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 tacsat_fs_land = tacsat_fs_ports %>% 
   st_join( europe_aoi , join = st_intersects, left = T )%>%
   mutate  ( SI_LAND  = ifelse ( is.na ( Id ), FALSE ,TRUE))%>%
@@ -678,11 +611,8 @@ st_write( tacsat_fs_land, dsn = ".\\workflow_outputs\\spatial\\tacsat_fs_land.ge
 
 Investigate the points on land.
 
-<<<<<<< HEAD
 ```{r investiagte points on land, include=TRUE,eval = FALSE}
-=======
-```{r investiagte points on land, include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 tacsat_fs_land%>%st_drop_geometry()%>%group_by(SI_LAND)%>%count()
 
 
@@ -695,11 +625,8 @@ ggplot() +
   coord_sf(xlim = c(- 5.5, -4), ylim = c(51.6, 52.2))
 ```
 
-<<<<<<< HEAD
 ```{r , include=TRUE,eval = FALSE}
-=======
-```{r , include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 tacsat_fs_land = tacsat_fs_land %>% mutate ( SI_STATE = ifelse  (  SI_SP  >= 1 & SI_SP <= 6 , 'f', 's'  ))
 
 
@@ -711,11 +638,8 @@ st_write( tacsat_fs_df, dsn = ".\\workflow_outputs\\tacsat_fs_df.geojson", layer
 
 ### Save outputs
 
-<<<<<<< HEAD
 ```{r , include=TRUE,eval = FALSE}
-=======
-```{r , include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 #   Save the cleaned EFLALO file 
 
   save(eflalo_fs, file = '.\\workflow_outputs\\eflalo_fs_qc.RData')
@@ -731,11 +655,8 @@ st_write( tacsat_fs_df, dsn = ".\\workflow_outputs\\tacsat_fs_df.geojson", layer
 
 Finally, check well the reported ICES rectangles and the actual rectangles match.
 
-<<<<<<< HEAD
 ```{r , include=TRUE,eval = FALSE}
-=======
-```{r , include=TRUE, eval=FALSE}
->>>>>>> 58879c823746e4435c7d2624cb0c978f35a31d74
+
 tac_geom = tacsat_fs_df %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
 
 

@@ -142,7 +142,7 @@ Create vessel length categories based on the fleet segment. The chosen segment d
 
 Create the trip days field by calculating the difference between departure and landing time.
 
-```{r , include=TRUE, eval=FALSE}
+```{r calculate trip days, include=TRUE, eval=FALSE}
   ## Create the field "trip_days" with duration of each trips as   number of days  
 
   eflalo_fs  = eflalo_fs %>% mutate ( trip_days = as.numeric(difftime(eflalo_fs$FT_LDATIM, eflalo_fs$FT_DDATIM), units = "days") ) 
