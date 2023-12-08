@@ -1,0 +1,939 @@
+---
+title: "SRF2_workflow"
+author: "Roi & Mike"
+date: "2023-12-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(lubridate)  ## this package helps with manage date fields 
+library(dplyr)      ## R Package to use pipelines (%>%) analysis language 
+library(sf)         ## R Package for spatial analysis in R ( Simple Features )
+library(ggplot2)    ## R Package for plotting and graphs
+library(tidyr)
+library(vmstools)
+
+
+## SET YOUR R WORKING DIRECTORY
+
+##check WD is in the desired data folder location
+getwd() 
+
+## otherwise change to desired data folder location
+setwd('./../../data')
+```
+
+
+For the SRF 2 workflow, we have condensed the main workflow into the essential pieces of code for the requirements of this SRF. Additionally, due to the multi-year request, the workflow has been implemented into two for loops. Essentially what this does is run the code start to finish, and then runs it again for every value (year) provided in the years variable, which is created below. Throughout the script, the variable year is called upon, usually when loading or saving data; this refers to the current year running through the loop. For the sake of the Rmd, the loop will be separated into sections, so will not run functionally in this document. Please see the regular .R script for the functional version. 
+
+```{r for loop setup, include=TRUE, eval=FALSE}
+years <- 2012:2022  # assign the temporal range, this can be multiple or a single year. In the event you wish to use multiple, non-consecutive                         years, a list must replace the range sequence.
+
+for (year in years) { # years refers to the sequence above, year is the iterator, so it will be replaced by the next year on each run.
+```
+
+Select the analysis type. Analysis is separated into trips in Welsh waters, and Welsh vessels. Welsh waters analysis will investigate only the data which intersects with the Welsh zone, regardless of the vessel's nationality. Welsh waters analysis will set the file path leading to the data containing only welsh vessels. If statements have a requirement that, if met, will progress the code in a certain way. The else portion of the statement dictates what will happen if the parameter is not met or if a different parameter is met.
+
+```{r set wd, include=TRUE, eval=FALSE}
+for (year in years) {
+
+## SELECT THE ANALYSIS OPTION:
+
+analysis_type = 'welsh_waters' ## Options: ( 'welsh_fleet' , 'welsh_waters'  ) 
+
+
+if ( analysis_type == 'welsh_fleet')  { 
+  
+  ###  1. WELSH FLEET ACTIVITY ANALYSIS 
+  
+  data_folder_t3 = file.path( paste0 ( getwd() , '/welsh_fleet_data/t3' )  )
+  data_folder_geofish = file.path( paste0 ( getwd() , '/welsh_fleet_data/geofish/', year) ) 
+  
+} else if  (analysis_type == 'welsh_waters' ) { 
+  
+  
+  ## 2. WELSH WATERS ACTIVITY ANALYSIS 
+  
+  
+  data_folder_t3 = file.path( paste0 ( getwd() , '/welsh_waters_data/t3' )  )
+  data_folder_geofish = file.path( paste0 ( getwd() , '/welsh_waters_data/geofish/', year))
+  
+} 
+```
+
+Read in the eflalo_ft data block. Header = T tells R whether or not to expect the first row to be the headers for each column. If this were set to F for FALSE, it would assume the first row of data was data, not the column names. The sep = part of the function is used as the data will be presented in a csv format, so the values in each row are separated by commas, which is chosen here. Finally, set column names to upper case to meet formatting requirements.
+
+Data is coming from two sources: GeoFISH and Tier3. The column which identifies the vessel's country is named and formatted differently between the two. Here, the Tier3 format is converted to match the GeoFISH format, using three letter codes to identify vessel country of origin.
+
+Following the requirements of SRF2, for years 2012-2021, only over 12s information is required, meaning it can all be sourced from Geofish. However for data products where under 12s data is required (products A and B), T3 must be used as a source. As these are both for 2022, the if statement checks if the year is 2022. If this is true, it will load the T3 eflalo data as well as the Geofish eflalo data, if not, it will just load Geofish eflalo data.
+
+```{r load eflalo, include=TRUE, eval=FALSE}
+if (year == '2022') {
+  
+  eflalo_ft_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  eflalo_ft_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  names(eflalo_ft_gf) = toupper( names(eflalo_ft_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  
+  
+  ## Convert the field VE_COU in a standard country acronym 
+  countries_id = data.frame( ve_fa =   c('Wales', 'England', 'Isle of Man', 'NULL', 'Scotland', 'North Ireland') , ve_cou_gb = c( 'GBW', 'GBE', 'GBI','NULL', 'GBS', 'GBN' ) ) 
+  eflalo_ft_t3 = eflalo_ft_t3 %>% left_join(countries_id, by =  c ( 'VE_FA' = 've_fa')) %>% mutate(VE_COU = ve_cou_gb) %>% select ( - ve_cou_gb)
+  
+  ## Filter GeoFISH data for Over 10 meter vessesl. Logbook info from <10 m in GeoFISH it comes from Sales Notes and is less reliable.
+  
+  eflalo_ft_t3 %>% filter ( VE_LEN != 'NULL') %>% mutate ( VE_LEN =  as.numeric(VE_LEN) ) 
+  
+  
+  eflalo_ft_gf = eflalo_ft_gf %>% filter ( VE_LEN >= 10 )
+  eflalo_ft_t3 = eflalo_ft_t3 %>%  filter ( VE_LEN != 'NULL') %>% mutate ( VE_LEN =  as.numeric(VE_LEN) ) %>%
+    filter(as.numeric( VE_LEN)  < 10 )
+  str(eflalo_ft_t3)
+  
+  
+  # explore the loaded data, can change to gf data to check
+  head (eflalo_ft_t3)
+  str(eflalo_ft_t3)
+  dim(eflalo_ft_t3)
+  summary(eflalo_ft_t3)
+  
+  
+  
+  # load eflalo_le from both sources ----
+  eflalo_le_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM', colClasses = c ( rep(NA, 10) , "character") )  
+  eflalo_le_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM' , colClasses = c ( rep(NA, 10) , "character") )
+  names(eflalo_le_gf) = toupper( names(eflalo_le_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  
+  
+  head (eflalo_le_t3)
+  str (eflalo_le_t3)
+  
+  # load eflalo_spe from both sources ----
+  eflalo_spe_t3 = read.csv(file = paste0(data_folder_t3, '\\eflalo_spe.csv' ), header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  eflalo_spe_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_spe.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  names(eflalo_spe_gf) = toupper( names(eflalo_spe_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  
+  
+  ## Merge  EFLALO data blocks into one using common fields ----
+  
+  eflalo_t3  =    eflalo_ft_t3 %>%
+    inner_join (eflalo_le_t3 , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
+    inner_join(eflalo_spe_t3, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
+  
+  
+  eflalo_t3 = eflalo_t3 %>% mutate ( LE_VALUE = -9999, FLEET_SEG = analysis_type, SOURCE = 't3') %>% select  ( - VE_FA)
+  
+  eflalo_gf =     eflalo_ft_gf %>%
+    inner_join (eflalo_le_gf , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
+    inner_join(eflalo_spe_gf, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
+  
+  eflalo_gf = eflalo_gf %>% rename ( LE_VALUE = LE_EURO )  %>%  mutate (   FLEET_SEG = analysis_type, SOURCE = 'geofish') 
+  
+  # eflalo_gf <- eflalo_gf[, !names(eflalo_gf) %in% cols2rm]
+  
+  eflalo = rbind(eflalo_t3, eflalo_gf)
+
+  } else {
+
+
+
+  ## list.files(path = '.\\..\\data') # check the files in your directory 
+  
+  
+  eflalo_ft_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_ft.csv') , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  names(eflalo_ft_gf) = toupper( names(eflalo_ft_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  
+  
+  ## Convert the field VE_COU in a standard country acronym 
+  countries_id = data.frame( ve_fa =   c('Wales', 'England', 'Isle of Man', 'NULL', 'Scotland', 'North Ireland') , ve_cou_gb = c( 'GBW', 'GBE', 'GBI','NULL', 'GBS', 'GBN' ) ) 
+  
+  ## Filter GeoFISH data for Over 10 meter vessesl. Logbook info from <10 m in GeoFISH it comes from Sales Notes and is less reliable.
+  
+  eflalo_ft_gf = eflalo_ft_gf %>% filter ( VE_LEN >= 10 )
+  
+  
+  
+  # load eflalo_le from both sources ----
+  eflalo_le_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_le.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM' , colClasses = c ( rep(NA, 10) , "character") )
+  names(eflalo_le_gf) = toupper( names(eflalo_le_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  
+  
+  # load eflalo_spe from both sources ----
+  eflalo_spe_gf = read.csv(file = paste0(data_folder_geofish, '\\eflalo_spe.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  names(eflalo_spe_gf) = toupper( names(eflalo_spe_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  
+  
+  ## Merge  EFLALO data blocks into one using common fields ----
+  
+  eflalo_gf =     eflalo_ft_gf %>%
+    inner_join (eflalo_le_gf , by =  c("FT_REF" = "EFLALO_FT_FT_REF"))%>%
+    inner_join(eflalo_spe_gf, by = c("LE_ID" = "EFLALO_LE_LE_ID"   ))
+  
+  eflalo_gf = eflalo_gf %>% rename ( LE_VALUE = LE_EURO )  %>%  mutate (   FLEET_SEG = analysis_type, SOURCE = 'geofish') 
+  
+  # eflalo_gf <- eflalo_gf[, !names(eflalo_gf) %in% cols2rm]
+
+}
+```
+
+Simply binding the two data sources to make eflalo, or reassigning just the Geofish eflalo data to the eflalo variable.
+
+```{r create eflalo, include=TRUE, eval=FALSE}
+if (year == '2022') {
+  
+  eflalo = rbind(eflalo_t3, eflalo_gf)
+  
+} else {
+  
+  eflalo = eflalo_gf
+  
+  }
+```
+
+Some field require some formatting. the ymd() function orientates the selected columns with dates, into a year-month-day format. Columns with time values associated can be formatted using ymd_hms.
+
+The vessel length field (VE_LEN) is required to be in numerical format; as.numeric sorts that out.
+
+Finally, the year and month columns are created by pulling the information from the previously formatted columns.
+
+```{r eflalo column formatting, include=TRUE, eval=FALSE}
+eflalo$FT_DDAT =  ymd(eflalo$FT_DDAT)  ## ymd lubridate function to CAST date into Year Mond Day date format
+eflalo$FT_LDAT =  ymd(eflalo$FT_LDAT) 
+
+eflalo = eflalo %>% mutate (LE_CDAT  = substr (eflalo$LE_CDAT, 1, 10) )  ## To convert Log Event date just in Year- month - day. Time is not provided an is by default 00:00:00 
+eflalo$LE_CDAT = ymd(eflalo$LE_CDAT) 
+
+eflalo$FT_DDATIM = ymd_hms(eflalo$FT_DDATIM) 
+eflalo$FT_LDATIM = ymd_hms(eflalo$FT_LDATIM) 
+
+eflalo$VE_LEN = as.numeric(eflalo$VE_LEN)
+eflalo$VE_KW = as.numeric(eflalo$VE_KW)
+eflalo$VE_TON = as.numeric(eflalo$VE_TON)
+
+eflalo$EFLALO_FT_FT_REF  = as.numeric(eflalo$EFLALO_FT_FT_REF)
+eflalo$LE_VALUE = as.numeric(eflalo$LE_VALUE )
+
+eflalo$Year = year(eflalo$FT_DDATIM )
+eflalo$Month = month(eflalo$FT_LDATIM)
+```
+
+Again, due to the SRF requirements, under 12s data is only required for 2022. Therefore if the year in the loop is 2022, T3 tacsat data is loaded as well as Geofish, if not, then just Geofish.
+
+```{r load & create tacsat, include=TRUE, eval=FALSE}
+if (year == 2022) {
+  # tacsat_t3 = read.csv(file = paste0(data_folder_t3, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  # tacsat_t3 = tacsat_t3 %>% mutate ( FLEET_SEG = analysis_type, SOURCE = 't3')
+  
+  load("Z:\\FISHERIES M MoU\\Working_Area\\spatial_fisheries_data\\welsh_gov_srf2\\tacsatActivity_t32022.RData")
+  
+  tacsatp = tacsatp %>% select (1:15)
+  
+  tacsat_t3 = tacsatp
+  
+  tacsat_gf = read.csv(file = paste0(data_folder_geofish, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  names(tacsat_gf) = toupper( names(tacsat_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  tacsat_gf = tacsat_gf %>% mutate ( FLEET_SEG = analysis_type, SOURCE = 'geofish') 
+  
+  cols2rm <- c("GID", "GEOM")
+  tacsat_gf <- tacsat_gf[, !names(tacsat_gf) %in% cols2rm]
+
+  
+  
+  tacsat = rbind(tacsat_t3, tacsat_gf)
+  
+} else {
+
+  tacsat_gf = read.csv(file = paste0(data_folder_geofish, '\\tacsat.csv' ) , header = T, sep = ','  , fileEncoding = 'UTF-8-BOM')
+  names(tacsat_gf) = toupper( names(tacsat_gf ) )  ## Column names are lower case in geofish , needs to be changed to upper case 
+  tacsat_gf = tacsat_gf %>% mutate ( FLEET_SEG = analysis_type, SOURCE = 'geofish') 
+  
+  cols2rm <- c("GID", "GEOM")
+  tacsat_gf <- tacsat_gf[, !names(tacsat_gf) %in% cols2rm]
+
+  tacsat = tacsat_gf
+
+}
+```
+
+Format dates, times and numerical columns for consistency purposes. These will be in the same format as the EFLALO data. Also filter to see how many NAs are present in the speed column (SI_SP). This does not change the data as it is not applying the command to the object. It simply prints the number of rows containing NAs. If there are a large number, this can be investigated.
+
+```{r format tacsat columns, include=TRUE, eval=FALSE}
+tacsat$SI_DATE  =  ymd( tacsat$SI_DATE   )  ### reformatting the data in required format . Change to dmy if your system date format is different
+#tacsat$SI_DATIM  = ymd_hms(tacsat$SI_DATIM  ) 
+tacsat$SI_DATIM = ymd_hms(paste ( tacsat$SI_DATE, tacsat$SI_TIME, sep= " "  ) ) 
+tacsat$SI_SP = as.numeric(tacsat$SI_SP)
+tacsat$SI_HE = as.numeric(tacsat$SI_HE)
+
+tacsat%>%filter(is.na(SI_SP))%>%dim()
+```
+
+If the analysis being conducted is the Welsh waters analysis, the following code will extract the data intersecting with the Welsh zone. If it is Welsh vessels analysis being conducted, this code will just be passed over. The code block reads the welsh plan area geojson, intersecting the vms data with the boundary. Those inside the boundary are kept.
+
+```{r set wd, include=TRUE, eval=FALSE}
+retain_eflalo_with_no_tacsat = 'yes'
+
+if ( analysis_type == 'welsh_waters'  ) { 
+  
+  welsh_marine_area = st_read ( dsn = '.\\spatial_layers\\wales_plan_area.geojson' )
+  welsh_marine_area_geom = st_make_valid(st_union(welsh_marine_area  ))
+  
+  
+  tacsat_geom = tacsat %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 , remove = FALSE)
+  tacsat_geom_ww =  tacsat_geom  %>%  filter(  st_intersects( .,  welsh_marine_area_geom , sparse = FALSE)  )
+  
+  
+  trips_in_welsh_waters = tacsat_geom_ww %>% st_drop_geometry() %>%  distinct(SI_FT ) %>% pull()
+  
+  if ( retain_eflalo_with_no_tacsat == 'no' ) { 
+    
+    eflalo = eflalo %>% filter ( FT_REF  %in%  trips_in_welsh_waters) 
+    
+  } 
+  
+  tacsat = tacsat  %>% filter ( SI_FT  %in% trips_in_welsh_waters ) 
+  
+  
+  
+  ## To visualize in a GIS software save the TACSAT  as point geometry 
+  
+  
+  st_write( tacsat_geom_ww, dsn = paste0(".\\workflow_outputs\\spatial\\tacsat_welsh_waters_SRF2_", year, ".geojson"), layer = paste0("tacsat_welsh_waters_SRF2_", year, ".geojson"))
+  
+  
+}
+```
+
+Save the outputs up to this point.
+
+```{r set wd, include=TRUE, eval=FALSE}
+save(eflalo, file = paste0(".\\workflow_outputs\\eflalo_", analysis_type, "_", year, ".RData"))
+save(tacsat, file = paste0(".\\workflow_outputs\\tacsat_", analysis_type, "_", year, ".RData"))
+```
+
+Select fleet segment. Similarly to the previous if statement, this section selects which segment of the dataset is being analised. The options are Over 12m vessels, Under 12m vessels and all vessels.
+
+```{r select fleet segment, include=TRUE, eval=FALSE}
+fleet_segment = 'all' ## Options: ( 'over12', 'under12', 'all' )
+
+
+if ( fleet_segment == 'over12')  { 
+  
+  ###  1. Over 12m vessels analysis
+  
+  eflalo_fs = eflalo %>% filter(VE_LEN >= 12) %>% mutate  ( FLEET_SEG = paste0 ( FLEET_SEG, '_', fleet_segment))
+  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
+  #tacsat = tacsat %>% filter(SI_FT %in% eflalo$FT_REF)
+  
+  
+} else if  (fleet_segment == 'under12' ) { 
+  
+  
+  ### 2. Under 12m vessels analysis 
+  
+  eflalo_fs = eflalo %>% filter(VE_LEN < 12) %>% mutate  ( FLEET_SEG = paste0 ( FLEET_SEG, '_', fleet_segment))
+  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
+  
+} else if  (fleet_segment == 'all' ) { 
+  
+  
+  ### 3. All vessels 
+  
+  eflalo_fs = eflalo 
+  tacsat_fs = tacsat  
+  
+} 
+```
+
+Create vessel length categories based on the fleet segment. The chosen segment dictates the category distribution. This is done via an ifelse statement, as above. VE_LEN_CAT does not yet exist, so it is created here, using what follows the =. Categories are created using breaks, as the categories will reside in between each break value. E.g. the first category is -Inf to 4.5, meaning anything below 4.5 is assigned here. Then anything between 4.5 and 5 is assigned to the next category, and so on. Finally, the labels are assigned in the same order, so it is important they are correctly located in the list. 
+
+```{r vessel length categories, include=TRUE, eval=FALSE}
+if ( fleet_segment == 'over12')  {  
+  
+  eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
+                             breaks=c(-Inf, 12, 15, 18, 24, 40,  Inf), 
+                             labels=c("<12m",  "12-15m","15-18m", "18-24m", "24-40m" ,"=>40m"))
+  
+  
+  
+  
+  
+} else if  (fleet_segment == 'under12' ) { 
+  
+  
+  eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
+                             breaks=c(-Inf, 4.5, 4.999 , 6.999, 8.999, 11.999 , Inf), 
+                             labels=c("<4.5m","4.5-5m", "5-7m", "7-9m", "9-12m", "=>12m"))
+  
+} else if ( fleet_segment == 'all') { 
+  
+  
+  eflalo_fs$VE_LEN_CAT = cut(eflalo_fs$VE_LEN , include.lowest = T,
+                             breaks=c(-Inf, 6, 8, 10, 12, 15, 18, 24, 40,  Inf), 
+                             labels=c("<6m","6-8m", "8-10m", "10-12m", "12-15m","15-18m", "18-24m", "24-40m" ,"=>40m"))
+  
+  
+  
+  
+}
+
+```
+
+Create the trip days field by calculating the difference between departure and landing time.
+
+```{r calculate trip days, include=TRUE, eval=FALSE}
+eflalo_fs  = eflalo_fs %>% mutate ( trip_days = as.numeric(difftime(eflalo_fs$FT_LDATIM, eflalo_fs$FT_DDATIM), units = "days") ) 
+```
+
+Save the outputs up to this point.
+
+```{r set wd, include=TRUE, eval=FALSE}
+save(eflalo_fs, file = paste0(".\\workflow_outputs\\eflalo_fs_", analysis_type, "_", year, ".RData"))
+save(tacsat_fs, file = paste0(".\\workflow_outputs\\tacsat_fs_", analysis_type, "_", year, ".RData"))
+```
+
+## Clean the EFLALO data
+
+### 1.1  Number of EFLALO records and fishing Log Events records
+
+The EFLALO data requires cleaning as the majority of the data is manually input by humans, such as species, weight, time of departure and return. This leaves room for human error, which must be accounted for in the processing. In this section, the number of log events per trip is checked; if this number is unrealistic, this would be an example of an incorrect input and should be dealt with.
+
+Checking the eflalo data using the dplyr package is simple, as it allows multiple functions to be chained together using the %>% symbol combination. Under Q1.1, the groupby, summarise and arrange functions are all applied to the dataset eflalo_gbw, without the need to separate the commands into multiple lines of code.
+
+This line groups all entries that share the same FT_REF, using groupby(). Obviously there would be some loss of data if we simply applied each record of the next if it shared a trip reference, but here it is simply counting the number of records per trip, so a tally is taken using summarise(). Finally, arrange() sorts them into descending order.
+
+As can be seen, the output is each trip reference, followed by the n column displaying the number of records that occurred.
+
+Following this, the number of log events is calculated and individual trip references can be inspected if they present unrealistic log event or record numbers.
+
+Identifying trips with more than one assigned gear. 
+
+```{r trip outliers, include=TRUE, eval=FALSE}
+trips_with_more_than_1_gear = eflalo_fs %>% distinct(FT_REF, LE_GEAR )%>% group_by(FT_REF ) %>% 
+  mutate ( rn = row_number ( ) ) %>% filter ( rn > 1) 
+
+
+## SOLUTION: The best solution for those fishing trips using more than 1 Gear is to unify them into a unique combined gear 
+## So these trips will have a merged gear and metier defined: e.g. a trip using GN and FPO would have a gear defined as : GN_FPO
+
+eflalo_fs_mult_gears = eflalo_fs %>% filter(FT_REF %in% trips_with_more_than_1_gear$FT_REF )
+
+trips_mult_gears_comb = eflalo_fs_mult_gears %>% 
+  distinct(FT_REF, LE_GEAR, LE_MET ) %>% arrange( FT_REF , LE_GEAR, LE_MET) %>%
+  group_by( FT_REF  )  %>% 
+  mutate ( LE_GEAR_C = paste0  ( LE_GEAR, collapse =  "_"), LE_MET_C =  ifelse( LE_MET != 'NULL',  paste0  ( LE_MET, collapse =  "_"), LE_MET  ) ) %>%
+  select (FT_REF, LE_GEAR_C, LE_MET_C )
+```
+
+### 1.2 Duration of the fishing trips 
+
+Unrealistic trip days suggest human error, so the following code calculates the number of days each trip reference supposedly spanned. 
+
+From the code in section 1.2, the number of days is produced, so outliers can be seen. It is evident there are some unrealistic trip times, with one trip supposedly lasting 366 days - likely the wrong year was input. These trips can be filtered out in section 1.1.1, which finds trips which took 10 days or less and assigns them to 'trips_in'. This number cam be edited depending on the dataset. Then, eflalo_gbw is filtered to only include trip references which are present in 'trips_in', successfully removing trips with unrealistic time frames. 
+
+```{r trip outliers, include=TRUE, eval=FALSE}
+trips_outliers =  eflalo_fs %>% 
+  filter(SOURCE == 't3' & trip_days > 5 ) %>% 
+  select(FT_REF) %>%
+  distinct(FT_REF) %>%
+  pull()
+
+
+length ( trips_outliers )
+
+# < 5 days trips : 9194
+# < 10 days trips : 9207
+# total trips : 9228
+
+eflalo_ti = eflalo_fs %>% filter ( ( ! FT_REF %in% trips_outliers ) ) 
+```
+
+Duplicated trips cause inaccuracies in landings data and therefore should be removed. duplicate analysis is creating a variable which provides a boolean response to if a trip is duplicated or not, by checking the trip and vessel references and the departure/landing times. These trips can be investigated by the code in the third block. Finally, trips IDs that are identified as duplicates can be removed via common FT_REF with the duplicated_trips dataset.
+
+```{r duplicates analysis, include=TRUE, eval=FALSE}
+## Select a logarithm scale landing weight threshold ( e.g. 1.5)
+
+landingThreshold = 1.5
+
+## Identify the records with species captures over expected thresholds 
+# 1.6  Remove non-unique trip numbers -----------------------------------------------------------------------------
+
+
+duplicate_analysis = eflalo_fs%>%
+  distinct(VE_REF , FT_REF,  FT_DDAT, FT_LDAT)%>%
+  group_by(VE_REF, FT_DDAT, FT_LDAT)%>%
+  summarise( number_trips = n() ) %>%
+  mutate ( duplicated = ifelse( number_trips >  1, TRUE , FALSE    )  )  
+```
+
+Create the duplicate trips variable by joining the duplicates analysis by multiple columns to ensure accuracy.
+
+Remove the duplicate trips by setting eflalo_fs to any trips NOT included in the duplicate trips table.
+
+```{r remove duplicates, include=TRUE, eval=FALSE}
+## Identify the trip id's that are duplicated 
+
+duplicate_trips =  eflalo_fs%>%
+  left_join (duplicate_analysis , by = c ( 'VE_REF', 'FT_DDAT', 'FT_LDAT'))%>%
+  group_by(FT_REF)%>%
+  mutate ( number_records = n ())%>% 
+  ungroup()%>%
+  filter(duplicated == TRUE) %>%
+  distinct(VE_REF, FT_REF, FT_DDAT ,  FT_LDAT , number_records) %>%
+  arrange( VE_REF,   FT_DDAT ,  FT_LDAT , desc( number_records) )%>%
+  ungroup()%>%
+  group_by(VE_REF, FT_DDAT,FT_LDAT)%>%
+  mutate(r_num = row_number() )%>%
+  filter(r_num > 1)%>%
+  select(FT_REF)%>%
+  pull()
+
+## Filter out the duplicated trips
+
+eflalo_fs =   eflalo_fs %>%
+  filter( ! FT_REF %in% duplicate_trips   ) 
+```
+
+### 1.8 Remove trips which overlap with another trip
+
+Furthermore, a vessel cannot be on two separate trips at once, so trips which overlap one another cannot feasibly occur. The VMS locations of these trips will cause issues as they are technically suggesting a vessel is in two places at once. These trips must be corrected or deleted, this decision can be made on a case by case basis, following the following filtering, which will pull these trips out conveniently.
+
+```{r overlapping trips, include=TRUE, eval=FALSE}
+overlaps_analysis =  eflalo_fs%>%distinct(VE_REF, FT_REF, FT_DDATIM, FT_LDATIM)%>%
+  arrange(VE_REF, FT_DDATIM)%>%
+  group_by(VE_REF)%>%
+  mutate( overlaps = FT_LDATIM > lead (FT_DDATIM)   )
+
+
+## Check what vessel and trips dates are overlapping
+
+overlaps_analysis%>%
+  filter ( overlaps == TRUE)
+```
+
+
+
+## Clean the TACSAT data
+
+### 2.1 Load spatial auxiliary data
+
+Spatial data is necessary for analysing VMS data. It can be loaded into R as follows.
+
+```{r load spatial layers, include=TRUE, eval=FALSE}
+welsh_marine_area = st_read ( dsn = '.\\spatial_layers\\wales_plan_area.geojson' )
+port_500m = st_read( dsn = '.\\spatial_layers\\welsh_ports_ammended_0_005.geojson')
+land = st_read ( dsn = '.\\spatial_layers\\Europe_coastline_poly.shp')
+europe_aoi = st_read ( dsn = '.\\spatial_layers\\europe_aoi.geojson')  ###load the layer with crop are of interest 
+ICESareas = st_read(dsn = '.\\spatial_layers\\ICES_rectangles.geojson')
+ices_rect_welsh = st_read(dsn = '.\\spatial_layers\\ICES_rectangle_welsh.geojson')
+```
+
+Convert the data to the espg:4326 crs so that all data pieces are in the same crs.
+
+```{r set crs, include=TRUE, eval=FALSE}
+welsh_marine_area %>% st_crs()  ## WGS 84 EPSG: 4326
+port_500m %>% st_crs()   ## WGS 84
+land  %>% st_crs() 
+ICESareas = ICESareas %>% st_transform(4326)
+
+land_4326 = land %>% st_transform( 4326 )
+```
+
+Define a bounding box for Europe. This is used to reduce the size of the land data, to reduce the processing power needed for plotting. Additionally, the view frame will be much closer in and therefore more detail will be visible.
+
+```{r europe aoi, include=TRUE, eval=FALSE}
+## Define an object bbox ( bounding box )  with the area of interest 
+aoi = st_bbox( c( xmin = -15, xmax = 3, ymax = 60, ymin = 47), crs = st_crs( 4326 )) ## Define our area of intenrest.  4326 is id for WGS1984 unprojected coordinate system 
+
+europe_aoi = st_crop (x = land_4326, y = aoi)  ## clip/crop the whole European layer to our of interest
+```
+
+Filter the tacsat data to limit it to the trips in the eflalo data.
+
+```{r trips in clean eflalo, include=TRUE,eval = FALSE}
+
+trips_in_clean_eflalo = eflalo_fs %>% distinct(FT_REF)%>%pull() 
+
+ 
+tacsat_fs -> bk # creates a backup of tacsat_fs
+tacsat_fs = tacsat_fs %>% filter( SI_FT %in%  trips_in_clean_eflalo  ) # filter tacsat data to trips in eflalo
+```
+
+Explore the data.
+
+```{r set wd, include=TRUE, eval=FALSE}
+Explore the tacsat data to investigate the number of trips the number of trips within each respective dataset, which are common?
+
+```{r investigate common trips, include=TRUE,eval = FALSE}
+
+# Q1 : Number of trips in tacsat (iVMS) present in eflalo 
+
+tacsat_fs %>% mutate(inboth = SI_FT %in% trips_in_clean_eflalo )%>%select(inboth)%>%table()
+
+# Q2 : Number of trips in eflalo present in tacsat (iVMS)  
+
+eflalo_fs %>%distinct(FT_REF)%>% mutate(inboth = FT_REF %in% ( tacsat_fs%>%distinct(SI_FT)%>%pull())  )%>%select(inboth)%>%table()
+```
+
+Analyse the trips which do not have related tacsat information due to potential human error, such as forgetting to activate the tacsat box. Or from being prior to 16-02-2022, when iVMS was introduced.
+
+```{r ft_ref not in tacsat, include=TRUE,eval = FALSE}
+
+ft_ref_not_in_tacsat = eflalo_fs %>%distinct(FT_REF)%>% mutate(inboth = FT_REF %in% ( tacsat_fs%>%distinct(SI_FT)%>%pull())  )%>%
+  filter ( inboth == FALSE)
+
+res1 = eflalo_fs %>% filter( FT_REF %in% (ft_ref_not_in_tacsat %>% select (FT_REF) %>% pull() ) ) %>% 
+        filter( FT_DDAT > '2022-02-15')
+```
+
+### 2.2 Remove VMS pings outide ICES areas
+
+Convert spatial grid references to match so the datasets can be used in conjunction for analysis. Next, remove any VMS pings which do not fall inside ICES areas.
+
+```{r edit spatial grid references, include=TRUE, eval=FALSE}
+# 2.2 Take only VMS pings in the ICES areas ==============================================
+
+ia =  ICESareas%>% 
+  sf::st_as_sf() %>% 
+  sf::st_make_valid() %>% 
+  sf::st_transform(4326)  
+
+overs = 
+  tacsat_fs  %>% 
+  sf::st_as_sf(coords = c("SI_LONG", "SI_LATI")) %>% 
+  sf::st_set_crs(4326) %>% 
+  sf::st_intersects(ia)
+
+tacsat_fs = tacsat_fs[lengths(overs) > 0,]
+```
+
+Remove points that cannot be possible. Points which supposedly exist outside the extent of earth's longitude and latitude scales can simply be removed with the following code.
+
+```{r remove impossible points, include=TRUE,eval = FALSE}
+
+tacsat_fs = tacsat_fs %>% filter(abs(SI_LATI) < 90 | abs(SI_LONG) < 180)
+tacsat_fs = tacsat_fs %>% filter(SI_HE >= 0 | SI_HE <= 360)
+```
+
+### 2.5 Remove points which are pseudo duplicates as they have an interval rate < x minutes
+
+As VMS systems ping regularly at 2 hour intervals, double points are almost certainly duplicates, so they can be removed. To do this, R must know where the points are located, so it the TACSAT data must be converted into a spatial object using the sf package. 
+
+Using the interval between pings on records with the same trip reference, records which have pinged too frequently in short succession can be identified.
+
+```{r remove pseudo-duplicate points, include=TRUE, eval=FALSE}
+
+## Convert the TACSAT into a spatial object (SF package)
+
+tacsat_fs_geom = tacsat_fs %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 , remove = FALSE)
+
+# st_write( tacsat_fs_geom, dsn = paste0(".\\workflow_outputs\\tacsat_fs_", analysis_type, "_", year, ".geojson"),
+#           layer = paste0("tacsat_fs_", analysis_type, "_", year, ".geojson"), append = FALSE)
+
+## Q1: What is the minimum expected time interval between iVMS positions
+
+## Use that value to filter potential pseudo-duplicates ( values below the minimum expected interval)
+
+minInterval = 1 / 60 ## 1 minute converted in hours (0.01666667 hours)
+
+tacsat$SI_DATIM = ymd_hms(paste ( tacsat$SI_DATE, tacsat$SI_TIME, sep= " "  ) ) 
+
+tacsat_fs_geom$SI_DATIM =  ymd_hms(paste ( tacsat_fs_geom$SI_DATE, tacsat_fs_geom$SI_TIME, sep= " "  ) ) 
+
+tacsat_fs_geom = tacsat_fs_geom%>%ungroup()%>%
+  group_by(VE_REF, SI_FT)%>% arrange (VE_REF, SI_DATIM)%>%
+  mutate (INTV =  difftime(SI_DATIM , lag(SI_DATIM), units = "hours" )  )%>% ## Calcualte the difference between a iVMS loction time stamp and previous location to calcualte a fishign effort in a given location
+  mutate(interval_mean = mean(INTV , na.rm = T))%>% ## Calcualte the mean to replace the NA's interval when a VMS location is the 1st of a trip and cannot calculate with a prev. iVMS location
+  mutate(INTV = ifelse( is.na(INTV), interval_mean, INTV ))%>%  ## Convert the NA's into a effort represented by the mean of that vessel durign given trip
+  select(- interval_mean) %>%ungroup()
+```
+
+### 2.6 Remove points within harbours
+
+Points within harbours are identified by their spatial intersection with the port_3km dataset. This action is completed via a left join, which retains all the data entries in the left table (TACSAT data) and applies the information from corresponding entries in the port_3km dataset.
+
+These points can be plotted as shown below, using ggplot, which adds the Welsh marine area, the chosen ports which are selected within the quotation marks and the vms points which are located inside the ports. Finally, the boundary of the plot is specified so the plot is focused on the area of interest.
+
+```{r remove points in harbours, include=TRUE, eval=FALSE}
+tacsat_fs_ports = tacsat_fs_geom %>%
+  st_join ( port_500m %>% select ( Name, District_N) , join = st_intersects, left = T) %>%
+  mutate  ( SI_HARB  = ifelse ( is.na ( Name  ), FALSE , TRUE))  %>%
+  select ( - names(port_500m%>% select ( Name, District_N)))
+```
+
+
+
+```{r remove points on land, include=TRUE, eval=FALSE}
+tacsat_fs_land = tacsat_fs_ports %>% 
+  st_join( europe_aoi , join = st_intersects, left = T )%>%
+  mutate  ( SI_LAND  = ifelse ( is.na ( Id ), FALSE ,TRUE))%>%
+  select ( - names(europe_aoi) ) 
+
+tacsat_fs_df = tacsat_fs_land %>% filter(SI_LAND == FALSE & SI_HARB == FALSE )
+
+## Check how match the reported LE_RECT in EFLALO and the actual rectangle the  VMS location is located
+
+tac_geom = tacsat_fs_df %>% st_as_sf( ., coords = c("SI_LONG" ,"SI_LATI"), crs = 4326 )
+
+tacsat_fs_df_geom = tac_geom %>%
+  st_join ( ices_rect_welsh%>% select ( icesname ) , join = st_intersects, left = T) %>%
+  mutate  ( SI_RECT = icesname) 
+```
+
+
+
+```{r select fleet segment, include=TRUE, eval=FALSE}
+fleet_segment = 'all' ## Options: ( 'over12', 'under12', 'all' )
+
+
+if ( fleet_segment == 'over12')  { 
+  
+  ###  1. Over 12m vessels analysis
+  
+  eflalo_fs = eflalo %>% filter(VE_LEN >= 12) %>% mutate  ( FLEET_SEG = paste0 ( FLEET_SEG, '_', fleet_segment))
+  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
+  #tacsat = tacsat %>% filter(SI_FT %in% eflalo$FT_REF)
+  
+  
+} else if  (fleet_segment == 'under12' ) { 
+  
+  
+  ### 2. Under 12m vessels analysis 
+  
+  eflalo_fs = eflalo %>% filter(VE_LEN < 12) %>% mutate  ( FLEET_SEG = paste0 ( FLEET_SEG, '_', fleet_segment))
+  tacsat_fs = tacsat %>% filter(VE_REF %in% eflalo_fs$VE_REF)
+  
+} else if  (fleet_segment == 'all' ) { 
+  
+  
+  ### 3. All vessels 
+  
+  eflalo_fs = eflalo 
+  tacsat_fs = tacsat  
+  
+} 
+```
+
+Convert EFLALO from LARGE format into WIDE format. This complies with the format required by VMSTOOL 'splitamongpings' function. Depending on the format selected, we have to choose Option 1 or Option 2 in step '2.3 Dispatch landings/catches among VMS pings'. As a general approach, if we want to analyse all species together choose long format if we want to analyse a number of species choose wide format.
+
+```{r pivot eflalo, include=TRUE, eval=FALSE}
+eflalo_fs = eflalo_fs%>%
+  pivot_wider(id_cols = c( FT_REF, FT_DCOU, FT_DHAR, FT_DDAT, FT_DTIME, FT_DDATIM,
+                           FT_LCOU, FT_LHAR, FT_LDAT, FT_LTIME, FT_LDATIM, VE_REF,
+                           VE_FLT, VE_COU, VE_LEN, VE_KW, VE_TON, FT_YEAR,
+                           LE_ID, LE_CDAT, LE_STIME, LE_ETIME, LE_SLAT, LE_GEAR,
+                           LE_MSZ, LE_RECT, LE_DIV, LE_MET, EFLALO_FT_FT_REF, Year,
+                           Month, VE_LEN_CAT, SOURCE, FLEET_SEG ),
+              names_from = c(LE_SPE), values_from = c(LE_KG, LE_VALUE))
+```
+
+Retrieve a selection of columns from eflalo_fs to be joined to tacsat.
+
+```{r eflalo_sel, include=TRUE, eval=FALSE}
+   eflalo_sel =  eflalo_fs %>% 
+                  select(FT_REF, LE_CDAT, LE_GEAR,LE_MSZ, LE_RECT, LE_MET, VE_LEN, VE_KW, VE_COU) %>%
+                  distinct()
+```
+
+Join the data and check all gears transferred correctly. The number of NA values in the LE_GEAR column must be 0.
+
+```{r join tacsat eflalo_sel, include=TRUE, eval=FALSE}
+    tacsatp =  tacsat_fs%>%  left_join( eflalo_sel  , by = c("SI_FT" = "FT_REF", "SI_DATE" = "LE_CDAT"))
+  
+    tacsatp%>%filter (is.na(LE_GEAR)) ## must be 0 , that means all iVMS records have an associated EFLALO records 
+```
+
+Retrieve the first trip from this list after rearranging the data. 
+
+```{r , include=TRUE, eval=FALSE}
+  ft =    eflalo_sel %>% arrange(FT_REF , LE_CDAT) %>% 
+          select (FT_REF, LE_GEAR) %>% rename(LE_GEAR2 = LE_GEAR) %>%
+          group_by(FT_REF)%>%slice(1)
+```
+
+Assign the main gear of each trip to the VMS locations that do not already have a gear assigned.
+
+```{r set wd, include=TRUE, eval=FALSE}
+ve_c = eflalo_sel%>%distinct(FT_REF, VE_LEN, VE_KW, VE_COU)%>%rename(VE_LEN2 = VE_LEN, VE_KW2 = VE_KW, VE_COU2 = VE_COU )
+
+tacsatp =  tacsatp %>% left_join ( ve_c , by = c( "SI_FT" = "FT_REF"))%>%
+  mutate ( VE_LEN = ifelse(is.na (VE_LEN), VE_LEN2 , VE_LEN  ), 
+           VE_KW = ifelse( is.na (VE_KW), VE_KW2 , VE_KW  ) , 
+           VE_COU = ifelse(is.na (VE_COU), VE_COU2 , VE_COU  ) )%>%
+  select (-c(VE_LEN2, VE_KW2, VE_COU2))
+```
+
+Save tacsatp and close the for loop.
+
+```{r save tacsatp, include=TRUE, eval=FALSE}
+tacsatp = tacsatp %>% as.data.frame()
+
+tacsatp %>% filter(SOURCE == 't3')
+
+tacsatp = tacsatp %>% select(!geometry)
+
+#write.csv(tacsatp, paste0("Z:\\FISHERIES M MoU\\Working_Area\\spatial_fisheries_data\\welsh_gov_srf2\\tacsatp_", year, "_", analysis_type, ".csv"), row.names = FALSE)
+save(tacsatp, file = paste0(".\\workflow_outputs\\tacsatp_", analysis_type, "_", year, ".RData"))
+
+save(eflalo_fs, file = paste0('.\\workflow_outputs\\eflalo_fs_qc_', analysis_type, "_wide_", year, '.RData'))
+
+print(paste0("Finished ", year))
+
+}
+```
+
+
+The following is a secondary loop which sets up and completes SplitAmongPings.
+
+```{r initiate for loop, include=TRUE, eval=FALSE}
+years = 2012:2022
+# year = 2013
+
+analysis_type = 'welsh_waters' ### welsh_fleet / welsh_waters
+
+for (year in years) {
+```
+
+Load the data
+
+```{r load data, include=TRUE, eval=FALSE}
+  load(paste0(".\\workflow_outputs\\eflalo_fs_qc_", analysis_type, "_wide_", year, '.RData'))
+  
+  load(paste0(".\\workflow_outputs\\tacsatp_", analysis_type, "_", year, ".RData"))
+```
+
+Depending on the format of the eflalo data, wide or long, the analysis will need to be different, so select the type being used here. Also, the results from the data and how their weights per species are summarised can be changed.
+
+```{r wide/long, include=TRUE, eval=FALSE}
+  eflalo_format = 'wide' ## defautl format following toolbox workflow 
+  species_analysis_type = 'all_species_separated' # options: ( all_species_sum, all_species_separated ,   selected_species_sum,       selected_species_separated )
+  
+  if ( eflalo_format == 'wide' ) { 
+    
+    ## For all the species together 
+    
+    
+    ## Option 1: Names in wide format . Each species catch value has its own column 
+    
+    idxkg  =  grep("KG", colnames(eflalo_fs ) )  
+    idxval =  grep("VALUE", colnames(eflalo_fs )  ) 
+    
+    
+    
+    ## Option 1.1 : all landings for all species sum together 
+    if (species_analysis_type == 'all_species_sum') {
+      
+      eflalo_fs_tot = eflalo_fs %>% mutate(LE_KG_TOT = select(.,idxkg) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% mutate(LE_EURO_TOT = NA ) %>% as.data.frame()       
+      
+    } else if (species_analysis_type == 'all_species_separated') {
+      
+      eflalo_fs_tot = eflalo_fs%>% as.data.frame()  # %>% mutate(LE_KG_TOT = select(.,idxkg) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% mutate(LE_EURO_TOT = NA ) %>% as.data.frame()       
+      
+    } else if (species_analysis_type == 'selected_species_sum') {
+      
+      ## Option 1.2 : by selected species totals
+      eflalo_fs_tot = eflalo_fs %>%   mutate(LE_KG_TOT = select(.,contains(c('KG_SOL', 'KG_MAC')) ) %>% rowSums(., na.rm = TRUE) ) %>% select ( -c ( idxkg, idxval) ) %>% as.data.frame()       
+      
+    } else if (species_analysis_type == 'selected_species_separated') {
+      
+      ## Option 1.3 : Analysis by species separately 
+      eflalo_fs_tot = eflalo_fs %>% select(., -idxkg , -idxval, contains(c('SOL', 'MAC') ) ) %>% filter_at ( vars (contains( c('SOL', 'MAC') ) ) , any_vars(!is.na(.)) ) %>%  as.data.frame()
+      
+    }
+    
+    dim( eflalo_fs_tot)
+    
+    
+    
+  }  else if   (eflalo_format == 'long'  ) { 
+    
+    
+    ## Option 2: Species names in long format. All  species in LE_SPE and  catch value in LE_KG columns
+    
+    
+    captures_total = eflalo_fs %>% group_by(FT_REF, LE_ID) %>% summarise(LE_KG_TOT = sum( LE_KG), LE_EURO_TOT = 0 ) # LE_KG_TOT = sum( LE_KG) if VALUE data is available
+    
+    
+    eflalo_fs_tot = eflalo_fs %>% select(-c (LE_SPE, LE_KG, LE_VALUE)) %>% distinct() %>% inner_join(captures_total , by = c("FT_REF", "LE_ID" ))
+    
+  } 
+```
+
+Convert the SI_FT column to FT_REF to meet the requirements of the functions. Also, investigate which trips are not merged. Finally, reassign fishing/non-fishing from 'f' and 's' to 1 and 0.
+
+```{r set up data for SplitAmongPings, include=TRUE, eval=FALSE}
+  tacsatp %>% select(SI_STATE) %>% filter(SI_STATE == 'f') %>% tally()
+  
+  tacsatp = tacsatp %>% mutate( FT_REF = SI_FT )
+  
+  eflaloM =  subset(eflalo_fs_tot,FT_REF %in% unique(tacsatp$FT_REF))
+  eflaloNM = subset(eflalo_fs_tot,!FT_REF %in% unique(tacsatp$FT_REF))
+  
+  
+  tacsatp  = tacsatp %>% mutate ( SI_STATE = ifelse (SI_STATE == 'f', 1, 0   )  )  
+  
+  tacsatp %>% select(SI_STATE) %>% filter(SI_STATE == '1') %>% tally()
+  
+  
+  ##Filter only records when vessel is detected as fishing 
+  
+  tacsatEflalo  = tacsatp  %>% filter( SI_STATE == 1) 
+  
+  
+  tacsatEflalo = tacsatEflalo %>% filter ( FT_REF %in%  ( eflaloM%>%distinct(FT_REF)%>%pull())   )
+  
+  
+  ## if LE_KG or LE_VALUE is NA , replace by 0s'
+  
+  
+  #eflaloM = eflaloM %>% mutate ( LE_VALUE_TOT = 0 )
+  #eflaloM = eflaloM %>% mutate ( LE_EURO_TOT = LE_VALUE_TOT   )
+  
+  tacsatEflalo  = tacsatEflalo %>% as.data.frame()
+  eflaloM = eflaloM%>% as.data.frame()
+```
+
+Run the split among pings function and add additional columns.
+
+```{r split among pings, include=TRUE, eval=FALSE}
+  tacsatEflalo =  splitAmongPings(
+    tacsat = tacsatEflalo,
+    eflalo = eflaloM,
+    variable = "all", # "kgs",
+    level = "day",
+    conserve = FALSE
+  )
+  
+  
+  tacsatEflalo$Csquare_05   =  CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.05)
+  tacsatEflalo$Year         =  year(tacsatEflalo$SI_DATIM)
+  tacsatEflalo$Month        =  month(tacsatEflalo$SI_DATIM)
+  tacsatEflalo$kwHour       =  as.numeric(tacsatEflalo$VE_KW) * tacsatEflalo$INTV  
+  #tacsatEflalo$cpue        =  tacsatEflalo$LE_KG_TOT / tacsatEflalo$INTV   
+  tacsatEflalo$INTV         =  tacsatEflalo$INTV 
+  
+  save(tacsatEflalo, file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+
+```
+
+Produce eflalo_output and alter/add columns. Finally, finish the loop.
+
+```{r eflalo_output, include=TRUE, eval=FALSE}
+  eflalo_output = eflalo_fs_tot
+  
+  eflalo_output$Year      = year(eflalo_output$FT_LDATIM)
+  eflalo_output$Month     = month(eflalo_output$FT_LDATIM)
+  eflalo_output$INTV      = 1 # 1 day
+  
+  eflalo_output = eflalo_output %>% group_by(VE_REF, LE_CDAT) %>% mutate ( nr = row_number() ) %>% 
+    mutate ( nr = max(nr) ) %>% 
+    mutate ( INTV = INTV / nr)   %>% 
+    arrange ( VE_REF , LE_CDAT)  %>% as.data.frame()
+  
+  
+  eflalo_output$kwDays =  as.numeric(eflalo_output$VE_KW) * eflalo_output$INTV
+  eflalo_output$tripInTacsat = ifelse(eflalo_output$FT_REF %in% tacsatp$FT_REF, "Y", "N")
+  
+  save(eflalo_output,file = paste0("workflow_outputs\\srf-2\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+
+```
