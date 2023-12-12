@@ -10,6 +10,3 @@ data-products/
 
 data/*
 !data/spatial_layers
-!data/welsh_fleet_data
-!data/welsh_waters_data
-!data/workflow_outputs
