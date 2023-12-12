@@ -30,7 +30,7 @@ plotsPath = paste0(outPath, "plots\\")
 
 #######
 
-
+## ASSGIN C-SQuare label
 csq = 'csq005'
 
 
@@ -40,12 +40,8 @@ csq = 'csq005'
 
 year = 2022
 
-analysis_type = 'welsh_fleet'
-
-load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
-load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
-
-## ASSGIN C-SQuare label
+load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_welsh_fleet_", year, "_SRF_2_FDP.RData"))
+load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_welsh_fleet_", year, "_SRF_2_FDP.RData"))
 
 
 tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
@@ -74,7 +70,7 @@ table1m = table1m %>% filter(LE_KG > 0 & LE_EURO > 0)
 
 table1m %>% filter(!INTV == 0) %>% tally()
 
-### Year, Month, 0.01 Csquare, gear, species
+### Year, Month, 0.05 Csquare, gear, species
 
 table1.a_input <- table1m
 
@@ -113,12 +109,10 @@ write.csv(table1.a, paste0(outPath, "\\", year, "_table1_a_", csq, "_SRF2.csv"),
 
 year = 2022
 
-analysis_type = 'welsh_waters'
+load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_welsh_waters_", year, "_SRF_2_FDP.RData"))
+load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_welsh_waters_", year, "_SRF_2_FDP.RData"))
 
-load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
-load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
-
-## ASSGIN C-SQuare label
+## ASSGIN C-SQuare 0.01
 tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
 
 VE_lut <- data.frame(VE_REF = unique(c(tacsatEflalo$VE_REF, eflalo_output$VE_REF)))
@@ -140,9 +134,11 @@ table1m[, LE_SPE := factor(LE_SPE,
                            labels = unique(gsub("(.*)(_)([A-Z]*)$", "\\3", 
                                                 grep("LE_KG|LE_EURO", colnames(table1), value = TRUE))))]
 
+table1m = table1m %>% filter(LE_KG > 0 & LE_EURO > 0)
+
 table1.b_input <- table1m
 
-### Year, Month, 0.01 Csquare, gear, species
+### Year, Month, 0.05 Csquare, gear, species
 table1.b = 
   table1.b_input %>%
   group_by(SI_YEAR, Month, Csquare_05, LE_GEAR, LE_SPE) %>%
@@ -184,8 +180,6 @@ for ( year in years ) {
   load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
   load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
   
-  ## ASSGIN C-SQuare label
-  
   if (year == 2012) {
     tacsatEflalo_all <- tacsatEflalo
     eflalo_all <- eflalo_output
@@ -219,10 +213,12 @@ for ( year in years ) {
   table1m[, LE_SPE := factor(LE_SPE, 
                              labels = unique(gsub("(.*)(_)([A-Z]*)$", "\\3", 
                                                   grep("LE_KG|LE_EURO", colnames(table1), value = TRUE))))]
-
+  
+  table1m = table1m %>% filter(LE_KG > 0 & LE_EURO > 0)
+  
   table1_input = table1m %>% filter (VE_LEN > 12)
   
-  ### Year, Month, 0.01 Csquare, gear, species
+  ### Year, Month, 0.05 Csquare, gear, species
   table1.output = 
     table1_input %>%
     group_by(SI_YEAR, Month, Csquare_05, LE_GEAR, LE_SPE) %>%
