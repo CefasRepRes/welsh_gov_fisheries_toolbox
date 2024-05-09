@@ -53,7 +53,8 @@ setwd('./../../data')
                   select(FT_REF, LE_CDAT, LE_GEAR,LE_MSZ, LE_RECT, LE_MET, VE_LEN, VE_KW, VE_COU) %>%
                   distinct()
   
-  
+  unique(tacsat_fs$SI_DATE)
+  unique(eflalo_sel$LE_GEAR)
   
     tacsatp =  tacsat_fs%>%  left_join( eflalo_sel  , by = c("SI_FT" = "FT_REF"       , "SI_DATE" = "LE_CDAT"  )   )
   
@@ -314,6 +315,8 @@ setwd('./../../data')
   
   
   save( tacsatp, file = paste0(".\\workflow_outputs\\tacsatActivity", year, ".RData")) 
+  
+  load (      file = paste0(".\\workflow_outputs\\tacsatActivity", year, ".RData"))  
   
   message("Defining activity completed")
   

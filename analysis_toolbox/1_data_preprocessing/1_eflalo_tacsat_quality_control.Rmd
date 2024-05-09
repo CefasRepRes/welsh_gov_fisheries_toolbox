@@ -149,7 +149,7 @@ Further exploration into a trip identified with more than one gear.
 
 Unrealistic trip days suggest human error, so the following code calculates the number of days each trip reference supposedly spanned. 
 
-From the code in section 1.2, the number of days is produced, so outliers can be seen. It is evident there are some unrealistic trip times, with one trip supposedly lasting 366 days - likely the wrong year was input. These trips can be filtered out in section 1.1.1, which finds trips which took 10 days or less and assigns them to 'trips_in'. This number cam be edited depending on the dataset. Then, eflalo_gbw is filtered to only include trip references which are present in 'trips_in', successfully removing trips with unrealistic time frames. 
+From the code in section 1.2, the number of days is produced, so outliers can be seen. It is evident there are some unrealistic trip times, with one trip supposedly lasting 366 days - likely the wrong year was input. These trips can be filtered out in section 1.1.1, which finds trips which took 10 days or less and assigns them to 'trips_in'. This number cam be edited depending on the dataset. Then, eflalo_fs is filtered to only include trip references which are present in 'trips_in', successfully removing trips with unrealistic time frames. 
 
  
 ```{r , include=TRUE, eval=FALSE}
