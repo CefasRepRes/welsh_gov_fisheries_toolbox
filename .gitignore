@@ -10,3 +10,4 @@ data-products/
 
 data/*
 !data/spatial_layers
+.lintr
