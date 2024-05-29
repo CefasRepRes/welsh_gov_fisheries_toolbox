@@ -511,6 +511,8 @@ tacsat_fs_ports = tacsat_fs_geom %>%
 
 
 getwd()
+
+dir.create(".\\workflow_outputs\\spatial")
 st_write( tacsat_fs_ports, dsn = paste0(".\\workflow_outputs\\spatial\\tacsat_port_welsh.geojson"), layer = "tacsat_port_welsh.geojson")      
 
 ##Q2: Plot the ports and iVMS locations when in port
