@@ -14,6 +14,7 @@ library(lubridate)  ## this package helps with manage date fields
 library(dplyr)      ## R Package to use pipelines (%>%) analysis language 
 library(sf)         ## R Package for spatial analysis in R ( Simple Features )
 library(ggplot2)    ## R Package for plotting and graphs
+library(here)       ## Package for referring back to root of git - also test branch
 
 ## SET YOUR R WORKING DIRECTORY
 
