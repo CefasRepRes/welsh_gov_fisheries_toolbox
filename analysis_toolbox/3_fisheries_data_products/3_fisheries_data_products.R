@@ -10,18 +10,18 @@ library(devtools)
 # function for plotting data products - to be used later, it is just common practice to put functions at the top of scripts
 plot_function = function ( data_plot , col_plot ,col_facet1 = NULL  , col_facet2 = NULL  ) {
   
-  gg1 =  ggplot() + geom_sf( data =   world     ) +
-    geom_sf (data = data_plot , aes(color = sum_intv,  fill = sum_intv) ) +
+  gg1 =  ggplot() + geom_sf(data = world) +
+    geom_sf (data = data_plot, aes(color = sum_intv, fill = sum_intv)) +
     theme_bw() +
     coord_sf(xlim = lons, ylim = lats, expand = FALSE) #+
     #labs(fill = "Effort") # +
   # facet_wrap( ~ get( col_facet1) + get( col_facet2)  )
-  if ( is.null( col_facet2 )  )  {
+  if (is.null( col_facet2)) {
     gg1 =  gg1 +
-      facet_wrap( ~ get( col_facet1)  )
-  } else  {
+      facet_wrap( ~ get(col_facet1))
+  } else {
     gg1 =  gg1 +
-      facet_wrap( ~ get( col_facet1) +get( col_facet2)   )
+      facet_wrap( ~ get(col_facet1) + get(col_facet2))
   }
   return(gg1)
 }
@@ -49,8 +49,8 @@ plotsPath = paste0(outPath, "plots\\")
 
 year = 2022
 
-load(file = paste0(inPath, "/eflalo_output_", year , ".RData")  )
-load(file = paste0(inPath, "/tacsatEflalo_output_", year , ".RData")  )
+load(file = paste0(inPath, "/eflalo_output_", year, ".RData"))
+load(file = paste0(inPath, "/tacsatEflalo_output_", year, ".RData"))
 
 ## 3.2 Welsh Gov Fisheries Data Product ----
 
