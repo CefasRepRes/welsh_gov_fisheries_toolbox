@@ -4,11 +4,12 @@ library(dplyr)
 library(ggplot2)
 library(here)
 
-setwd("./../../data")
+# setwd("./../../data")
 
-# load(".\\workflow_outputs\\eflalo_ww.RData")
+# If this option is not set from the previous script, uncomment the line and set it now
+# analysis_type = "welsh_waters" ## Options: ("welsh_fleet", "welsh_waters")
+
 load(paste0(here(), "\\data\\workflow_oututs\\eflalo_", analysis_type, ".RData"))
-# load(".\\workflow_outputs\\tacsat_ww.RData")
 load(paste0(here(), "\\data\\workflow_oututs\\tacsat_", analysis_type, ".RData"))
 
 ### Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section.
@@ -183,9 +184,9 @@ ggplot(data = eflalo_fs %>% filter(trip_days < 50), aes(x = trip_days, y = VE_LE
 
 
 
-write.csv(x = res1, file =  ".\\workflow_outputs\\species_kg_ranked_by_gear.csv", row.names = FALSE)
+write.csv(x = res1, file = paste0(here(), "\\data\\workflow_outputs\\species_kg_ranked_by_gear.csv"), row.names = FALSE)
 
 ## Save the intermediate EFLALO and TACSAT datasets
 
-save(eflalo_fs, file = ".\\workflow_outputs\\eflalo_fs_ww.RData")
-save(tacsat_fs, file = ".\\workflow_outputs\\tacsat_fs_ww.RData")
+save(eflalo_fs, file = paste0(here(), "\\data\\workflow_outputs\\eflalo_fs_", analysis_type, ".RData"))
+save(tacsat_fs, file = paste0(here(), "\\data\\workflow_outputs\\tacsat_fs_", analysis_type, ".RData"))
