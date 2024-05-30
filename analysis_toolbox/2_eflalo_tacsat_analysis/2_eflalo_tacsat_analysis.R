@@ -533,4 +533,4 @@ eflalo_output$kwDays = as.numeric(eflalo_output$VE_KW) * eflalo_output$INTV
 eflalo_output$tripInTacsat = ifelse(eflalo_output$FT_REF %in% tacsatp$FT_REF, "Y", "N") # Y = Yes and N = No
 
 
-save(eflalo_output, file = paste0(here(), "\\data\\workflow_outputs\\eflalo_output_", analysis_type, "_", year, ".RData"))
+save(eflalo_output, file = paste0(here("data\\workflow_outputs\\eflalo_output_"), analysis_type, "_", year, ".RData"))
