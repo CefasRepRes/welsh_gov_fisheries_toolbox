@@ -12,9 +12,9 @@
 --------------------------------------------------
 
 select *
-from eflalo2.eflalo_ft
+from eflalo.eflalo_ft
 where ft_ref in (
-	select eflalo_ft_ft_ref from eflalo2.eflalo_le
+	select eflalo_ft_ft_ref from eflalo.eflalo_le
 	where le_rect in ('32E5','35E5','34E6','32E6','35E6','31E7','32E7','35E7','33E4','33E5','30E2','31E2','30E3',
 					  '31E3','32E3','30E4','31E4','32E4','34E4','35E4','36E4','31E5','34E5','36E5','31E6','36E6'
 					  )
@@ -27,7 +27,7 @@ where ft_ref in (
 -----------------------------------------------
 
 select *
-from eflalo2.eflalo_le
+from eflalo.eflalo_le
 where le_rect in ('32E5','35E5','34E6','32E6','35E6','31E7','32E7',
 				  '35E7','33E4','33E5','30E2','31E2','30E3','31E3',
 				  '32E3','30E4','31E4','32E4','34E4','35E4','36E4',
@@ -41,10 +41,10 @@ and (le_cdat, le_cdat) overlaps ('2022-01-01'::DATE, '2022-12-31'::DATE)
 --------------------------------------------------
 
 select *
-from eflalo2.eflalo_spe
+from eflalo.eflalo_spe
 where eflalo_ft_ft_ref in (
 	select eflalo_ft_ft_ref
-	from eflalo2.eflalo_le
+	from eflalo.eflalo_le
 	where le_rect in ('32E5','35E5','34E6','32E6','35E6','31E7','32E7',
 				  	  '35E7','33E4','33E5','30E2','31E2','30E3','31E3',
 				  	  '32E3','30E4','31E4','32E4','34E4','35E4','36E4',
@@ -59,7 +59,7 @@ where eflalo_ft_ft_ref in (
 -------------------------------------
 
 select *
-from tacsat2.tacsat 
+from tacsat.tacsat 
 where si_ft in (
 	select eflalo_ft_ft_ref
 	from eflalo2.eflalo_le
