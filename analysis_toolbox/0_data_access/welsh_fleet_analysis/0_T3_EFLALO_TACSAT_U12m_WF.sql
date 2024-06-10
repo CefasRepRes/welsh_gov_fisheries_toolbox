@@ -6,7 +6,7 @@ from DM.DimFishingTrip ft with(nolock)
 left join DM.DimVesselRegistration v with(nolock) on ft.RegisteredFishingVesselDmk = v.RegisteredFishingVesselDmk
 where YEAR(CAST(StartDatetime AS DATE)) = @Year
 and TripIdentifier like 'GBR-TRP-SDS-%'
-and VE_FA = 'Wales'
+and v.FisheriesAuthorityName = 'Wales'
 
 
 select FishingTripDmk, ft.TripIdentifier, ft.StartDatetime, ft.EndDatetime, ft.DeparturePortDmk, ft.ArrivalPortDmk, ft.RegisteredFishingVesselDmk, v.RSSNumber
@@ -15,7 +15,7 @@ from DM.DimFishingTrip ft with(nolock)
 left join DM.DimVesselRegistration v with(nolock) on ft.RegisteredFishingVesselDmk = v.RegisteredFishingVesselDmk
 where YEAR(CAST(StartDatetime AS DATE)) = @Year
 and TripIdentifier not like 'GBR-TRP-SDS-%'
-and VE_FA = 'Wales'
+and v.FisheriesAuthorityName = 'Wales'
 
 select *
 into #TripsToExtract
@@ -128,7 +128,7 @@ select
 	, NULL as LE_VALUE
 from #TripsToExtract x 
 inner join DM.DimFishingOperation fo with(nolock) on x.TripIdentifier = fo.TripIdentifier
-inner join DM.FactFishingActivityUnlandedCatch foc with(nolock) on fo.FishingOperationDmk = foc.FishingOperationDmk
+inner join DM.FactFishingActivityCatch foc with(nolock) on fo.FishingOperationDmk = foc.FishingOperationDmk
 left join DM.DimSpecies s with(nolock) on s.SpeciesDmk = foc.SpeciesDmk
 where fo.ActivityType = 'FISHING_OPERATION'
 group by fo.FishingOperationDmk, x.FishingTripDmk, s.FAOSpeciesCode
