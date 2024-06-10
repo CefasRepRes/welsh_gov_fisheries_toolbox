@@ -1,23 +1,23 @@
 declare @Year int = 2022
 
-select FishingTripDmk, ft.TripIdentifier, ft.StartDatetime, DATEADD(dd, 1, ft.EndDatetime) as EndDatetime, ft.DeparturePortDmk, ft.ArrivalPortDmk, ft.RegisteredFishingVesselDmk, v.RSSNumber, , fao.QualifiedAreaCode
+select FishingTripDmk, ft.TripIdentifier, ft.StartDatetime, DATEADD(dd, 1, ft.EndDatetime) as EndDatetime, ft.DeparturePortDmk, ft.ArrivalPortDmk, ft.RegisteredFishingVesselDmk, v.RSSNumber, fao.QualifiedAreaCode
 into #U10TripsToExtract
 from DM.DimFishingTrip ft with(nolock)
-inner join DM.DimFishingOperation fo with(nolock) on x.TripIdentifier = fo.TripIdentifier
+inner join DM.DimFishingOperation fo with(nolock) on ft.TripIdentifier = fo.TripIdentifier
 left join DM.DimVesselRegistration v with(nolock) on ft.RegisteredFishingVesselDmk = v.RegisteredFishingVesselDmk
 left join DM.DimFAOFishingArea fao with(nolock) on fo.FAOFishingAreaDmk = fao.FAOFishingAreaDmk
 where YEAR(CAST(StartDatetime AS DATE)) = @Year
-and TripIdentifier like 'GBR-TRP-SDS-%'
+and ft.TripIdentifier like 'GBR-TRP-SDS-%'
 
 
 select FishingTripDmk, ft.TripIdentifier, ft.StartDatetime, ft.EndDatetime, ft.DeparturePortDmk, ft.ArrivalPortDmk, ft.RegisteredFishingVesselDmk, v.RSSNumber, fao.QualifiedAreaCode
 into #O10TripsToExtract
 from DM.DimFishingTrip ft with(nolock)
-inner join DM.DimFishingOperation fo with(nolock) on x.TripIdentifier = fo.TripIdentifier
+inner join DM.DimFishingOperation fo with(nolock) on ft.TripIdentifier = fo.TripIdentifier
 left join DM.DimVesselRegistration v with(nolock) on ft.RegisteredFishingVesselDmk = v.RegisteredFishingVesselDmk
 left join DM.DimFAOFishingArea fao with(nolock) on fo.FAOFishingAreaDmk = fao.FAOFishingAreaDmk
 where YEAR(CAST(StartDatetime AS DATE)) = @Year
-and TripIdentifier not like 'GBR-TRP-SDS-%'
+and ft.TripIdentifier not like 'GBR-TRP-SDS-%'
  
 
 select *
@@ -159,7 +159,7 @@ select
 	, NULL as LE_VALUE
 from #TripsToExtract x 
 inner join DM.DimFishingOperation fo with(nolock) on x.TripIdentifier = fo.TripIdentifier
-inner join DM.FactFishingActivityUnlandedCatch foc with(nolock) on fo.FishingOperationDmk = foc.FishingOperationDmk
+inner join DM.FactFishingActivityCatch foc with(nolock) on fo.FishingOperationDmk = foc.FishingOperationDmk
 left join DM.DimSpecies s with(nolock) on s.SpeciesDmk = foc.SpeciesDmk
 where fo.ActivityType = 'FISHING_OPERATION'
 group by fo.FishingOperationDmk, x.FishingTripDmk, s.FAOSpeciesCode
