@@ -10,7 +10,7 @@
 --------------------------------------------------
 
 select *
-from eflalo2.eflalo_ft
+from eflalo.eflalo_ft
 where ve_cou = 'GBW'
 and ft_year = '2022'
 
@@ -20,10 +20,10 @@ and ft_year = '2022'
 -----------------------------------------------
 
 select *
-from eflalo2.eflalo_le
+from eflalo.eflalo_le
 where eflalo_ft_ft_ref in (
 	select ft_ref 
-	from eflalo2.eflalo_ft
+	from eflalo.eflalo_ft
 	where ve_cou = 'GBW'
 	and ft_year = '2022'
 )
@@ -34,10 +34,10 @@ where eflalo_ft_ft_ref in (
 --------------------------------------------------
 
 select eflalo_le_le_id, le_spe, sum(le_kg) as le_kg, sum(le_euro) as le_euro, eflalo_ft_ft_ref
-from eflalo2.eflalo_spe
+from eflalo.eflalo_spe
 where eflalo_ft_ft_ref in (
 	select ft_ref 
-	from eflalo2.eflalo_ft
+	from eflalo.eflalo_ft
 	where ve_cou = 'GBW'
 	and ft_year = '2022'
 )
@@ -49,10 +49,10 @@ group by eflalo_le_le_id, le_spe, eflalo_ft_ft_ref
 -------------------------------------
 
 select *
-from tacsat2.tacsat
+from tacsat.tacsat
 where si_ft in (
 	select ft_ref 
-	from eflalo2.eflalo_ft
+	from eflalo.eflalo_ft
 	where ve_cou = 'GBW'
 	and ft_year = '2022'
 )
