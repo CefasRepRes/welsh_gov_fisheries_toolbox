@@ -20,7 +20,7 @@ library(here)       ## Package for referring back to root of git
 
 ##check WD is in the desired data folder location
 getwd()
-
+here()
 
 ## SELECT THE ANALYSIS OPTION:
 analysis_type = "welsh_waters" ## Options: ("welsh_fleet", "welsh_waters")
@@ -35,10 +35,12 @@ if (analysis_type == "welsh_fleet") {
 
   ## 2. WELSH WATERS ACTIVITY ANALYSIS
 
-  data_folder_t3 = file.path(paste0(here(), "\\data\\welsh_fleet_data\\t3"))
-  data_folder_geofish = file.path(paste0(here(), "\\data\\welsh_fleet_data\\geofish"))
+  data_folder_t3 = file.path(paste0(here(), "\\data\\welsh_waters_data\\t3"))
+  data_folder_geofish = file.path(paste0(here(), "\\data\\welsh_waters_data\\geofish"))
 }
 
+print(data_folder_t3)
+print(data_folder_geofish)
 
 ## 1. Load T3\\GeoFISH  EFLALO data set blocks and merge them into one R data frame
 
@@ -166,11 +168,13 @@ tacsat %>% filter(is.na(SI_SP)) %>% dim()
 ## Do you want to keep logbook records with no related VMS\\IVMS (TACSAT) records?
 ## Otherwise select "no" to keep only eflalo records with asscociated tacsat (to ensure trips have a vessel location within Welsh Waters)
 
+dir.create(here("data\\workflow_outputs\\spatial"))
+
 retain_eflalo_with_no_tacsat = "yes"
 
 if (analysis_type == "welsh_waters") {
 
-  welsh_marine_area = st_read(dsn = ".\\spatial_layers\\wales_plan_area.geojson")
+  welsh_marine_area = st_read(dsn = here("data\\spatial_layers\\wales_plan_area.geojson"))
   welsh_marine_area_geom = st_make_valid(st_union(welsh_marine_area))
 
 
@@ -193,7 +197,7 @@ if (analysis_type == "welsh_waters") {
   ## To visualize in a GIS software, save the TACSAT as point geometry
 
 
-  st_write(tacsat_geom_ww, dsn = ".\\workflow_outputs\\spatial\\tacsat_welsh_waters.geojson", layer = "tacsat_welsh_waters.geojson")
+  st_write(tacsat_geom_ww, dsn = here("data\\workflow_outputs\\spatial\\tacsat_welsh_waters.geojson"), layer = "tacsat_welsh_waters.geojson")
 
 
 }

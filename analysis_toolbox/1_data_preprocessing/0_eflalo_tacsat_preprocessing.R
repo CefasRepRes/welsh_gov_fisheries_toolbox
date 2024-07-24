@@ -7,10 +7,10 @@ library(here)
 # setwd("./../../data")
 
 # If this option is not set from the previous script, uncomment the line and set it now
-# analysis_type = "welsh_waters" ## Options: ("welsh_fleet", "welsh_waters")
+analysis_type = "welsh_waters" ## Options: ("welsh_fleet", "welsh_waters")
 
-load(paste0(here(), "\\data\\workflow_oututs\\eflalo_", analysis_type, ".RData"))
-load(paste0(here(), "\\data\\workflow_oututs\\tacsat_", analysis_type, ".RData"))
+load(paste0(here(), "\\data\\workflow_outputs\\eflalo_", analysis_type, ".RData"))
+load(paste0(here(), "\\data\\workflow_outputs\\tacsat_", analysis_type, ".RData"))
 
 ### Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section.
 
@@ -80,9 +80,24 @@ eflalo_fs %>% distinct(FT_REF) %>% dim()
 
 eflalo_fs %>% filter(VE_LEN >= 10 & SOURCE == "geofish")
 
-eflalo_fs %>% select(VE_LEN) %>% mutate(VE_LEN = as.numeric(VE_LEN)) %>% summary()
-eflalo_fs %>% mutate(VE_LEN =  floor(VE_LEN)) %>% distinct(VE_LEN, SOURCE) %>% group_by(VE_LEN, SOURCE) %>% tally()
-eflalo_fs %>% distinct(VE_REF, VE_LEN) %>% mutate(VE_LEN = floor(VE_LEN)) %>% group_by(VE_LEN) %>% tally() %>% ggplot(., aes(VE_LEN, n)) + geom_bar(stat = "identity") + scale_x_continuous(breaks = seq(1:32))
+eflalo_fs %>% 
+  select(VE_LEN) %>% 
+  mutate(VE_LEN = as.numeric(VE_LEN)) %>% 
+  summary()
+
+eflalo_fs %>% 
+  mutate(VE_LEN = floor(VE_LEN)) %>% 
+  distinct(VE_LEN, SOURCE) %>% 
+  group_by(VE_LEN, SOURCE) %>% 
+  tally()
+
+eflalo_fs %>% 
+  distinct(VE_REF, VE_LEN) %>% 
+  mutate(VE_LEN = floor(VE_LEN)) %>% 
+  group_by(VE_LEN) %>% 
+  tally() %>% 
+  ggplot(., aes(VE_LEN, n)) + geom_bar(stat = "identity") + scale_x_continuous(breaks = seq(1:32))
+
 eflalo_fs %>% ggplot(., aes(VE_LEN)) + geom_histogram()
 
 
@@ -188,5 +203,5 @@ write.csv(x = res1, file = paste0(here(), "\\data\\workflow_outputs\\species_kg_
 
 ## Save the intermediate EFLALO and TACSAT datasets
 
-save(eflalo_fs, file = paste0(here(), "\\data\\workflow_outputs\\eflalo_fs_", analysis_type, ".RData"))
-save(tacsat_fs, file = paste0(here(), "\\data\\workflow_outputs\\tacsat_fs_", analysis_type, ".RData"))
+save(eflalo_fs, file = paste0(here(), "\\data\\workflow_outputs\\eflalo_fs_", analysis_type, "_", fleet_segment, ".RData"))
+save(tacsat_fs, file = paste0(here(), "\\data\\workflow_outputs\\tacsat_fs_", analysis_type, "_", fleet_segment, ".RData"))

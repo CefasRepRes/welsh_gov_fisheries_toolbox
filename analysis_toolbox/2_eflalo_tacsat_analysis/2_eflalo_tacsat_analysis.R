@@ -7,8 +7,11 @@ library(here)
 
 # setwd("./../../data")
 
-load(file = paste0(here(), "\\data\\workflow_outputs\\eflalo_fs_qc", analysis_type, ".RData"))
-load(file = paste0(here(), "\\data\\workflow_outputs\\tacsat_fs_qc", analysis_type, ".RData"))
+analysis_type = "welsh_waters"
+fleet_segment = "all"
+
+load(file = paste0(here(), "\\data\\workflow_outputs\\eflalo_fs_qc_", analysis_type, "_", fleet_segment, ".RData"))
+load(file = paste0(here(), "\\data\\workflow_outputs\\tacsat_fs_qc_", analysis_type, "_", fleet_segment, ".RData"))
 
 
 ## define the year for the  analysed data
@@ -287,7 +290,7 @@ ggplot(subTacsat %>% filter(LE_GEAR == "DRB"), aes(x = SI_SP, fill = SI_STATE)) 
 
 # Assign for visually inspected gears a simple speed rule classification ===============
 
-## This will apply the values in speed array data frame created at the begginign of the process
+## This will apply the values in speed array data frame created at the begining of the process
 
 
 metiers = unique(nonsubTacsat$LE_GEAR)
@@ -302,7 +305,7 @@ for (mm in metiers) {
 
 }
 
-## In the dataset we are analysing there aren"t NA"s or MISC gear , so this section doesn"t apply in this example
+## In the dataset we are analysing there aren"t NA"s or MISC gear , so this section doesn't apply in this example
 
 sp_gear = speedarr %>% filter(LE_GEAR == "MIS")
 
@@ -337,9 +340,9 @@ tacsatp$SI_STATE[idx] <- "f"
 
 
 
-save(tacsatp, file = paste0(here(), "\\data\\workflow_outputs\\tacsatActivity_", analysis_type, "_", year, ".RData"))
+save(tacsatp, file = paste0(here(), "\\data\\workflow_outputs\\tacsatActivity_", analysis_type, "_", fleet_segment, "_", year, ".RData"))
 
-load(file = paste0(here(), "\\data\\workflow_outputs\\tacsatActivity_", analysis_type, "_", year, ".RData"))
+load(file = paste0(here(), "\\data\\workflow_outputs\\tacsatActivity_", analysis_type, "_", fleet_segment, "_", year, ".RData"))
 
 message("Defining activity completed")
 
@@ -422,7 +425,7 @@ if (eflalo_format == "wide") {
 
 ## Save the eflalo with total landings before merge with TACSAT
 
-save(eflalo_fs_tot, file = paste0(here(), "\\data\\workflow_outputs\\eflaloTotals_", analysis_type, "_", year, ".RData"))
+save(eflalo_fs_tot, file = paste0(here(), "\\data\\workflow_outputs\\eflaloTotals_", analysis_type, "_", fleet_segment, "_", year, ".RData"))
 
 
 tacsatp = tacsatp %>% mutate(FT_REF = SI_FT)
@@ -449,7 +452,19 @@ eflaloM = eflaloM %>% mutate(LE_VALUE_TOT = 0)
 eflaloM = eflaloM %>% mutate(LE_EURO_TOT = LE_VALUE_TOT)
 
 
+## TACSATP speed analysis
+unique(tacsatp$LE_GEAR)
 
+
+speed_ranges <- tacsatp %>%
+  filter(SI_STATE == 1) %>%
+  group_by(LE_GEAR) %>%
+  summarize(
+    min_SI_SP = min(SI_SP, na.rm = TRUE),
+    max_SI_SP = max(SI_SP, na.rm = TRUE)
+  )
+
+print(speed_ranges)
 
 #- Split among ping the landings to iVMS locations
 
@@ -471,10 +486,10 @@ tacsatEflalo %>% summarise(TOT = sum(LE_KG_TOT))
 
 
 
-save(tacsatEflalo, file = paste0(here(), "\\data\\workflow_outputs\\tacsatEflalo_", analysis_type, "_", year, ".RData"))
+save(tacsatEflalo, file = paste0(here(), "\\data\\workflow_outputs\\tacsatEflalo_", analysis_type, "_", fleet_segment, "_", year, ".RData"))
 
 
-load(paste0(here(), "\\data\\workflow_outputs\\tacsatEflalo_", analysis_type, "_", year, ".RData"))
+load(paste0(here(), "\\data\\workflow_outputs\\tacsatEflalo_", analysis_type, "_", fleet_segment, "_", year, ".RData"))
 print("Dispatching landings completed")
 
 tacsatp %>% filter(SI_STATE == 1 & SI_FT == 610736051) %>% dim()

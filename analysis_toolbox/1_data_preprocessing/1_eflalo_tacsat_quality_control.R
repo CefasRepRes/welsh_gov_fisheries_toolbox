@@ -9,11 +9,14 @@ library(here)
 
 getwd()
 
-# if you opened from the file explorer, you will likele need this, may have to edit, needs to be pointed to data folder
+# if you opened from the file explorer, you will likely need this, may have to edit, needs to be pointed to data folder
 # setwd("./../../data")
 
+analysis_type = "welsh_waters"
+fleet_segment = "all"
 
-load(paste0(here(), "\\data\\workflow_outputs\\eflalo_fs_", analysis_type, ".RData"))
+load(paste0(here(), "\\data\\workflow_outputs\\eflalo_fs_", analysis_type, "_", fleet_segment, ".RData"))
+load(paste0(here(), "\\data\\workflow_outputs\\tacsat_fs_", analysis_type, "_", fleet_segment, ".RData"))
 
 
 #### QUALITY CONTROL:  Clean data with potential  outlines ########
@@ -318,12 +321,12 @@ eflalo_fs %>% filter(FT_REF %in% c(610738857, 610735265))
 ## LIBRARY SF required for spatial analysis
 
 
-welsh_marine_area = st_read(dsn = ".\\spatial_layers\\wales_plan_area.geojson")
-port_500m = st_read(dsn = ".\\spatial_layers\\welsh_ports_ammended_0_005.geojson")
-land = st_read(dsn = ".\\spatial_layers\\Europe_coastline_poly.shp")
-europe_aoi = st_read(dsn = ".\\spatial_layers\\europe_aoi.geojson")  ###load the layer with crop are of interest
-ICESareas = st_read(dsn = ".\\spatial_layers\\ICES_rectangles.geojson")
-ices_rect_welsh = st_read(dsn = ".\\spatial_layers\\ICES_rectangle_welsh.geojson")
+welsh_marine_area = st_read(dsn = here("data\\spatial_layers\\wales_plan_area.geojson"))
+port_500m = st_read(dsn = here("data\\spatial_layers\\welsh_ports_ammended_0_005.geojson"))
+land = st_read(dsn = here("data\\spatial_layers\\Europe_coastline_poly.shp"))
+europe_aoi = st_read(dsn = here("data\\spatial_layers\\europe_aoi.geojson"))  ###load the layer with crop are of interest
+ICESareas = st_read(dsn = here("data\\spatial_layers\\ICES_rectangles.geojson"))
+ices_rect_welsh = st_read(dsn = here("data\\spatial_layers\\ICES_rectangle_welsh.geojson"))
 
 ## explore connection to WFS/WMS services ( Welsh Portal ,  OSGB )
 
@@ -482,7 +485,9 @@ tacsat_fs %>% filter(SI_SP > 30)
 
 tacsat_fs_geom = tacsat_fs %>% st_as_sf(., coords = c("SI_LONG", "SI_LATI"), crs = 4326, remove = FALSE)
 
-st_write(tacsat_fs_geom, dsn = ".\\workflow_outputs\\tacsat_fs.geojson", layer = "tacsat_fs.geojson")
+st_write(tacsat_fs_geom, 
+         dsn = paste0(here(), "\\data\\workflow_outputs\\tacsat_fs_", analysis_type, "_", fleet_segment, ".geojson"), 
+         layer = paste0("tacsat_fs_", analysis_type, "_", fleet_segment, ".geojson"))
 
 ## Q1: What is the minimum expected time interval between iVMS positions
 
@@ -564,11 +569,7 @@ tacsat_fs_ports = tacsat_fs_geom %>%
 
 
 
-
-getwd()
-
-dir.create(".\\workflow_outputs\\spatial")
-st_write(tacsat_fs_ports, dsn = paste0(".\\workflow_outputs\\spatial\\tacsat_port_welsh.geojson"), layer = "tacsat_port_welsh.geojson")
+st_write(tacsat_fs_ports, dsn = paste0(here(), "\\data\\workflow_outputs\\spatial\\tacsat_port_welsh.geojson"), layer = "tacsat_port_welsh.geojson")
 
 ##Q2: Plot the ports and iVMS locations when in port
 
@@ -600,7 +601,7 @@ tacsat_fs_land = tacsat_fs_ports %>%
   mutate(SI_LAND = ifelse(is.na(Id), FALSE, TRUE)) %>%
   select(- names(europe_aoi))
 
-st_write(tacsat_fs_land, dsn = ".\\workflow_outputs\\spatial\\tacsat_fs_land.geojson", layer = "tacsat_fs_land.geojson", append = FALSE)
+st_write(tacsat_fs_land, dsn = paste0(here(), "\\data\\workflow_outputs\\spatial\\tacsat_fs_land.geojson"), layer = "tacsat_fs_land.geojson", append = FALSE)
 
 
 ##Q1: How many points are detected on land?
@@ -631,7 +632,9 @@ tacsat_fs_land = tacsat_fs_land %>% mutate(SI_STATE = ifelse(SI_SP  >= 1 & SI_SP
 tacsat_fs_df = tacsat_fs_land %>% filter(SI_LAND == FALSE & SI_HARB == FALSE)
 
 
-st_write(tacsat_fs_df, dsn = ".\\workflow_outputs\\tacsat_fs_df.geojson", layer = "tacsat_fs_df.geojson")
+st_write(tacsat_fs_df, 
+         dsn = paste0(here(), "\\data\\workflow_outputs\\tacsat_fs_df", analysis_type, "_", fleet_segment, ".geojson"), 
+         layer = paste0("tacsat_fs_df_", analysis_type, "_", fleet_segment, ".geojson"))
 
 
 
@@ -642,14 +645,14 @@ st_write(tacsat_fs_df, dsn = ".\\workflow_outputs\\tacsat_fs_df.geojson", layer 
 
 # Save the cleaned EFLALO file
 
-save(eflalo_fs, file = paste0(here(), "\\data\\workflow_outputs\\eflalo_fs_qc_ww", analysis_type, ".RData"))
+save(eflalo_fs, file = paste0(here(), "\\data\\workflow_outputs\\eflalo_fs_qc_", analysis_type, "_", fleet_segment, ".RData"))
 
 
 # Save the cleaned TACSAT file
 
 tacsat_fs = tacsat_fs_df
 
-save(tacsat_fs, file = paste0(here(), "\\data\\workflow_outputs\\tacsat_fs_qc_", analysis_type, ".RData"))
+save(tacsat_fs, file = paste0(here(), "\\data\\workflow_outputs\\tacsat_fs_qc_", analysis_type, "_", fleet_segment, ".RData"))
 
 
 
