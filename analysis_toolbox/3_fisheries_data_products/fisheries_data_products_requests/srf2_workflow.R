@@ -18,14 +18,14 @@ getwd()
 years <- 2009:2021
 # year <- 2022
 
+## SELECT THE ANALYSIS OPTION:
+
+analysis_type = "welsh_waters" ## Options: ("welsh_fleet", "welsh_waters")
+
 
 ########################## LOAD #######################################################################################################################
 
 for (year in years) {
-
-  ## SELECT THE ANALYSIS OPTION:
-
-  analysis_type = "welsh_waters" ## Options: ( "welsh_fleet" , "welsh_waters"  )
 
 
   if (analysis_type == "welsh_fleet")  {
@@ -1004,9 +1004,10 @@ for (year in years) {
 ## 5.2 Define the fishing activity ( This is based on expert criteria and can be defined using the script in 2_eflalo_tacsat_analysis\ 2_eflalo_tacsat_analysis.R from line 14 to 321)  ######
 
 years = 2012:2022
-# year = 2013
+# year = 2022
 
-analysis_type = "welsh_waters" ### welsh_fleet / welsh_waters
+eflalo_format = "wide" ## defautl format following toolbox workflow
+species_analysis_type = "all_species_separated" # options: ( all_species_sum, all_species_separated ,   selected_species_sum, selected_species_separated )
 
 for (year in years) {
 
@@ -1016,9 +1017,6 @@ for (year in years) {
   load(paste0(here("data\\workflow_outputs\\tacsatp_"), analysis_type, "_", year, ".RData"))
 
   # 5.3 Dispatch landings/catches of merged eflalo at the VMS/iVMS ping scale  -------------------------------------------------
-
-  eflalo_format = "wide" ## defautl format following toolbox workflow
-  species_analysis_type = "all_species_separated" # options: ( all_species_sum, all_species_separated ,   selected_species_sum, selected_species_separated )
 
   if (eflalo_format == "wide") {
 
@@ -1098,6 +1096,40 @@ for (year in years) {
   tacsatp = tacsatp %>% mutate(SI_STATE = ifelse(SI_STATE == "f", 1, 0))
 
   tacsatp %>% select(SI_STATE) %>% filter(SI_STATE == "1") %>% tally()
+
+  speed_ranges <- tacsatp %>%
+    filter(SI_STATE == 1) %>%
+    group_by(LE_GEAR) %>%
+    summarize(
+      min_SI_SP = min(SI_SP, na.rm = TRUE),
+      max_SI_SP = max(SI_SP, na.rm = TRUE)
+    )
+
+  print(speed_ranges)
+
+  srp <- ggplot(speed_ranges, aes(x = LE_GEAR, y = (min_SI_SP + max_SI_SP) / 2)) +
+    geom_point(color = "black") +
+    geom_errorbar(aes(ymin = min_SI_SP, ymax = max_SI_SP), width = 0.2, color = "black") +
+    labs(title = "Speed Ranges for Gears", x = "Gear", y = "Speed (Knots)") +
+    theme_minimal(base_size = 15) + # Adjust base_size as needed
+    theme(
+      plot.background = element_rect(fill = "white", color = NA), # White background
+      panel.background = element_rect(fill = "white", color = NA), # White background
+      panel.grid.major = element_line(color = "grey80"), # Light grey grid lines
+      panel.grid.minor = element_line(color = "grey90"), # Lighter grey grid lines
+      axis.text.x = element_text(angle = 45, hjust = 1, color = "black"), # Black x-axis text
+      axis.text.y = element_text(color = "black"), # Black y-axis text
+      axis.title.x = element_text(color = "black"), # Black x-axis title
+      axis.title.y = element_text(color = "black"), # Black y-axis title
+      plot.title = element_text(hjust = 0.5, color = "black") # Centered and black plot title
+    )
+
+  plot(srp)
+
+  ggsave(here("data/workflow_outputs/gear_speed_ranges.png"), plot = srp, width = 10, height = 6)
+
+  names(speed_ranges) <- c("Gear", "Min Fishing Speed", "Max Fishing Speed")
+  write.csv(speed_ranges, file = here("data/workflow_outputs/gear_speed_ranges.csv"), row.names = FALSE)
 
 
   ##Filter only records when vessel is detected as fishing
