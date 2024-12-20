@@ -29,6 +29,8 @@ gjPath = paste0(outPath, "geojson\\")
 dir.create(paste0(outPath, "plots"))
 plotsPath = paste0(outPath, "plots\\")
 
+gitpath <- here()
+
 #######
 
 ## ASSGIN C-SQuare label
@@ -41,8 +43,8 @@ csq = "csq005"
 
 year = 2022
 
-load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_welsh_fleet_", year, "_SRF_2_FDP.RData"))
-load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_welsh_fleet_", year, "_SRF_2_FDP.RData"))
+load(file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsatEflalo_welsh_fleet_", year, "_SRF_2_FDP.RData"))
+load(file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_output_welsh_fleet_", year, "_SRF_2_FDP.RData"))
 
 
 tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
@@ -111,8 +113,8 @@ write.csv(table1.a, paste0(outPath, "\\", year, "_table1_a_", csq, "_SRF2.csv"),
 
 year = 2022
 
-load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_welsh_waters_", year, "_SRF_2_FDP.RData"))
-load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_welsh_waters_", year, "_SRF_2_FDP.RData"))
+load(file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsatEflalo_welsh_waters_", year, "_SRF_2_FDP.RData"))
+load(file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_output_welsh_waters_", year, "_SRF_2_FDP.RData"))
 
 ## ASSGIN C-SQuare 0.01
 tacsatEflalo$Csquare_01 = CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.01)
@@ -180,8 +182,8 @@ analysis_type = "welsh_waters" ## welsh_fleet / welsh_waters
 
 for (year in years) {
 
-  load(file = paste0(".\\workflow_outputs\\srf-2\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
-  load(file = paste0(".\\workflow_outputs\\srf-2\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+  load(file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
+  load(file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
 
   if (year == 2012) {
     tacsatEflalo_all <- tacsatEflalo
