@@ -12,15 +12,19 @@ library(here)
 ##check WD is in the desired data folder location
 getwd()
 
+options(max.print = 100) # Limits print to 100 lines
+
+gitpath <- here()
+
+
 ## otherwise change to desired data folder location
 # setwd("./../../data")
 
-years <- 2009:2021
-# year <- 2022
+years <- 2022
 
 ## SELECT THE ANALYSIS OPTION:
 
-analysis_type = "welsh_waters" ## Options: ("welsh_fleet", "welsh_waters")
+analysis_type = "welsh_fleet" ## Options: ("welsh_fleet", "welsh_waters")
 
 
 ########################## LOAD #######################################################################################################################
@@ -296,17 +300,17 @@ for (year in years) {
   }
 
   ### The EFLALO and TACSAT have been formatted and ready for analysis!!
-
-  save(eflalo, file = paste0(here("data\\workflow_outputs\\eflalo_"), analysis_type, "_", year, ".RData"))
-  save(tacsat, file = paste0(here("data\\workflow_outputs\\tacsat_"), analysis_type, "_", year, ".RData"))
+  dir.create(paste0(gitpath, "\\data\\workflow_outputs\\", year))
+  save(eflalo, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_", analysis_type, "_", year, ".RData"))
+  save(tacsat, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsat_", analysis_type, "_", year, ".RData"))
 
 
   #rm(list = ls())
 
   ########################## PREPROCESSING #######################################################################################################################
 
-  load(paste0(here("data\\workflow_outputs\\eflalo_"), analysis_type, "_", year, ".RData"))
-  load(paste0(here("data\\workflow_outputs\\tacsat_"), analysis_type, "_", year, ".RData"))
+  load(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_", analysis_type, "_", year, ".RData"))
+  load(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsat_", analysis_type, "_", year, ".RData"))
 
   ### Define the fleet segment to be analysed from the Analysis Option chosen in "0_DATA_ACCESS" toolbox section.
 
@@ -421,8 +425,8 @@ for (year in years) {
 
   ## Save the intermediate EFLALO and TACSAT datasets
 
-  save(eflalo_fs, file = paste0(here("data\\workflow_outputs\\eflalo_fs_"), analysis_type, "_", year, ".RData"))
-  save(tacsat_fs, file = paste0(here("data\\workflow_outputs\\tacsat_fs_"), analysis_type, "_", year, ".RData"))
+  save(eflalo_fs, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_fs_", analysis_type, "_", year, ".RData"))
+  save(tacsat_fs, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsat_fs_", analysis_type, "_", year, ".RData"))
 
 
 
@@ -432,8 +436,8 @@ for (year in years) {
   ########################## QUALITY CONTROL #######################################################################################################################
 
 
-  load(paste0(here("data\\workflow_outputs\\eflalo_fs_"), analysis_type, "_", year, ".RData"))
-  load(paste0(here("data\\workflow_outputs\\tacsat_fs_"), analysis_type, "_", year, ".RData"))
+  load(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_fs_", analysis_type, "_", year, ".RData"))
+  load(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsat_fs_", analysis_type, "_", year, ".RData"))
 
 
   #### QUALITY CONTROL:  Clean data with potential outliers ########
@@ -630,7 +634,7 @@ for (year in years) {
   trips_in_clean_eflalo = eflalo_fs %>% distinct(FT_REF) %>% pull()
 
 
-  tacsat_fs -> bk
+  tacsat_fs_bk <- tacsat_fs
   tacsat_fs = tacsat_fs %>% filter(SI_FT %in% trips_in_clean_eflalo)
 
 
@@ -735,7 +739,6 @@ for (year in years) {
                      select(Name, District_N)))
 
 
-  getwd()
   # st_write( tacsat_fs_ports, dsn = paste0(".\\workflow_outputs\\spatial\\tacsat_port_welsh_", year, ".geojson"),
   #           layer = paste0("tacsat_port_welsh_", analysis_type, "_", year, ".geojson"), append = FALSE)
 
@@ -746,8 +749,9 @@ for (year in years) {
     mutate(SI_LAND = ifelse(is.na(Id), FALSE, TRUE)) %>%
     select(- names(europe_aoi))
 
-  # st_write( tacsat_fs_land, dsn = paste0(".\\workflow_outputs\\spatial\\tacsat_fs_land_", analysis_type, "_", year,".geojson"),
-  #           layer = "tacsat_fs_land", analysis_type, "_", year,".geojson", append = FALSE )
+  dir.create(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\spatial"))
+  st_write(tacsat_fs_land, dsn = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\spatial\\tacsat_fs_land_", analysis_type, "_", year, ".geojson"),
+           layer = "tacsat_fs_land", analysis_type, "_", year, ".geojson", append = FALSE)
 
 
   ##Q1: How many points are detected on land?
@@ -768,13 +772,13 @@ for (year in years) {
   tacsat_fs_df = tacsat_fs_land %>% filter(SI_LAND == FALSE & SI_HARB == FALSE)
 
 
-  st_write(tacsat_fs_df, dsn = paste0(here("data\\workflow_outputs\\tacsat_fs_df_"), analysis_type, "_", year, ".geojson",
-                                      layer = paste0("tacsat_fs_df_", analysis_type, "_", year, ".geojson")))
+  st_write(tacsat_fs_df, dsn = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\spatial\\tacsat_fs_df_", analysis_type, "_", year, ".geojson"),
+                                      layer = paste0("tacsat_fs_df_", analysis_type, "_", year, ".geojson"))
 
 
   #   Save the cleaned EFLALO file
 
-  save(eflalo_fs, file = paste0(here("data\\workflow_outputs\\eflalo_fs_qc_"), analysis_type, "_", year, ".RData"))
+  save(eflalo_fs, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_fs_qc_", analysis_type, "_", year, ".RData"))
 
 
   #   Save the cleaned TACSAT file
@@ -782,7 +786,7 @@ for (year in years) {
 
   tacsat_fs = tacsat_fs_df
 
-  save(tacsat_fs, file = paste0(here("data\\workflow_outputs\\tacsat_fs_qc_"), analysis_type, "_", year, ".RData"))
+  save(tacsat_fs, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsat_fs_qc_", analysis_type, "_", year, ".RData"))
 
 
   ## Check how match the reported LE_RECT in EFLALO and the actual rectangle the  VMS location is located
@@ -800,8 +804,8 @@ for (year in years) {
   ########################## TOOLBOX LITE #######################################################################################################################
 
 
-  load(paste0(here("data\\workflow_outputs\\eflalo_fs_qc_"), analysis_type, "_", year, ".RData"))
-  load(paste0(here("data\\workflow_outputs\\tacsat_fs_qc_"), analysis_type, "_", year, ".RData"))
+  load(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_fs_qc_", analysis_type, "_", year, ".RData"))
+  load(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsat_fs_qc_", analysis_type, "_", year, ".RData"))
 
   # eflalo = eflalo_fs
   # tacsat = tacsat_fs
@@ -993,9 +997,9 @@ for (year in years) {
   tacsatp = tacsatp %>% select(!geometry)
 
   #write.csv(tacsatp, paste0("Z:\\FISHERIES M MoU\\Working_Area\\spatial_fisheries_data\\welsh_gov_srf2\\tacsatp_", year, "_", analysis_type, ".csv"), row.names = FALSE)
-  save(tacsatp, file = paste0(here("data\\workflow_outputs\\tacsatp_"), analysis_type, "_", year, ".RData"))
+  save(tacsatp, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsatp_", analysis_type, "_", year, ".RData"))
 
-  save(eflalo_fs, file = paste0(here("data\\workflow_outputs\\eflalo_fs_qc_"), analysis_type, "_wide_", year, ".RData"))
+  save(eflalo_fs, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_fs_qc_", analysis_type, "_wide_", year, ".RData"))
 
   print(paste0("Finished ", year))
 }
@@ -1003,8 +1007,7 @@ for (year in years) {
 
 ## 5.2 Define the fishing activity ( This is based on expert criteria and can be defined using the script in 2_eflalo_tacsat_analysis\ 2_eflalo_tacsat_analysis.R from line 14 to 321)  ######
 
-years = 2012:2022
-# year = 2022
+years = 2022
 
 eflalo_format = "wide" ## defautl format following toolbox workflow
 species_analysis_type = "all_species_separated" # options: ( all_species_sum, all_species_separated ,   selected_species_sum, selected_species_separated )
@@ -1012,9 +1015,13 @@ species_analysis_type = "all_species_separated" # options: ( all_species_sum, al
 for (year in years) {
 
   #load(paste0(".\\workflow_outputs\\eflalo_fs_qc_", analysis_type, "_", year, ".RData"))
-  load(paste0(here("data\\workflow_outputs\\eflalo_fs_qc_"), analysis_type, "_wide_", year, ".RData"))
+  load(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_fs_qc_", analysis_type, "_wide_", year, ".RData"))
 
-  load(paste0(here("data\\workflow_outputs\\tacsatp_"), analysis_type, "_", year, ".RData"))
+  load(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsatp_", analysis_type, "_", year, ".RData"))
+
+  tacsatp %>% select(SI_STATE) %>% filter(SI_STATE == "f") %>% tally()
+  tacsatp %>% select(SI_STATE) %>% filter(SI_STATE == "s") %>% tally()
+
 
   # 5.3 Dispatch landings/catches of merged eflalo at the VMS/iVMS ping scale  -------------------------------------------------
 
@@ -1085,9 +1092,58 @@ for (year in years) {
 
   }
 
-  tacsatp %>% select(SI_STATE) %>% filter(SI_STATE == "f") %>% tally()
 
-  tacsatp = tacsatp %>% mutate(FT_REF = SI_FT)
+  ## Load the Fishing Speed Arrays from the AD-HOC speed profile analysis
+  if (year == years[1]) {
+    speed_array <- read.csv(here("data\\speed-array.csv"))
+  }
+
+  # reformat columns to align with tacsatp
+  names(speed_array)[names(speed_array) == "Gear"] <- "LE_GEAR"
+  names(speed_array)[names(speed_array) == "Revised.Min.speed.W.gov"] <- "min"
+  names(speed_array)[names(speed_array) == "Revised.Max.speed.W.gov"] <- "max"
+
+  # start by correctly formatting the level 5 metier
+  # tacsatp$LE_L5MET <- sapply(strsplit(tacsatp$LE_MET, "_"), function(x) paste(x[1:2], collapse = "_"))
+
+  ## Join the TACSAT data with the speed array ranges to identify fishing VMS records ('f') and not fishing records ( steaming, 's')
+
+  join_q <- join_by(LE_GEAR)
+
+  tacsat_bk_speed <- tacsatp ; # tacsatp <- tacsat_bk_speed
+  tacsatp <- tacsatp |> left_join(speed_array, by = join_q)
+
+
+  tacsatp_orig <- tacsatp |>
+    mutate(SI_STATE = ifelse(SI_SP >= Original.Min.Fishing.Speed & SI_SP <= Original.Max.Fishing.Speed, "f", "s"))
+
+  tacsatp_orig %>% filter(SI_STATE == "f") %>% tally()
+  tacsatp_orig %>% filter(SI_STATE == "s") %>% tally()
+
+  # tacsatp <- tacsatp %>% dplyr::select(-Gear.name, -Original.Min.Fishing.Speed, -Original.Max.Fishing.Speed)
+
+  eflalo %>% distinct(FT_REF, LE_CDAT) %>% tally()
+
+
+  ## Retain the ranges of speed for QC purposes to be able to see the MAX and MIN ranges.
+  ## For analysis purposes the comment can be removed
+
+  total_days_fishing_speed_original <- tacsatp_orig %>% filter(SI_STATE == "f") %>% summarise(tot_effort_days = sum(INTV, na.rm = TRUE) / 24)
+  total_days_fishing_speed_original
+
+
+  tacsatp <- tacsatp %>% mutate(FT_REF = SI_FT)
+
+  tacsatp <- tacsatp |>
+    mutate(SI_STATE = ifelse(SI_SP >= min & SI_SP <= max, "f", "s"))
+
+
+  ### STAT TO SEND OVER FOR VALIDATION
+  total_days_fishing_speed_reviewed <- tacsatp  %>% filter(SI_STATE == "f")  %>% summarise(tot_effort_days = sum(INTV, na.rm = TRUE) / 24)
+  total_days_fishing_speed_reviewed
+
+  tacsatp %>% select(SI_STATE) %>% filter(SI_STATE == "f") %>% tally()
+  tacsatp %>% select(SI_STATE) %>% filter(SI_STATE == "s") %>% tally()
 
   eflaloM = subset(eflalo_fs_tot, FT_REF %in% unique(tacsatp$FT_REF))
   eflaloNM = subset(eflalo_fs_tot, !FT_REF %in% unique(tacsatp$FT_REF))
@@ -1126,10 +1182,10 @@ for (year in years) {
 
   plot(srp)
 
-  ggsave(here("data/workflow_outputs/gear_speed_ranges.png"), plot = srp, width = 10, height = 6)
+  ggsave(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\gear_speed_ranges_", analysis_type, ".png"), plot = srp, width = 10, height = 6)
 
   names(speed_ranges) <- c("Gear", "Min Fishing Speed", "Max Fishing Speed")
-  write.csv(speed_ranges, file = here("data/workflow_outputs/gear_speed_ranges.csv"), row.names = FALSE)
+  write.csv(speed_ranges, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\gear_speed_ranges_", analysis_type, ".csv"), row.names = FALSE)
 
 
   ##Filter only records when vessel is detected as fishing
@@ -1152,15 +1208,95 @@ for (year in years) {
 
   #- Split among ping the landings to iVMS locations
 
+  # create backup prior to SplitAmongPings
+  eflaloM_bk_sap <- eflaloM ; # eflaloM_bk_sap -> eflaloM
+
+  eflaloM$LE_CDAT <- lubridate::ymd(eflaloM$LE_CDAT)
+  tacsatp$SI_DATIM <- lubridate::ymd_hms(tacsatp$SI_DATIM)
+
+  tacsatp$LE_RECT <- NULL
+
+  tacsatp <- tacsatp[!is.na(tacsatp$INTV), ] ; dim(tacsatp)
+
+  tacsatp <- tacsatp %>%
+    dplyr::select(-Gear.name,
+                  -Original.Min.Fishing.Speed,
+                  -Original.Max.Fishing.Speed,
+                  -min,
+                  -max)
+
+  dim(tacsatp)
 
 
-  tacsatEflalo = splitAmongPings(
+  tacsatp %>% filter(is.na(INTV)) %>% tally()
+
+  # Rename columns starting with "LE_VALUE_" to replace "VALUE" with "EURO"
+  eflaloM <- eflaloM |>
+    rename_with(
+      ~ gsub("^LE_VALUE_", "LE_EURO_", .),
+      starts_with("LE_VALUE_")
+    )
+
+
+  print("Data prepared for SplitAmongPings")
+
+  # Distribute landings among pings, first by day, metier and trip; then by metier and trip; then by trip
+  # tacsatEflalo_0p77 <-
+  #   splitAmongPings_0p77(
+  #     tacsat = tacsatp,
+  #     eflalo = eflaloM,
+  #     variable = "all",
+  #     level = c("day", "trip"),
+  #     conserve = TRUE,
+  #     conserve_ML2 = TRUE,
+  #     by = "INTV")
+
+    tacsatEflalo = splitAmongPings(
     tacsat = tacsatEflalo,
     eflalo = eflaloM,
     variable = "all", # "kgs",
     level = "day",
     conserve = FALSE
   )
+
+
+  print(paste0("tacsatEflalo_0p77 created for ", year))
+
+
+  # load(paste0(outPath, year, "\\tacsatEflalo_2012.RData"))
+
+  # retrieve first item from list created by above function
+  # tacsatEflalo <- tacsatEflalo_0p77[[1]]
+  # stats_splitamongpings <- tacsatEflalo_0p77[[2]] |> mutate(year = year)
+  # stats_vms_splitamongpings <- tacsatEflalo_0p77[[3]] |> mutate(year = year)
+
+  # print(paste0("Sum of eflalo$LE_KG_TOT: ", sum(eflalo$LE_KG_TOT)))
+  # print(paste0("Sum of tacsatEflalo$LE_KG_TOT: ", sum(tacsatEflalo$LE_KG_TOT)))
+  # stats_splitamongpings |> filter(category == "kg in eflalo") |> summarise(sum(total))
+
+  # # Save tacsatEflalo without the totals columns for use in data product creation
+  # tacsatEflalo_save <- tacsatEflalo |> dplyr::select(-c(LE_KG_TOT, LE_EURO_TOT))
+
+  # save(
+  #   tacsatEflalo_save,
+  #   file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsatEflalo_", year, ".RData"))
+
+
+  # print(paste0("Saved the result of SplitAmongPings_0p77_", year))
+
+
+  # save(
+  #   stats_splitamongpings,
+  #   file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsatEflalo_summary_split_kg_", year, ".RData"))
+
+
+  # save(
+  #   stats_vms_splitamongpings,
+  #   file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsatEflalo_summary_split_vms_", year, ".RData"))
+
+
+
+  # print(paste0("Saved the stats of SplitAmongPings_", year))
 
 
   tacsatEflalo$Csquare_05   =  CSquare(tacsatEflalo$SI_LONG, tacsatEflalo$SI_LATI, degrees = 0.05)
@@ -1171,8 +1307,8 @@ for (year in years) {
   tacsatEflalo$INTV         =  tacsatEflalo$INTV
 
 
-
-  save(tacsatEflalo, file = paste0(here("data\\workflow_outputs\\srf-2\\tacsatEflalo_"), analysis_type, "_", year, "_SRF_2_FDP.RData"))
+  # dir.create(paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\srf-2"))
+  save(tacsatEflalo, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\tacsatEflalo_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
 
   # 2.5 Assign  year, month, quarter, area and create table 2 ----------------------------------------
 
@@ -1199,7 +1335,7 @@ for (year in years) {
   eflalo_output$tripInTacsat = ifelse(eflalo_output$FT_REF %in% tacsatp$FT_REF, "Y", "N") # Y = Yes and N = No
 
 
-  save(eflalo_output, file = paste0(here("data\\workflow_outputs\\srf-2\\eflalo_output_"), analysis_type, "_", year, "_SRF_2_FDP.RData"))
+  save(eflalo_output, file = paste0(gitpath, "\\data\\workflow_outputs\\", year, "\\eflalo_output_", analysis_type, "_", year, "_SRF_2_FDP.RData"))
 
   print(paste0("Finished ", year))
 
